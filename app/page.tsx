@@ -1,12 +1,11 @@
 "use client"; // Next.JS 13+ defaults to server components in the app router.
 
 import { useEffect, useState } from "react";
-import { Rubik } from 'next/font/google'
+import { Inconsolata } from 'next/font/google'
 
-const rubik = Rubik({
+const inconsolata = Inconsolata({
   weight: '500',
 })
- 
 
 interface APIError {
   message: string;
@@ -70,10 +69,10 @@ export default function Home() {
   }, []);
 
   return (
-    <div className = {rubik.className}>
+    <div className = {inconsolata.className}>
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-purple-50 p-8">
       <h1 className="text-4xl text-pink-700 mb-8 drop-shadow-sm">
-        Transaction Summaries ✿
+        Transaction Summaries
       </h1>
       {loading ? (
         <p className="text-pink-600 text-lg">Loading summaries... ♡</p>
@@ -86,10 +85,10 @@ export default function Home() {
             key={index}
             className="bg-white p-6 rounded-2xl shadow-md border border-pink-100 hover:shadow-lg transition-all duration-300 hover:scale-102"
           >
-            <h2 className="text-2xl text-purple-700 mb-4">
+            <h2 className="text-3xl text-pink-600 mb-4">
               {s.user} 🌸
             </h2>
-            <table className="w-full text-xl text-blue-600 border-collapse">
+            <table className="w-full text-2xl text-blue-600 border-collapse">
               <tbody>
                 <tr className="border-b border-pink-100">
                   <td className="py-2 flex items-center">
