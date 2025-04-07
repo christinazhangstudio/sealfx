@@ -30,7 +30,7 @@ export default function RootLayout({
                   alt="web logo" 
                   className="h-16 w-30 object-contain" // adjust size
                 />
-                <h1 className="text-6xl font-rubik text-pink-800 drop-shadow-sm whitespace-nowrap">
+                <h1 className="text-6xl text-pink-800 drop-shadow-sm whitespace-nowrap">
                   sealift
                 </h1>
               </div>
@@ -46,37 +46,37 @@ export default function RootLayout({
           <div className={comfortaa.className}>
             <div className="max-w-9xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between py-2 sm:py-4 flex-col sm:flex-row gap-2 sm:gap-0 min-h-[4rem] sm:h-auto">
-                <div className="flex shrink-0">
+                <div className="flex shrink-0 pl-0 sm:pl-9 lg:pl-10">
                   <a
                     href="/"
                     className="flex items-center text-pink-700 hover:text-pink-900"
                   >
-                    <span className="font-rubik text-xl">Home</span>
+                    <span className="text-xl">Home</span>
                   </a>
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-6 text-center sm:text-left">
                   <a
                     href="/open-orders"
-                    className="text-pink-700 hover:text-pink-900 font-rubik transition-colors duration-200 text-sm sm:text-base whitespace-nowrap"
+                    className="text-pink-700 hover:text-pink-900 transition-colors duration-200 text-sm sm:text-base whitespace-nowrap"
                   >
-                    Open Orders
+                    &nbsp;Open Orders
                   </a>
                   <a
                     href="/refunds"
-                    className="text-pink-700 hover:text-pink-900 font-rubik transition-colors duration-200 text-sm sm:text-base whitespace-nowrap"
+                    className="text-pink-700 hover:text-pink-900 transition-colors duration-200 text-sm sm:text-base whitespace-nowrap"
                   >
                     Refunds
                   </a>
                   <a
                     href="/shipping"
-                    className="text-pink-700 hover:text-pink-900 font-rubik transition-colors duration-200 text-sm sm:text-base whitespace-nowrap"
+                    className="text-pink-700 hover:text-pink-900 transition-colors duration-200 text-sm sm:text-base whitespace-nowrap"
                   >
                     Shipping Status
                   </a>
                   <a
                     href="/shipping-labels"
-                    className="text-pink-700 hover:text-pink-900 font-rubik transition-colors duration-200 text-sm sm:text-base whitespace-nowrap"
+                    className="text-pink-700 hover:text-pink-900 transition-colors duration-200 text-sm sm:text-base whitespace-nowrap"
                   >
                     Shipping Labels
                   </a>
