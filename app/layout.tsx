@@ -46,7 +46,6 @@ export default function RootLayout({
           <div className={comfortaa.className}>
             <div className="max-w-9xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between py-2 sm:py-4 flex-col sm:flex-row gap-2 sm:gap-0 min-h-[4rem] sm:h-auto">
-                {/* Left Side: Home */}
                 <div className="flex shrink-0">
                   <a
                     href="/"
@@ -56,7 +55,6 @@ export default function RootLayout({
                   </a>
                 </div>
 
-                {/* Right Side: Navigation Links */}
                 <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-6 text-center sm:text-left">
                   <a
                     href="/open-orders"
@@ -77,7 +75,7 @@ export default function RootLayout({
                     Shipping Status
                   </a>
                   <a
-                    href="/shipping-lables" // Note: "lables" seems like a typo, should be "labels"?
+                    href="/shipping-labels"
                     className="text-pink-700 hover:text-pink-900 font-rubik transition-colors duration-200 text-sm sm:text-base whitespace-nowrap"
                   >
                     Shipping Labels
