@@ -6,6 +6,8 @@ npm run dev --turbo
 
 ![csr and ssr](csr-vs-ssr.png)
 
+![ts and tsx](ts-vs-tsx.png)
+
 `NEXT_PUBLIC_`: in Next.js, vars exposed to the browser 
 (client-side code, like your fetch in useEffect) must start with NEXT_PUBLIC_. 
 without this prefix, the var is only available server-side 

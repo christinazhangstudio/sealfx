@@ -7,9 +7,6 @@ const inconsolata = Inconsolata({
   weight: '500',
 })
 
-interface APIError {
-  message: string;
-}
 
 interface UserSummary {
     user: string;
@@ -40,12 +37,21 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (!apiUrl) {
-      setError("API URL env not defined");
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL
+    const transactionSummaryUri = process.env.NEXT_PUBLIC_TRANSACTION_SUMMARY_URI;
+    if (!apiBaseUrl) {
+      setError("API base URL env not defined");
       setLoading(false);
       return;
     }
+
+    if (!transactionSummaryUri) {
+      setError("transaction summary URI env not defined");
+      setLoading(false);
+      return;
+    }
+
+    const apiUrl = `${apiBaseUrl}/${transactionSummaryUri}`;
   
     fetch(apiUrl)
       .then((res) => {

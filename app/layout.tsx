@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Comfortaa } from "next/font/google";
-import "./globals.css";
+import "../styles/globals.css";
 
 const comfortaa = Comfortaa({
   weight: '400',
