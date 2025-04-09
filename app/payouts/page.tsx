@@ -2,6 +2,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Inconsolata } from "next/font/google";
+
+const inconsolata = Inconsolata({
+  weight: "500",
+});
 
 interface UserPayouts {
   user: string;
@@ -30,7 +35,7 @@ interface Payout {
 }
 
 interface Amount {
-  value: number;
+  value: string;
   currency: string;
 }
 
@@ -62,127 +67,193 @@ export default function Payouts() {
     }
 
     const apiUrl = `${apiBaseUrl}/${payoutsUri}`;
-    fetchPayouts(apiUrl);
-  }, []);
 
-  const fetchPayouts = async (url: string) => {
-    try {
-      setLoading(true);
-      const res = await fetch(url);
-      const data = await res.json();
-      setUserPayouts(data);
-      setLoading(false);
-    } catch (err: any) {
-      setError(err.message);
-      console.log(err.message);
-      setLoading(false);
-    }
-  };
+    fetch(apiUrl)
+      .then((res) => {
+        if (!res.ok) {
+          return res.json().then((err: { message: string }) => {
+            throw new Error(err.message);
+          });
+        }
+        return res.json();
+      })
+      .then((data: UserPayouts[]) => {
+        setUserPayouts(data);
+        setLoading(false);
+      })
+      .catch((err: Error) => {
+        setError(err.message);
+        console.log(err.message);
+        setLoading(false);
+      });
+  }, []);
 
   const handlePagination = (url: string) => {
     if (url) {
-      fetchPayouts(url);
+      fetch(url)
+        .then((res) => {
+          if (!res.ok) {
+            return res.json().then((err: { message: string }) => {
+              throw new Error(err.message);
+            });
+          }
+          return res.json();
+        })
+        .then((data: UserPayouts[]) => {
+          setUserPayouts(data);
+          setLoading(false);
+        })
+        .catch((err: Error) => {
+          setError(err.message);
+          console.log(err.message);
+          setLoading(false);
+        });
     }
   };
 
-  if (loading)
-    return <div className="text-center text-pink-700 text-lg">Loading...</div>;
-  if (error)
-    return (
-      <div className="text-center text-pink-800 text-lg">Error: {error}</div>
+  const calculateTotalPayoutAmount = (): number => {
+    const allPayouts = userPayouts.flatMap((p) =>
+      p.payouts && Array.isArray(p.payouts.payouts) ? p.payouts.payouts : []
     );
+    return allPayouts.reduce((sum, payout) => 
+      sum + Number(payout.amount.value), 0);
+  };
+
+  const totalPayoutAmount: number = calculateTotalPayoutAmount();
+
+  const calculateUserPayoutTotal = (payouts: Payout[]): number => {
+    return payouts.reduce((sum, payout) => 
+      sum + Number(payout.amount.value), 0);
+  };
+
+  // assume all payouts use the same currency (take first available or default to 'USD')
+  const currency: string =
+    userPayouts.length > 0 && userPayouts[0].payouts.payouts.length > 0
+      ? userPayouts[0].payouts.payouts[0].amount.currency
+      : "USD";
 
   return (
-    <div className="bg-pink-50 min-h-screen py-8">
-      <h1 className="text-3xl font-bold text-pink-800 mb-6 drop-shadow-sm">
-        User Payouts
-      </h1>
-
-      {userPayouts.map((p, index) => (
-        <div
-          key={index}
-          className="mb-6 bg-white rounded-lg shadow-md p-6 border border-blue-100"
-        >
-          <h2 className="text-xl font-semibold text-pink-700 mb-4">
-            User: {p.user}
-          </h2>
-
-          {p.payouts && (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-blue-50 text-pink-700">
-                      <th className="p-3 text-left font-semibold">Payout ID</th>
-                      <th className="p-3 text-left font-semibold">Status</th>
-                      <th className="p-3 text-left font-semibold">Amount</th>
-                      <th className="p-3 text-left font-semibold">Date</th>
-                      <th className="p-3 text-left font-semibold">
-                        Transactions
-                      </th>
-                      <th className="p-3 text-left font-semibold">
-                        Payment Method
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {p.payouts.payouts.map((payout) => (
-                      <tr
-                        key={payout.payoutId}
-                        className="border-b border-blue-100 hover:bg-pink-100 transition-colors"
+    <div className={inconsolata.className}>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-purple-50 p-8">
+        <h1 className="text-4xl text-pink-700 mb-8 drop-shadow-sm">
+          Payouts
+        </h1>
+        {userPayouts.length > 0 && (
+          <p className="text-2xl text-pink-600 mb-8">
+            Total: {totalPayoutAmount} {currency} 💰
+          </p>
+        )}
+        {loading ? (
+          <p className="text-pink-600 text-lg">Loading payouts... ♡</p>
+        ) : error ? (
+          <p className="text-rose-500 text-lg">{error}</p>
+        ) : userPayouts.length > 0 ? (
+          <div className="space-y-6">
+            {userPayouts.map((p, index) => (
+              <div
+                key={index}
+                className="bg-white p-6 rounded-2xl shadow-md border border-pink-100 hover:shadow-lg transition-all duration-300 hover:scale-102"
+              >
+                <h2 className="text-3xl text-pink-600 mb-4">
+                  {p.user} 🌸
+                </h2>
+                {p.payouts && p.payouts.payouts.length > 0 && (
+                  <p className="text-xl text-pink-600 mb-4">
+                    Total for user: {"$ "}{calculateUserPayoutTotal(p.payouts.payouts).toFixed(2)}{" "}💸
+                  </p>
+                )}
+                {p.payouts && p.payouts.payouts.length > 0 ? (
+                  <>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xl text-blue-600 border-collapse">
+                        <thead>
+                          <tr className="border-b border-pink-100">
+                            <th className="py-2 text-left w-1/5 min-w-[120px]">
+                              <span className="text-pink-500 mr-2">✦</span>
+                              Date
+                            </th>
+                            <th className="py-2 text-left w-1/5 min-w-[120px]">
+                              <span className="text-pink-500 mr-2">✦</span>
+                              Status
+                            </th>
+                            <th className="py-2 text-left w-1/5 min-w-[140px]">
+                              <span className="text-pink-500 mr-2">✦</span>
+                              Amount
+                            </th>
+                            <th className="py-2 text-left w-1/5 min-w-[160px]">
+                              <span className="text-pink-500 mr-2">✦</span>
+                              Transactions
+                            </th>
+                            <th className="py-2 text-left w-1/5 min-w-[140px]">
+                              <span className="text-pink-500 mr-2">✦</span>
+                              Payment Method
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {p.payouts.payouts.map((payout) => (
+                            <tr
+                              key={payout.payoutId}
+                              className="border-b border-pink-100"
+                            >
+                              <td className="py-2 whitespace-nowrap">
+                                {new Date(payout.payoutDate).toLocaleDateString()}
+                              </td>
+                              <td className="py-2">
+                                {payout.payoutStatus}
+                                <br />
+                                <small className="text-pink-500 text-base truncate block">
+                                  {payout.payoutStatusDescription}
+                                </small>
+                              </td>
+                              <td className="py-2">
+                                {payout.amount.value} {payout.amount.currency}
+                              </td>
+                              <td className="py-2">{payout.transactionCount}</td>
+                              <td className="py-2 truncate">
+                                {payout.payoutInstrument.nickname} (
+                                {payout.payoutInstrument.accountLastFourDigits})
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="mt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                      <button
+                        onClick={() => handlePagination(p.payouts.prev)}
+                        disabled={!p.payouts.prev}
+                        className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:bg-pink-300 disabled:cursor-not-allowed transition-colors"
                       >
-                        <td className="p-3 text-pink-900">{payout.payoutId}</td>
-                        <td className="p-3 text-pink-900">
-                          {payout.payoutStatus}
-                          <br />
-                          <small className="text-pink-600">
-                            {payout.payoutStatusDescription}
-                          </small>
-                        </td>
-                        <td className="p-3 text-pink-900">
-                          {payout.amount.value} {payout.amount.currency}
-                        </td>
-                        <td className="p-3 text-pink-900">
-                          {new Date(payout.payoutDate).toLocaleDateString()}
-                        </td>
-                        <td className="p-3 text-pink-900">
-                          {payout.transactionCount}
-                        </td>
-                        <td className="p-3 text-pink-900">
-                          {payout.payoutInstrument.nickname} (
-                          {payout.payoutInstrument.accountLastFourDigits})
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        Previous
+                      </button>
+                      <span className="text-lg text-pink-600">
+                        Showing {p.payouts.offset + 1} -{" "}
+                        {Math.min(
+                          p.payouts.offset + p.payouts.limit,
+                          p.payouts.total
+                        )}{" "}
+                        of {p.payouts.total} ✿
+                      </span>
+                      <button
+                        onClick={() => handlePagination(p.payouts.next)}
+                        disabled={!p.payouts.next}
+                        className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:bg-pink-300 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-pink-600 text-lg">No payouts available. ♡</p>
+                )}
               </div>
-
-              <div className="mt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <button
-                  onClick={() => handlePagination(p.payouts.prev)}
-                  disabled={!p.payouts.prev}
-                  className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:bg-pink-300 disabled:cursor-not-allowed transition-colors"
-                >
-                  Previous
-                </button>
-                <span className="text-sm text-pink-700">
-                  Showing {p.payouts.offset + 1} -{" "}
-                  {Math.min(p.payouts.offset + p.payouts.limit, p.payouts.total)}{" "}
-                  of {p.payouts.total}
-                </span>
-                <button
-                  onClick={() => handlePagination(p.payouts.next)}
-                  disabled={!p.payouts.next}
-                  className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:bg-pink-300 disabled:cursor-not-allowed transition-colors"
-                >
-                  Next
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      ))}
+            ))}
+          </div>
+        ) : (
+          <p className="text-pink-600 text-lg">No payouts available. ♡</p>
+        )}
+      </div>
     </div>
   );
 }
