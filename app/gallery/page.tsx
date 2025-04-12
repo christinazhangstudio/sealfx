@@ -93,9 +93,9 @@ export default function ListingsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dateError, setDateError] = useState<string | null>(null);
-  const [galleryIndices, setGalleryIndices] = useState<{
-    [itemID: string]: number;
-  }>({});
+  const [displaySize, setDisplaySize] = useState<"small" | "medium" | "big">(
+    "small"
+  );
   const pageSize = 10;
   const maxDaysPerChunk = 120;
 
@@ -149,18 +149,19 @@ export default function ListingsPage() {
     let pageIdx = 0;
     let hasMore = true;
 
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
+    const uri = process.env.NEXT_PUBLIC_LISTINGS_URI;
+    if (!apiBaseUrl) {
+      throw new Error("API base URL env not defined");
+    }
+
+    if (!uri) {
+      throw new Error("URI env not defined");
+    }
+
+    const apiUrl = `${apiBaseUrl}/${uri}`;
+
     while (hasMore) {
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-      const uri = process.env.NEXT_PUBLIC_LISTINGS_URI;
-      if (!apiBaseUrl) {
-        throw new Error("API base URL env not defined");
-      }
-
-      if (!uri) {
-        throw new Error("URI env not defined");
-      }
-
-      const apiUrl = `${apiBaseUrl}/${uri}`;
       const url = `${apiUrl}?pageSize=${pageSize}&pageIdx=${pageIdx}&startFrom=${formatDate(
         from
       )}&startTo=${formatDate(to)}`;
@@ -217,7 +218,6 @@ export default function ListingsPage() {
     setLoading(true);
     setError(null);
     setListings([]);
-    setGalleryIndices({});
 
     try {
       const chunks = getDateChunks(from, to);
@@ -230,6 +230,7 @@ export default function ListingsPage() {
 
       setListings(allListings);
     } catch (err: any) {
+      console.error("Fetch error:", err);
       setError(`Error fetching listings: ${err.message || "Unknown error"}. ♡`);
     } finally {
       setLoading(false);
@@ -259,23 +260,30 @@ export default function ListingsPage() {
     fetchAllListings(startFrom, startTo);
   }, []);
 
-  // Gallery navigation
-  const handleGalleryNav = (
-    itemID: string,
-    direction: "next" | "prev",
-    pictureCount: number
-  ) => {
-    setGalleryIndices((prev) => {
-      const currentIndex = prev[itemID] || 0;
-      let newIndex = direction === "next" ? currentIndex + 1 : currentIndex - 1;
-      if (newIndex < 0) newIndex = pictureCount - 1;
-      if (newIndex >= pictureCount) newIndex = 0;
-      return { ...prev, [itemID]: newIndex };
-    });
+  // Define grid and image styles based on display size
+  const sizeStyles = {
+    small: {
+      grid: "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6",
+      imageHeight: "h-[150px]",
+      captionSize: "text-sm",
+      placeholder: "https://via.placeholder.com/150?text=No+Image",
+    },
+    medium: {
+      grid: "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4",
+      imageHeight: "h-[300px]",
+      captionSize: "text-s",
+      placeholder: "https://via.placeholder.com/300?text=No+Image",
+    },
+    big: {
+      grid: "grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
+      imageHeight: "h-[450px]",
+      captionSize: "text-lg",
+      placeholder: "https://via.placeholder.com/450?text=No+Image",
+    },
   };
 
-  // Render table for a single user
-  const renderUserTable = (user: string, items: Item[]) => {
+  // Render gallery for a single user
+  const renderUserGallery = (user: string, items: Item[]) => {
     // Apply status filter to user's items
     const filteredItems = items.filter(
       (item) =>
@@ -293,158 +301,41 @@ export default function ListingsPage() {
           Total Items: {filteredItems.length} 📦
         </p>
         {filteredItems.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xl text-blue-600 border-collapse">
-              <thead>
-                <tr className="border-b border-pink-100">
-                  <th className="py-2 text-left w-[100px] min-w-[220px]">
-                    <span className="text-pink-500 mr-2">✦</span>
-                    Thumbnail
-                  </th>
-                  <th className="py-2 text-left min-w-[200px]">
-                    <span className="text-pink-500 mr-2">✦</span>
-                    Title
-                  </th>
-                  <th className="py-2 text-left w-1/5 min-w-[200px] pl-[38px]">
-                    <span className="text-pink-500 mr-2">✦</span>
-                    Start Time
-                  </th>
-                  <th className="py-2 text-left w-1/5 min-w-[150px]">
-                    <span className="text-pink-500 mr-2">✦</span>
-                    End Time
-                  </th>
-                  <th className="py-2 text-left w-[100px] min-w-[100px]">
-                    <span className="text-pink-500 mr-2">✦</span>
-                    Price
-                  </th>
-                  <th className="py-2 text-left w-[80px] min-w-[80px]">
-                    <span className="text-pink-500 mr-2">✦</span>
-                    Qty
-                  </th>
-                  <th className="py-2 text-left w-[120px] min-w-[120px]">
-                    <span className="text-pink-500 mr-2">✦</span>
-                    Status
-                  </th>
-                  <th className="py-2 text-left w-1/4 min-w-[200px]">
-                    <span className="text-pink-500 mr-2">✦</span>
-                    Category
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredItems.map((item) => {
-                  const currentImageIndex = galleryIndices[item.ItemID] || 0;
-                  const pictureURLs = item.PictureDetails?.PictureURLs || [];
-                  return (
-                    <tr
-                      key={item.ItemID}
-                      className="border-b border-pink-100"
-                    >
-                      <td className="py-2">
-                        {pictureURLs.length > 0 ? (
-                          <div className="flex items-center gap-2 relative">
-                            <button
-                              onClick={() =>
-                                handleGalleryNav(
-                                  item.ItemID,
-                                  "prev",
-                                  pictureURLs.length
-                                )
-                              }
-                              disabled={pictureURLs.length <= 1}
-                              className={`p-1 rounded-full ${
-                                pictureURLs.length <= 1
-                                  ? "bg-gray-200 cursor-not-allowed"
-                                  : "bg-pink-200 hover:bg-pink-300"
-                              }`}
-                              aria-label="Previous image"
-                            >
-                              ←
-                            </button>
-                            <div className="relative">
-                              <img
-                                src={pictureURLs[currentImageIndex]}
-                                alt={`Thumbnail for ${item.Title}`}
-                                className="w-[100px] h-[100px] object-contain"
-                                onError={(e) => {
-                                  e.currentTarget.src =
-                                    "https://via.placeholder.com/100?text=No+Image";
-                                }}
-                              />
-                              <a
-                                href={pictureURLs[currentImageIndex]}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="absolute top-0 right-0 bg-pink-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-pink-700"
-                                title="Open image in new tab"
-                                aria-label="Open image in new tab"
-                              >
-                                ↗
-                              </a>
-                            </div>
-                            <button
-                              onClick={() =>
-                                handleGalleryNav(
-                                  item.ItemID,
-                                  "next",
-                                  pictureURLs.length
-                                )
-                              }
-                              disabled={pictureURLs.length <= 1}
-                              className={`p-1 rounded-full ${
-                                pictureURLs.length <= 1
-                                  ? "bg-gray-200 cursor-not-allowed"
-                                  : "bg-pink-200 hover:bg-pink-300"
-                              }`}
-                              aria-label="Next image"
-                            >
-                              →
-                            </button>
-                          </div>
-                        ) : (
-                          <img
-                            src="https://via.placeholder.com/100?text=No+Image"
-                            alt="No image available"
-                            className="w-[100px] h-[100px] object-contain"
-                          />
-                        )}
-                      </td>
-                      <td className="py-2 max-w-[280px] truncate">
-                        <a
-                          href={item.ListingDetails.ViewItemURL}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline truncate"
-                          title={item.Title}
-                        >
-                          {item.Title}
-                        </a>
-                      </td>
-                      <td className="py-2 pl-[38px]">
-                        {new Date(
-                          item.ListingDetails.StartTime
-                        ).toLocaleDateString()}
-                      </td>
-                      <td className="py-2">
-                        {new Date(
-                          item.ListingDetails.EndTime
-                        ).toLocaleDateString()}
-                      </td>
-                      <td className="py-2">
-                        ${item.SellingStatus.CurrentPrice.Value.toFixed(2)}
-                      </td>
-                      <td className="py-2">{item.Quantity}</td>
-                      <td className="py-2">
-                        {item.SellingStatus.ListingStatus}
-                      </td>
-                      <td className="py-2 truncate">
-                        {item.PrimaryCategory.CategoryName}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className={`grid ${sizeStyles[displaySize].grid} gap-6`}>
+            {filteredItems.map((item) => {
+              const pictureURLs = item.PictureDetails?.PictureURLs || [];
+              const imageUrl =
+                pictureURLs.length > 0
+                  ? pictureURLs[0]
+                  : sizeStyles[displaySize].placeholder;
+              return (
+                <div key={item.ItemID} className="relative group">
+                  <a
+                    href={item.ListingDetails.ViewItemURL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block"
+                  >
+                    <div className="duration-500 group-hover:scale-105">
+                      <img
+                        src={imageUrl}
+                        alt={`Image for ${item.Title}`}
+                        className={`w-full ${sizeStyles[displaySize].imageHeight} object-cover rounded-lg transition-transform`}
+                        onError={(e) => {
+                          e.currentTarget.src =
+                            sizeStyles[displaySize].placeholder;
+                        }}
+                      />
+                      <div className="text-transform: uppercase absolute bottom-0 left-0 right-0 bg-gradient-to-br from-blue-50 via-pink-50 to-purple-100 text-pink-500 text-center py-2 rounded-b-lg transition-transform">
+                        <p className={sizeStyles[displaySize].captionSize}>
+                          {item.SellingStatus.ListingStatus}
+                        </p>
+                      </div>
+                    </div>
+                  </a>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <p className="text-pink-600 text-lg">
@@ -458,9 +349,11 @@ export default function ListingsPage() {
   return (
     <div className={inconsolata.className}>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-purple-50 p-8">
-        <h1 className="text-4xl text-pink-700 mb-8 drop-shadow-sm">Listings</h1>
-        {/* Date Range and Status Filter Inputs */}
-        <div className="mb-8 flex flex-col sm:flex-row gap-4 items-center">
+        <h1 className="text-4xl text-pink-700 mb-8 drop-shadow-sm">
+          Listings Gallery
+        </h1>
+        {/* Date Range, Status Filter, and Size Selector Inputs */}
+        <div className="mb-8 flex flex-col sm:flex-row gap-4 items-center flex-wrap">
           <div>
             <label className="text-pink-600 text-lg mr-2">From:</label>
             <input
@@ -504,6 +397,20 @@ export default function ListingsPage() {
               <option value="Ended">Ended</option>
             </select>
           </div>
+          <div>
+            <label className="text-pink-600 text-lg mr-2">Size:</label>
+            <select
+              value={displaySize}
+              onChange={(e) =>
+                setDisplaySize(e.target.value as "small" | "medium" | "big")
+              }
+              className="p-2 rounded-lg border border-pink-200 text-blue-600 focus:outline-none focus:ring-2 focus:ring-pink-400"
+            >
+              <option value="small">Small</option>
+              <option value="medium">Medium</option>
+              <option value="big">Big</option>
+            </select>
+          </div>
           <button
             onClick={handleApply}
             className="px-3 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
@@ -539,10 +446,10 @@ export default function ListingsPage() {
                 }
                 return acc;
               }, [])
-              .map(({ user, items }) => renderUserTable(user, items))}
+              .map(({ user, items }) => renderUserGallery(user, items))}
           </div>
         ) : (
-          <p className="text-pink-600 text-lg">No Listings available. ♡</p>
+          <p className="text-pink-600 text-lg">No listings available. ♡</p>
         )}
       </div>
     </div>

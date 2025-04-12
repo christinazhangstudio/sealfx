@@ -83,7 +83,7 @@ export default function Payouts() {
       })
       .catch((err: Error) => {
         setError(err.message);
-        console.log(err.message);
+        // console.log(err.message);
         setLoading(false);
       });
   }, []);
@@ -105,7 +105,7 @@ export default function Payouts() {
         })
         .catch((err: Error) => {
           setError(err.message);
-          console.log(err.message);
+          // console.log(err.message);
           setLoading(false);
         });
     }
