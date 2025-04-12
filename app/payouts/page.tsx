@@ -78,6 +78,7 @@ export default function Payouts() {
         return res.json();
       })
       .then((data: UserPayouts[]) => {
+        console.log(data)
         setUserPayouts(data);
         setLoading(false);
       })
@@ -115,32 +116,32 @@ export default function Payouts() {
     const allPayouts = userPayouts.flatMap((p) =>
       p.payouts && Array.isArray(p.payouts.payouts) ? p.payouts.payouts : []
     );
-    return allPayouts.reduce((sum, payout) => 
-      sum + Number(payout.amount.value), 0);
+    return allPayouts.reduce(
+      (sum, payout) => sum + Number(payout.amount.value),
+      0
+    );
   };
 
-  const totalPayoutAmount: number = calculateTotalPayoutAmount();
-
   const calculateUserPayoutTotal = (payouts: Payout[]): number => {
-    return payouts.reduce((sum, payout) => 
-      sum + Number(payout.amount.value), 0);
+    return payouts.reduce(
+      (sum, payout) => sum + Number(payout.amount.value),
+      0
+    );
   };
 
   // assume all payouts use the same currency (take first available or default to 'USD')
   const currency: string =
-    userPayouts.length > 0 && userPayouts[0].payouts.payouts.length > 0
+    userPayouts.length > 0 && userPayouts[0].payouts.total > 0
       ? userPayouts[0].payouts.payouts[0].amount.currency
       : "USD";
 
   return (
     <div className={inconsolata.className}>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-purple-50 p-8">
-        <h1 className="text-4xl text-pink-700 mb-8 drop-shadow-sm">
-          Payouts
-        </h1>
+        <h1 className="text-4xl text-pink-700 mb-8 drop-shadow-sm">Payouts</h1>
         {userPayouts.length > 0 && (
           <p className="text-2xl text-pink-600 mb-8">
-            Total: {totalPayoutAmount} {currency} 💰
+            Total: {calculateTotalPayoutAmount()} {currency} 💰
           </p>
         )}
         {loading ? (
@@ -154,15 +155,14 @@ export default function Payouts() {
                 key={index}
                 className="bg-white p-6 rounded-2xl shadow-md border border-pink-100 hover:shadow-lg transition-all duration-300 hover:scale-102"
               >
-                <h2 className="text-3xl text-pink-600 mb-4">
-                  {p.user} 🌸
-                </h2>
-                {p.payouts && p.payouts.payouts.length > 0 && (
+                <h2 className="text-3xl text-pink-600 mb-4">{p.user} 🌸</h2>
+                {p.payouts && p.payouts.total > 0 && (
                   <p className="text-xl text-pink-600 mb-4">
-                    Total for user: {"$ "}{calculateUserPayoutTotal(p.payouts.payouts).toFixed(2)}{" "}💸
+                    Total for user: {"$ "}
+                    {calculateUserPayoutTotal(p.payouts.payouts).toFixed(2)} 💸
                   </p>
                 )}
-                {p.payouts && p.payouts.payouts.length > 0 ? (
+                {p.payouts && p.payouts.total > 0 ? (
                   <>
                     <div className="overflow-x-auto">
                       <table className="w-full text-xl text-blue-600 border-collapse">
@@ -197,7 +197,9 @@ export default function Payouts() {
                               className="border-b border-pink-100"
                             >
                               <td className="py-2 whitespace-nowrap">
-                                {new Date(payout.payoutDate).toLocaleDateString()}
+                                {new Date(
+                                  payout.payoutDate
+                                ).toLocaleDateString()}
                               </td>
                               <td className="py-2">
                                 {payout.payoutStatus}
@@ -209,7 +211,9 @@ export default function Payouts() {
                               <td className="py-2">
                                 {payout.amount.value} {payout.amount.currency}
                               </td>
-                              <td className="py-2">{payout.transactionCount}</td>
+                              <td className="py-2">
+                                {payout.transactionCount}
+                              </td>
                               <td className="py-2 truncate">
                                 {payout.payoutInstrument.nickname} (
                                 {payout.payoutInstrument.accountLastFourDigits})
@@ -245,7 +249,9 @@ export default function Payouts() {
                     </div>
                   </>
                 ) : (
-                  <p className="text-pink-600 text-lg">No payouts available. ♡</p>
+                  <p className="text-pink-600 text-lg">
+                    No payouts available. ♡
+                  </p>
                 )}
               </div>
             ))}
