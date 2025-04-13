@@ -90,7 +90,7 @@ export default function ListingsPage() {
   );
   const [startTo, setStartTo] = useState<Date>(new Date());
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dateError, setDateError] = useState<string | null>(null);
   const [galleryIndices, setGalleryIndices] = useState<{
@@ -214,7 +214,6 @@ export default function ListingsPage() {
   const fetchAllListings = async (from: Date, to: Date) => {
     if (!validateDateRange(from, to)) return;
 
-    setLoading(true);
     setError(null);
     setListings([]);
     setGalleryIndices({});
@@ -447,7 +446,7 @@ export default function ListingsPage() {
             </table>
           </div>
         ) : (
-          <p className="text-pink-600 text-lg">
+          <p className="text-gray-600 text-lg">
             No items available for {user}. ♡
           </p>
         )}
@@ -542,7 +541,7 @@ export default function ListingsPage() {
               .map(({ user, items }) => renderUserTable(user, items))}
           </div>
         ) : (
-          <p className="text-pink-600 text-lg">No Listings available. ♡</p>
+          <p className="text-gray-600 text-lg">No listings available. ♡</p>
         )}
       </div>
     </div>

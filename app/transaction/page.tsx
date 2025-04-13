@@ -152,7 +152,7 @@ export default function TransactionPage() {
             ))}
           </div>
         ) : (
-          <p className="text-pink-600 text-lg">No summaries available. ♡</p>
+          <p className="text-gray-600 text-lg">No summaries available. ♡</p>
         )}
       </div>
     </div>

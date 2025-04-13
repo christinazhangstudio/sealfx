@@ -90,7 +90,7 @@ export default function ListingsPage() {
   );
   const [startTo, setStartTo] = useState<Date>(new Date());
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dateError, setDateError] = useState<string | null>(null);
   const [displaySize, setDisplaySize] = useState<"small" | "medium" | "big">(
@@ -215,7 +215,6 @@ export default function ListingsPage() {
   const fetchAllListings = async (from: Date, to: Date) => {
     if (!validateDateRange(from, to)) return;
 
-    setLoading(true);
     setError(null);
     setListings([]);
 
@@ -263,20 +262,20 @@ export default function ListingsPage() {
   // Define grid and image styles based on display size
   const sizeStyles = {
     small: {
-      grid: "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6",
-      imageHeight: "h-[150px]",
+      grid: "grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7",
+      imageHeight: "h-[130px]",
       captionSize: "text-sm",
       placeholder: "https://via.placeholder.com/150?text=No+Image",
     },
     medium: {
       grid: "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4",
-      imageHeight: "h-[300px]",
+      imageHeight: "h-[200px]",
       captionSize: "text-s",
       placeholder: "https://via.placeholder.com/300?text=No+Image",
     },
     big: {
       grid: "grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
-      imageHeight: "h-[450px]",
+      imageHeight: "h-[300px]",
       captionSize: "text-lg",
       placeholder: "https://via.placeholder.com/450?text=No+Image",
     },
@@ -338,7 +337,7 @@ export default function ListingsPage() {
             })}
           </div>
         ) : (
-          <p className="text-pink-600 text-lg">
+          <p className="text-gray-600 text-lg">
             No items available for {user}. ♡
           </p>
         )}
@@ -449,7 +448,7 @@ export default function ListingsPage() {
               .map(({ user, items }) => renderUserGallery(user, items))}
           </div>
         ) : (
-          <p className="text-pink-600 text-lg">No listings available. ♡</p>
+          <p className="text-gray-600 text-lg">No listings available. ♡</p>
         )}
       </div>
     </div>

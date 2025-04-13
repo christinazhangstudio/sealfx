@@ -79,12 +79,6 @@ export default function RootLayout({
                   >
                     Listings (Gallery)
                   </a>
-                  <a
-                    href="/shipping-labels"
-                    className="text-pink-700 hover:text-pink-900 transition-colors duration-200 text-sm md:text-base whitespace-nowrap"
-                  >
-                    Shipping Labels
-                  </a>
                 </div>
               </div>
             </div>

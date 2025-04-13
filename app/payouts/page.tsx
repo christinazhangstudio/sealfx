@@ -249,7 +249,7 @@ export default function Payouts() {
                     </div>
                   </>
                 ) : (
-                  <p className="text-pink-600 text-lg">
+                  <p className="text-gray-600 text-lg">
                     No payouts available. ♡
                   </p>
                 )}
@@ -257,7 +257,7 @@ export default function Payouts() {
             ))}
           </div>
         ) : (
-          <p className="text-pink-600 text-lg">No payouts available. ♡</p>
+          <p className="text-gray-600 text-lg">No payouts available. ♡</p>
         )}
       </div>
     </div>

@@ -19,19 +19,20 @@ export default function RegisterSellerPage() {
 
   const [users, setUsers] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [apiError, setAPIError] = useState<string | null>(null);
 
   useEffect(() => {
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
     const usersUri = process.env.NEXT_PUBLIC_USERS_URI;
 
     if (!apiBaseUrl) {
-      setError("API base URL env not defined");
+      setAPIError("API base URL env not defined");
       setLoading(false);
       return;
     }
 
     if (!usersUri) {
-      setError("Users URI env not defined");
+      setAPIError("Users URI env not defined");
       setLoading(false);
       return;
     }
@@ -53,7 +54,7 @@ export default function RegisterSellerPage() {
         setLoading(false);
       })
       .catch((err: Error) => {
-        setError(err.message);
+        setAPIError(err.message);
         // console.log(err.message);
         setLoading(false);
       });
@@ -257,8 +258,8 @@ export default function RegisterSellerPage() {
           </h2>
           {loading ? (
             <p className="text-pink-600 text-lg">Loading users... ♡</p>
-          ) : error ? (
-            <p className="text-rose-500 text-lg">{error}</p>
+          ) : apiError ? (
+            <p className="text-rose-500 text-lg">{apiError}</p>
           ) : users && users.length > 0 ? (
             <div className="text-gray-600 text-lg text-center">
               {users.map((user) => (
