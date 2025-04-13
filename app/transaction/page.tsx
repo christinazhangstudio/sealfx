@@ -30,7 +30,7 @@ interface Amount {
   currency: string;
 }
 
-export default function Home() {
+export default function TransactionPage() {
   const [summaries, setSummaries] = useState<UserSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
