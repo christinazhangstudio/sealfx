@@ -574,10 +574,6 @@ export default function ListingsPage() {
         </div>
         {dateError && <p className="text-rose-500 text-lg mb-4">{dateError}</p>}
         {error && <p className="text-rose-500 text-lg mb-4">{error}</p>}
-        <p className="text-xl text-pink-600 mb-4">
-          Showing data from {formatDate(startFrom)} to {formatDate(startTo)} 📅
-          {statusFilter !== "ALL" && ` (Filtered by ${statusFilter} status)`}
-        </p>
         {userLoading.global ? (
           <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
             <p className="text-pink-600 text-lg">Loading Users... ♡</p>
