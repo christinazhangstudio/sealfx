@@ -379,11 +379,6 @@ export default function ListingsPage() {
     setResetTriggered(true); // Signal that a reset has occurred
   };
 
-  // Effect to handle initial fetch after users are loaded
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
   // Effect to handle initial fetch of users
   useEffect(() => {
     fetchUsers();
@@ -498,9 +493,11 @@ export default function ListingsPage() {
   return (
     <div className={inconsolata.className}>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-purple-50 p-8">
-        <h1 className="text-4xl text-pink-700 mb-8 drop-shadow-sm">
-          Listings Gallery
-        </h1>
+        <div className="flex justify-between items-center mb-8 flex-col sm:flex-row gap-4">
+          <h1 className="text-4xl text-pink-700 drop-shadow-sm">
+            Listings Gallery
+          </h1>
+        </div>
         <div className="mb-8 flex flex-col sm:flex-row gap-4 items-center flex-wrap">
           <div>
             <label className="text-pink-600 text-lg mr-2">From:</label>
@@ -532,33 +529,6 @@ export default function ListingsPage() {
               max={formatDate(new Date())}
             />
           </div>
-          <div>
-            <label className="text-pink-600 text-lg mr-2">Status:</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="p-2 rounded-lg border border-pink-200 text-blue-600 focus:outline-none focus:ring-2 focus:ring-pink-400"
-            >
-              <option value="ALL">ALL</option>
-              <option value="Active">Active</option>
-              <option value="Completed">Completed</option>
-              <option value="Ended">Ended</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-pink-600 text-lg mr-2">Size:</label>
-            <select
-              value={displaySize}
-              onChange={(e) =>
-                setDisplaySize(e.target.value as "small" | "medium" | "big")
-              }
-              className="p-2 rounded-lg border border-pink-200 text-blue-600 focus:outline-none focus:ring-2 focus:ring-pink-400"
-            >
-              <option value="small">Small</option>
-              <option value="medium">Medium</option>
-              <option value="big">Big</option>
-            </select>
-          </div>
           <button
             onClick={handleApply}
             className="px-3 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
@@ -571,6 +541,35 @@ export default function ListingsPage() {
           >
             Reset ✿
           </button>
+          <div className="flex flex-col gap-2 bg-white rounded-lg shadow-md p-1">
+            <div>
+              <label className="text-pink-600 text-md mr-2">Status:</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="p-2 rounded-lg border border-pink-200 text-blue-600 focus:outline-none focus:ring-2 focus:ring-pink-400 w-full sm:w-auto"
+              >
+                <option value="ALL">ALL</option>
+                <option value="Active">Active</option>
+                <option value="Completed">Completed</option>
+                <option value="Ended">Ended</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-pink-600 text-md mr-2">Size:</label>
+              <select
+                value={displaySize}
+                onChange={(e) =>
+                  setDisplaySize(e.target.value as "small" | "medium" | "big")
+                }
+                className="p-2 rounded-lg border border-pink-200 text-blue-600 focus:outline-none focus:ring-2 focus:ring-pink-400 w-full sm:w-auto"
+              >
+                <option value="small">Small</option>
+                <option value="medium">Medium</option>
+                <option value="big">Big</option>
+              </select>
+            </div>
+          </div>
         </div>
         {dateError && <p className="text-rose-500 text-lg mb-4">{dateError}</p>}
         {error && <p className="text-rose-500 text-lg mb-4">{error}</p>}

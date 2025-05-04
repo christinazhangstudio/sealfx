@@ -79,6 +79,12 @@ export default function RootLayout({
                   >
                     Listings (Gallery)
                   </a>
+                  <a
+                    href="/charts"
+                    className="text-pink-700 hover:text-pink-900 transition-colors duration-200 text-sm md:text-base whitespace-nowrap"
+                  >
+                    Charts
+                  </a>
                 </div>
               </div>
             </div>

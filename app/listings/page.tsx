@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { Inconsolata } from "next/font/google";
 
-const inconsolata = Inconsolata({ subsets: ["latin"] });
+const inconsolata = Inconsolata({
+  weight: "500",
+});
 
 interface PackageDetails {
   Weight: { Value: number; Unit: string };
@@ -94,10 +96,16 @@ const renderUserTable = (
 
   // Apply client-side pagination with clientPageSize
   const startIdx = (pageIdx - 1) * clientPageSize;
-  const paginatedItems = filteredItems.slice(startIdx, startIdx + clientPageSize);
+  const paginatedItems = filteredItems.slice(
+    startIdx,
+    startIdx + clientPageSize
+  );
 
   return (
-    <div key={user} className="mb-8 p-6 bg-white rounded-lg shadow-md border border-pink-100">
+    <div
+      key={user}
+      className="mb-8 p-6 bg-white rounded-lg shadow-md border border-pink-100"
+    >
       <h2 className="text-2xl text-blue-600 mb-4">{user}</h2>
       <p className="text-xl text-pink-600 mb-4">
         Total Items: {filteredItems.length} 📦
@@ -115,14 +123,15 @@ const renderUserTable = (
           <tbody>
             {paginatedItems.length > 0 ? (
               paginatedItems.map((listing) => (
-                <tr
-                  key={listing.ItemID}
-                  className="border-t border-pink-100"
-                >
+                <tr key={listing.ItemID} className="border-t border-pink-100">
                   <td className="p-2">{listing.ItemID}</td>
                   <td className="p-2">{listing.Title}</td>
                   <td className="p-2">{listing.SellingStatus.ListingStatus}</td>
-                  <td className="p-2">{new Date(listing.ListingDetails.StartTime).toLocaleDateString()}</td>
+                  <td className="p-2">
+                    {new Date(
+                      listing.ListingDetails.StartTime
+                    ).toLocaleDateString()}
+                  </td>
                 </tr>
               ))
             ) : (
@@ -406,7 +415,9 @@ export default function ListingsPage() {
   }, [startFrom, startTo, users]);
 
   const resetDateRange = () => {
-    const newStartFrom = new Date(new Date().setDate(new Date().getDate() - 120));
+    const newStartFrom = new Date(
+      new Date().setDate(new Date().getDate() - 120)
+    );
     const newStartTo = new Date();
     setStartFrom(newStartFrom);
     setStartTo(newStartTo);
@@ -477,19 +488,6 @@ export default function ListingsPage() {
               max={formatDate(new Date())}
             />
           </div>
-          <div>
-            <label className="text-pink-600 text-lg mr-2">Status:</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="p-2 rounded-lg border border-pink-200 text-blue-600 focus:outline-none focus:ring-2 focus:ring-pink-400"
-            >
-              <option value="ALL">ALL</option>
-              <option value="Active">Active</option>
-              <option value="Completed">Completed</option>
-              <option value="Ended">Ended</option>
-            </select>
-          </div>
           <button
             onClick={handleApply}
             className="px-3 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
@@ -502,6 +500,21 @@ export default function ListingsPage() {
           >
             Reset ✿
           </button>
+          <div className="flex flex-col gap-2 bg-white rounded-lg shadow-md p-1">
+            <div>
+              <label className="text-pink-600 text-md mr-2">Status:</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="p-2 rounded-lg border border-pink-200 text-blue-600 focus:outline-none focus:ring-2 focus:ring-pink-400"
+              >
+                <option value="ALL">ALL</option>
+                <option value="Active">Active</option>
+                <option value="Completed">Completed</option>
+                <option value="Ended">Ended</option>
+              </select>
+            </div>
+          </div>
         </div>
         {dateError && <p className="text-rose-500 text-lg mb-4">{dateError}</p>}
         {error && <p className="text-rose-500 text-lg mb-4">{error}</p>}
