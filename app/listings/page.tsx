@@ -99,6 +99,7 @@ const renderUserTable = (
   return (
     <div key={user} className="mb-8 p-6 bg-white rounded-lg shadow-md">
       <h2 className="text-2xl text-blue-600 mb-4">{user}</h2>
+      <div className="overflow-x-auto">
       <table className="w-full text-left">
         <thead>
           <tr className="text-pink-600">
@@ -130,6 +131,7 @@ const renderUserTable = (
           )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 };
