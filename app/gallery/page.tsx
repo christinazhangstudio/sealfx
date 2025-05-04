@@ -1,6 +1,5 @@
 "use client"; // Next.js 13+ App Router client component
 
-// app/listings/page.tsx
 import { useState, useEffect } from "react";
 import { Inconsolata } from "next/font/google";
 
@@ -8,7 +7,6 @@ const inconsolata = Inconsolata({
   weight: "500",
 });
 
-// Interfaces remain unchanged
 interface PackageDetails {
   Weight: { Value: number; Unit: string };
   Dimensions: { Height: number; Length: number; Width: number; Unit: string };
@@ -84,41 +82,36 @@ interface ListingsResponse {
 
 // Component
 export default function ListingsPage() {
-  const [listings, setListings] = useState<ListingsResponse[]>([]);
+  const [users, setUsers] = useState<string[]>([]);
+  const [userListings, setUserListings] = useState<{
+    [user: string]: Listings;
+  }>({});
+  const [userPages, setUserPages] = useState<{ [user: string]: number }>({});
+  const [userTotalPages, setUserTotalPages] = useState<{
+    [user: string]: number;
+  }>({});
   const [startFrom, setStartFrom] = useState<Date>(
     new Date(new Date().setDate(new Date().getDate() - 120))
   );
   const [startTo, setStartTo] = useState<Date>(new Date());
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [loading, setLoading] = useState(true);
+  const [userLoading, setUserLoading] = useState<{ [user: string]: boolean }>(
+    {}
+  );
   const [error, setError] = useState<string | null>(null);
   const [dateError, setDateError] = useState<string | null>(null);
+
   const [displaySize, setDisplaySize] = useState<"small" | "medium" | "big">(
     "small"
   );
+
   const pageSize = 10;
   const maxDaysPerChunk = 120;
 
-  // Format dates for API (YYYY-MM-DD)
   const formatDate = (date: Date): string => {
     return date.toISOString().split("T")[0];
   };
 
-  // Validate date range
-  const validateDateRange = (from: Date, to: Date): boolean => {
-    if (isNaN(from.getTime()) || isNaN(to.getTime())) {
-      setDateError("Invalid date selected. ♡");
-      return false;
-    }
-    if (to < from) {
-      setDateError("End date must be after start date. ♡");
-      return false;
-    }
-    setDateError(null);
-    return true;
-  };
-
-  // Split date range into 120-day chunks
   const getDateChunks = (
     from: Date,
     to: Date
@@ -140,168 +133,296 @@ export default function ListingsPage() {
     return chunks;
   };
 
-  // Fetch all listings for a single chunk (all pages)
-  const fetchAllPagesForChunk = async (
+  const fetchUsers = async () => {
+    try {
+      setUserLoading((prev) => ({
+        ...prev,
+        global: true,
+      }));
+
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
+      const uri = process.env.NEXT_PUBLIC_USERS_URI;
+      const apiUrl = `${apiBaseUrl}/${uri}?`;
+
+      const response = await fetch(apiUrl);
+      if (!response.ok) throw new Error("Failed to fetch users");
+      const data = await response.json();
+
+      const usersData: string[] = data.users || [];
+      setUsers(usersData);
+
+      const initialPages = usersData.reduce((acc, user) => {
+        acc[user] = 1;
+        return acc;
+      }, {} as { [user: string]: number });
+
+      const initialTotalPages = usersData.reduce((acc, user) => {
+        acc[user] = 1;
+        return acc;
+      }, {} as { [user: string]: number });
+
+      const initialLoading = usersData.reduce((acc, user) => {
+        acc[user] = false;
+        return acc;
+      }, {} as { [user: string]: boolean });
+
+      setUserPages(initialPages);
+      setUserTotalPages(initialTotalPages);
+      setUserLoading((prev) => ({
+        ...prev,
+        ...initialLoading,
+        global: false,
+      }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error fetching users");
+      setUserLoading((prev) => ({ ...prev, global: false }));
+    }
+  };
+
+  const fetchListingsForChunk = async (
+    user: string,
+    pageIdx: number,
     from: Date,
     to: Date
-  ): Promise<ListingsResponse[]> => {
-    let allData: ListingsResponse[] = [];
-    let pageIdx = 0;
-    let hasMore = true;
+  ): Promise<Listings> => {
+    const params = new URLSearchParams({
+      user,
+      pageSize: pageSize.toString(),
+      pageIdx: pageIdx.toString(),
+      startTo: formatDate(to),
+      startFrom: formatDate(from),
+    });
 
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-    const uri = process.env.NEXT_PUBLIC_LISTINGS_URI;
-    if (!apiBaseUrl) {
-      throw new Error("API base URL env not defined");
-    }
-
-    if (!uri) {
-      throw new Error("URI env not defined");
-    }
-
-    const apiUrl = `${apiBaseUrl}/${uri}`;
-
-    while (hasMore) {
-      const url = `${apiUrl}?pageSize=${pageSize}&pageIdx=${pageIdx}&startFrom=${formatDate(
-        from
-      )}&startTo=${formatDate(to)}`;
-
-      const res = await fetch(url);
-
-      if (!res.ok) {
-        let errData;
-        try {
-          errData = await res.json();
-        } catch (jsonErr) {
-          errData = { message: `HTTP error ${res.status}` };
-        }
-        throw new Error(errData.message || `HTTP error ${res.status}`);
-      }
-
-      let data: ListingsResponse[];
-      try {
-        data = await res.json();
-      } catch (jsonErr) {
-        throw new Error("Invalid JSON response");
-      }
-
-      if (!Array.isArray(data)) {
-        console.warn("Received non-array response:", data);
-        break;
-      }
-
-      const validData = data.filter(
-        (item): item is ListingsResponse =>
-          item != null &&
-          typeof item === "object" &&
-          "user" in item &&
-          "listings" in item &&
-          item.listings != null &&
-          typeof item.listings.ReturnedItemCountActual === "number" &&
-          item.listings.ItemArray != null
-      );
-
-      allData = [...allData, ...validData];
-      hasMore =
-        validData.length > 0 &&
-        validData.some((item) => item.listings.HasMoreItems);
-      pageIdx += 1;
-    }
-
-    return allData;
-  };
-
-  // Fetch all listings for the entire date range
-  const fetchAllListings = async (from: Date, to: Date) => {
-    if (!validateDateRange(from, to)) return;
-
-    setError(null);
-    setListings([]);
+    const uri = process.env.NEXT_PUBLIC_LISTINGS_FOR_USER_URI;
+    const apiUrl = `${apiBaseUrl}/${uri}?${params.toString()}`;
 
     try {
-      const chunks = getDateChunks(from, to);
-      let allListings: ListingsResponse[] = [];
-
-      for (const { start, end } of chunks) {
-        const chunkData = await fetchAllPagesForChunk(start, end);
-        allListings = [...allListings, ...chunkData];
+      const response = await fetch(apiUrl);
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status} for user ${user}`);
       }
-
-      setListings(allListings);
-    } catch (err: any) {
-      console.error("Fetch error:", err);
-      setError(`Error fetching listings: ${err.message || "Unknown error"}. ♡`);
-    } finally {
-      setLoading(false);
+      const data = await response.json();
+      return data.listings as Listings;
+    } catch (err) {
+      throw new Error(
+        `Failed to fetch listings for user ${user}: ${
+          err instanceof Error ? err.message : "Unknown error"
+        }`
+      );
     }
   };
 
-  // Handle date range and filter submission
-  const handleApply = () => {
-    fetchAllListings(startFrom, startTo);
+  const fetchAllPagesForChunk = async (
+    user: string,
+    from: Date,
+    to: Date
+  ): Promise<Listings> => {
+    let allItems: Item[] = [];
+    let pageIdx = 1;
+    let hasMoreItems = true;
+    let totalEntries = 0;
+
+    const defaultListings: Listings = {
+      XMLName: { Space: "", Local: "" },
+      Timestamp: "",
+      Ack: "",
+      Version: "",
+      Build: "",
+      PaginationResult: {
+        TotalNumberOfPages: 0,
+        TotalNumberOfEntries: 0,
+      },
+      HasMoreItems: false,
+      ItemArray: { Items: [] },
+      ItemsPerPage: pageSize,
+      PageNumber: 1,
+      ReturnedItemCountActual: 0,
+    };
+
+    while (hasMoreItems) {
+      const listings = await fetchListingsForChunk(user, pageIdx, from, to);
+      allItems = [
+        ...allItems,
+        ...(Array.isArray(listings.ItemArray.Items)
+          ? listings.ItemArray.Items
+          : []),
+      ];
+      hasMoreItems = listings.HasMoreItems;
+      totalEntries = listings.PaginationResult.TotalNumberOfEntries;
+      pageIdx++;
+    }
+
+    return {
+      ...defaultListings,
+      ItemArray: { Items: allItems },
+      ReturnedItemCountActual: allItems.length,
+      PaginationResult: {
+        TotalNumberOfPages: Math.ceil(totalEntries / pageSize),
+        TotalNumberOfEntries: totalEntries,
+      },
+    };
   };
 
-  // Reset to default range
+  const fetchListingsForUser = async (user: string) => {
+    try {
+      setUserLoading((prev) => ({ ...prev, [user]: true }));
+      const chunks = getDateChunks(startFrom, startTo);
+      const chunkListings: Listings[] = [];
+
+      for (const { start, end } of chunks) {
+        const listings = await fetchAllPagesForChunk(user, start, end);
+        if (listings.ReturnedItemCountActual > 0) {
+          chunkListings.push(listings);
+        }
+      }
+
+      // Merge listings from all chunks
+      const mergedItems = chunkListings.flatMap((listing) =>
+        Array.isArray(listing.ItemArray.Items) ? listing.ItemArray.Items : []
+      );
+      const totalEntries = chunkListings.reduce(
+        (sum, listing) => sum + listing.PaginationResult.TotalNumberOfEntries,
+        0
+      );
+
+      const defaultListings: Listings = {
+        XMLName: { Space: "", Local: "" },
+        Timestamp: "",
+        Ack: "",
+        Version: "",
+        Build: "",
+        PaginationResult: {
+          TotalNumberOfPages: 0,
+          TotalNumberOfEntries: 0,
+        },
+        HasMoreItems: false,
+        ItemArray: { Items: [] },
+        ItemsPerPage: pageSize,
+        PageNumber: 1,
+        ReturnedItemCountActual: 0,
+      };
+
+      const mergedListings: Listings = {
+        ...(chunkListings[0] || defaultListings),
+        ItemArray: {
+          Items: mergedItems,
+        },
+        ReturnedItemCountActual: mergedItems.length,
+        PaginationResult: {
+          TotalNumberOfEntries: totalEntries,
+          TotalNumberOfPages: Math.ceil(totalEntries / pageSize),
+        },
+      };
+
+      setUserListings((prev) => ({
+        ...prev,
+        [user]: mergedListings,
+      }));
+
+      setUserTotalPages((prev) => ({
+        ...prev,
+        [user]: Math.ceil(totalEntries / pageSize) || 1,
+      }));
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : `Error fetching listings for user ${user}`
+      );
+    } finally {
+      setUserLoading((prev) => ({ ...prev, [user]: false }));
+    }
+  };
+
+  const handleApply = () => {
+    if (startFrom > startTo) {
+      setDateError("Start date cannot be after end date");
+      return;
+    }
+    setDateError(null);
+    users.forEach((user) => {
+      setUserPages((prev) => ({ ...prev, [user]: 1 }));
+      fetchListingsForUser(user);
+    });
+  };
+
   const resetDateRange = () => {
-    const defaultStart = new Date(
-      new Date().setDate(new Date().getDate() - 120)
-    );
-    const defaultEnd = new Date();
-    setStartFrom(defaultStart);
-    setStartTo(defaultEnd);
+    setStartFrom(new Date(new Date().setDate(new Date().getDate() - 120)));
+    setStartTo(new Date());
     setStatusFilter("ALL");
     setDateError(null);
-    fetchAllListings(defaultStart, defaultEnd);
+    handleApply();
   };
 
-  // Initial fetch
   useEffect(() => {
-    fetchAllListings(startFrom, startTo);
+    fetchUsers();
   }, []);
+
+  useEffect(() => {
+    if (users.length > 0) {
+      handleApply();
+    }
+  }, [users]);
 
   // Define grid and image styles based on display size
   const sizeStyles = {
     small: {
-      grid: "grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7",
-      imageHeight: "h-[130px]",
+      grid: "grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-10",
+      imageHeight: "h-[120px]",
       captionSize: "text-sm",
-      placeholder: "https://via.placeholder.com/150?text=No+Image",
+      placeholder: "https://via.placeholder.com/150x112?text=No+Image",
     },
     medium: {
-      grid: "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4",
-      imageHeight: "h-[200px]",
+      grid: "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6",
+      imageHeight: "h-[180px]",
       captionSize: "text-s",
-      placeholder: "https://via.placeholder.com/300?text=No+Image",
+      placeholder: "https://via.placeholder.com/300x225?text=No+Image",
     },
     big: {
       grid: "grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
       imageHeight: "h-[300px]",
       captionSize: "text-lg",
-      placeholder: "https://via.placeholder.com/450?text=No+Image",
+      placeholder: "https://via.placeholder.com/450x337?text=No+Image",
     },
   };
 
   // Render gallery for a single user
-  const renderUserGallery = (user: string, items: Item[]) => {
-    // Apply status filter to user's items
-    const filteredItems = items.filter(
-      (item) =>
-        statusFilter === "ALL" ||
-        item.SellingStatus.ListingStatus === statusFilter
-    );
+  const renderUserGallery = (
+    user: string,
+    listings: Listings,
+    statusFilter: string,
+    pageIdx: number,
+    pageSize: number
+  ) => {
+    // Ensure Items is an array to prevent "not iterable" error
+    const items = Array.isArray(listings?.ItemArray?.Items)
+      ? listings.ItemArray.Items
+      : [];
+
+    const filteredItems =
+      statusFilter === "ALL"
+        ? items
+        : items.filter(
+            (item) => item.SellingStatus.ListingStatus === statusFilter
+          );
+
+    // Apply client-side pagination
+    const startIdx = (pageIdx - 1) * pageSize;
+    const paginatedItems = filteredItems.slice(startIdx, startIdx + pageSize);
 
     return (
       <div
         key={user}
         className="bg-white p-6 rounded-2xl shadow-md border border-pink-100 mb-8"
       >
-        <h2 className="text-3xl text-pink-600 mb-4">User: {user} 🌸</h2>
-        <p className="text-2xl text-pink-600 mb-8">
+        <h2 className="text-2xl text-blue-600 mb-4">{user}</h2>
+        <p className="text-xl text-pink-600 mb-8">
           Total Items: {filteredItems.length} 📦
         </p>
-        {filteredItems.length > 0 ? (
+        {paginatedItems.length > 0 ? (
           <div className={`grid ${sizeStyles[displaySize].grid} gap-6`}>
-            {filteredItems.map((item) => {
+            {paginatedItems.map((item) => {
               const pictureURLs = item.PictureDetails?.PictureURLs || [];
               const imageUrl =
                 pictureURLs.length > 0
@@ -319,7 +440,7 @@ export default function ListingsPage() {
                       <img
                         src={imageUrl}
                         alt={`Image for ${item.Title}`}
-                        className={`w-full ${sizeStyles[displaySize].imageHeight} object-cover rounded-lg transition-transform`}
+                        className={`w-full ${sizeStyles[displaySize].imageHeight} max-w-full object-contain rounded-lg transition-transform`}
                         onError={(e) => {
                           e.currentTarget.src =
                             sizeStyles[displaySize].placeholder;
@@ -424,28 +545,75 @@ export default function ListingsPage() {
           </button>
         </div>
         {dateError && <p className="text-rose-500 text-lg mb-4">{dateError}</p>}
+        {error && <p className="text-rose-500 text-lg mb-4">{error}</p>}
         <p className="text-xl text-pink-600 mb-4">
           Showing data from {formatDate(startFrom)} to {formatDate(startTo)} 📅
           {statusFilter !== "ALL" && ` (Filtered by ${statusFilter} status)`}
         </p>
-        {loading ? (
-          <p className="text-pink-600 text-lg">Loading Listings... ♡</p>
-        ) : error ? (
-          <p className="text-rose-500 text-lg">{error}</p>
-        ) : listings.length > 0 ? (
+        {userLoading.global ? (
+          <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
+            <p className="text-pink-600 text-lg">Loading Users... ♡</p>
+          </div>
+        ) : users.length > 0 ? (
           <div>
-            {listings
-              .reduce((acc: { user: string; items: Item[] }[], listing) => {
-                const existing = acc.find((group) => group.user === listing.user);
-                const items = listing.listings?.ItemArray?.Items || [];
-                if (existing) {
-                  existing.items.push(...items);
-                } else {
-                  acc.push({ user: listing.user, items });
-                }
-                return acc;
-              }, [])
-              .map(({ user, items }) => renderUserGallery(user, items))}
+            {users.map((user) => (
+              <div key={user}>
+                {userLoading[user] ? (
+                  <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
+                    <h2 className="text-2xl text-blue-600 mb-4">{user}</h2>
+                    <p className="text-pink-600 text-lg">
+                      Loading Listings... ♡
+                    </p>
+                  </div>
+                ) : userListings[user]?.ReturnedItemCountActual > 0 ? (
+                  renderUserGallery(
+                    user,
+                    userListings[user],
+                    statusFilter,
+                    userPages[user],
+                    pageSize
+                  )
+                ) : (
+                  <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
+                    <h2 className="text-2xl text-blue-600 mb-4">{user}</h2>
+                    <p className="text-gray-600 text-lg">
+                      No listings for {user}. ♡
+                    </p>
+                  </div>
+                )}
+                {userListings[user]?.ReturnedItemCountActual > 0 && (
+                  <div className="flex gap-4 mt-2 mb-6 justify-center">
+                    <button
+                      onClick={() => {
+                        setUserPages((prev) => ({
+                          ...prev,
+                          [user]: prev[user] - 1,
+                        }));
+                      }}
+                      disabled={userPages[user] === 1}
+                      className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-pink-600 text-lg flex items-center">
+                      Page {userPages[user]} of {userTotalPages[user] || 1}
+                    </span>
+                    <button
+                      onClick={() => {
+                        setUserPages((prev) => ({
+                          ...prev,
+                          [user]: prev[user] + 1,
+                        }));
+                      }}
+                      disabled={userPages[user] >= (userTotalPages[user] || 1)}
+                      className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         ) : (
           <p className="text-gray-600 text-lg">No listings available. ♡</p>
