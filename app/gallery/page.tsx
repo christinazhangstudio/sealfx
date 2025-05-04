@@ -1,6 +1,6 @@
 "use client"; // Next.js 13+ App Router client component
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Inconsolata } from "next/font/google";
 
 const inconsolata = Inconsolata({
@@ -100,12 +100,20 @@ export default function ListingsPage() {
   );
   const [error, setError] = useState<string | null>(null);
   const [dateError, setDateError] = useState<string | null>(null);
-
   const [displaySize, setDisplaySize] = useState<"small" | "medium" | "big">(
     "small"
   );
 
-  const pageSize = 10;
+  // initial page load  
+  const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
+
+  // needed to make sure that handleApply is deferred after
+  // setVariables in "Reset" have actually been set.
+  const [resetTriggered, setResetTriggered] = useState<boolean>(false);
+
+  // Define separate page sizes
+  const apiPageSize = 200; // For API requests
+  const clientPageSize = 10; // For client-side pagination
   const maxDaysPerChunk = 120;
 
   const formatDate = (date: Date): string => {
@@ -187,7 +195,7 @@ export default function ListingsPage() {
   ): Promise<Listings> => {
     const params = new URLSearchParams({
       user,
-      pageSize: pageSize.toString(),
+      pageSize: apiPageSize.toString(),
       pageIdx: pageIdx.toString(),
       startTo: formatDate(to),
       startFrom: formatDate(from),
@@ -235,7 +243,7 @@ export default function ListingsPage() {
       },
       HasMoreItems: false,
       ItemArray: { Items: [] },
-      ItemsPerPage: pageSize,
+      ItemsPerPage: apiPageSize,
       PageNumber: 1,
       ReturnedItemCountActual: 0,
     };
@@ -258,7 +266,7 @@ export default function ListingsPage() {
       ItemArray: { Items: allItems },
       ReturnedItemCountActual: allItems.length,
       PaginationResult: {
-        TotalNumberOfPages: Math.ceil(totalEntries / pageSize),
+        TotalNumberOfPages: Math.ceil(totalEntries / clientPageSize),
         TotalNumberOfEntries: totalEntries,
       },
     };
@@ -277,7 +285,6 @@ export default function ListingsPage() {
         }
       }
 
-      // Merge listings from all chunks
       const mergedItems = chunkListings.flatMap((listing) =>
         Array.isArray(listing.ItemArray.Items) ? listing.ItemArray.Items : []
       );
@@ -298,7 +305,7 @@ export default function ListingsPage() {
         },
         HasMoreItems: false,
         ItemArray: { Items: [] },
-        ItemsPerPage: pageSize,
+        ItemsPerPage: apiPageSize,
         PageNumber: 1,
         ReturnedItemCountActual: 0,
       };
@@ -311,7 +318,7 @@ export default function ListingsPage() {
         ReturnedItemCountActual: mergedItems.length,
         PaginationResult: {
           TotalNumberOfEntries: totalEntries,
-          TotalNumberOfPages: Math.ceil(totalEntries / pageSize),
+          TotalNumberOfPages: Math.ceil(totalEntries / clientPageSize),
         },
       };
 
@@ -322,7 +329,7 @@ export default function ListingsPage() {
 
       setUserTotalPages((prev) => ({
         ...prev,
-        [user]: Math.ceil(totalEntries / pageSize) || 1,
+        [user]: Math.ceil(totalEntries / clientPageSize) || 1,
       }));
     } catch (err) {
       setError(
@@ -335,37 +342,62 @@ export default function ListingsPage() {
     }
   };
 
-  const handleApply = () => {
+  const handleApply = useCallback(() => {
     if (startFrom > startTo) {
       setDateError("Start date cannot be after end date");
       return;
     }
     setDateError(null);
+    setError(null);
     users.forEach((user) => {
       setUserPages((prev) => ({ ...prev, [user]: 1 }));
       fetchListingsForUser(user);
     });
-  };
+  }, [startFrom, startTo, users]);
 
   const resetDateRange = () => {
-    setStartFrom(new Date(new Date().setDate(new Date().getDate() - 120)));
-    setStartTo(new Date());
+    const newStartFrom = new Date(new Date().setDate(new Date().getDate() - 120));
+    const newStartTo = new Date();
+    setStartFrom(newStartFrom);
+    setStartTo(newStartTo);
     setStatusFilter("ALL");
     setDateError(null);
-    handleApply();
+    setError(null);
+    setUserListings({});
+    setUserTotalPages(
+      users.reduce((acc, user) => {
+        acc[user] = 1;
+        return acc;
+      }, {} as { [user: string]: number })
+    );
+    setUserPages(
+      users.reduce((acc, user) => {
+        acc[user] = 1;
+        return acc;
+      }, {} as { [user: string]: number })
+    );
+    setResetTriggered(true); // Signal that a reset has occurred
   };
 
+  // Effect to handle initial fetch after users are loaded
   useEffect(() => {
     fetchUsers();
   }, []);
 
+  // Effect to handle initial fetch of users
   useEffect(() => {
-    if (users.length > 0) {
-      handleApply();
-    }
-  }, [users]);
+    fetchUsers();
+  }, []);
 
-  // Define grid and image styles based on display size
+  // Effect to handle initial data fetch and reset
+  useEffect(() => {
+    if (users.length > 0 && (isInitialLoad || resetTriggered)) {
+      handleApply();
+      setIsInitialLoad(false); // Prevent re-fetching on subsequent user changes
+      setResetTriggered(false); // Reset the trigger
+    }
+  }, [users, isInitialLoad, resetTriggered, handleApply]);
+
   const sizeStyles = {
     small: {
       grid: "grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-10",
@@ -387,15 +419,13 @@ export default function ListingsPage() {
     },
   };
 
-  // Render gallery for a single user
   const renderUserGallery = (
     user: string,
     listings: Listings,
     statusFilter: string,
     pageIdx: number,
-    pageSize: number
+    clientPageSize: number
   ) => {
-    // Ensure Items is an array to prevent "not iterable" error
     const items = Array.isArray(listings?.ItemArray?.Items)
       ? listings.ItemArray.Items
       : [];
@@ -407,9 +437,8 @@ export default function ListingsPage() {
             (item) => item.SellingStatus.ListingStatus === statusFilter
           );
 
-    // Apply client-side pagination
-    const startIdx = (pageIdx - 1) * pageSize;
-    const paginatedItems = filteredItems.slice(startIdx, startIdx + pageSize);
+    const startIdx = (pageIdx - 1) * clientPageSize;
+    const paginatedItems = filteredItems.slice(startIdx, startIdx + clientPageSize);
 
     return (
       <div
@@ -472,7 +501,6 @@ export default function ListingsPage() {
         <h1 className="text-4xl text-pink-700 mb-8 drop-shadow-sm">
           Listings Gallery
         </h1>
-        {/* Date Range, Status Filter, and Size Selector Inputs */}
         <div className="mb-8 flex flex-col sm:flex-row gap-4 items-center flex-wrap">
           <div>
             <label className="text-pink-600 text-lg mr-2">From:</label>
@@ -571,7 +599,7 @@ export default function ListingsPage() {
                     userListings[user],
                     statusFilter,
                     userPages[user],
-                    pageSize
+                    clientPageSize
                   )
                 ) : (
                   <div className="mb-8 p-6 bg-white rounded-lg shadow-md">

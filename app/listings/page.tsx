@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Inconsolata } from "next/font/google";
 
 const inconsolata = Inconsolata({ subsets: ["latin"] });
@@ -78,7 +78,7 @@ const renderUserTable = (
   listings: Listings,
   statusFilter: string,
   pageIdx: number,
-  pageSize: number
+  clientPageSize: number
 ) => {
   // Ensure Items is an array to prevent "not iterable" error
   const items = Array.isArray(listings?.ItemArray?.Items)
@@ -92,45 +92,48 @@ const renderUserTable = (
           (item) => item.SellingStatus.ListingStatus === statusFilter
         );
 
-  // Apply client-side pagination
-  const startIdx = (pageIdx - 1) * pageSize;
-  const paginatedItems = filteredItems.slice(startIdx, startIdx + pageSize);
+  // Apply client-side pagination with clientPageSize
+  const startIdx = (pageIdx - 1) * clientPageSize;
+  const paginatedItems = filteredItems.slice(startIdx, startIdx + clientPageSize);
 
   return (
-    <div key={user} className="mb-8 p-6 bg-white rounded-lg shadow-md">
+    <div key={user} className="mb-8 p-6 bg-white rounded-lg shadow-md border border-pink-100">
       <h2 className="text-2xl text-blue-600 mb-4">{user}</h2>
+      <p className="text-xl text-pink-600 mb-4">
+        Total Items: {filteredItems.length} 📦
+      </p>
       <div className="overflow-x-auto">
-      <table className="w-full text-left">
-        <thead>
-          <tr className="text-pink-600">
-            <th className="p-2">ID</th>
-            <th className="p-2">Title</th>
-            <th className="p-2">Status</th>
-            <th className="p-2">Date</th>
-          </tr>
-        </thead>
-        <tbody>
-          {paginatedItems.length > 0 ? (
-            paginatedItems.map((listing) => (
-              <tr
-                key={listing.ItemID}
-                className="text-blue-600 border-t border-pink-100"
-              >
-                <td className="p-2">{listing.ItemID}</td>
-                <td className="p-2">{listing.Title}</td>
-                <td className="p-2">{listing.SellingStatus.ListingStatus}</td>
-                <td className="p-2">{listing.ListingDetails.StartTime}</td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan={4} className="p-2 text-gray-600">
-                No listings match the selected status.
-              </td>
+        <table className="w-full text-left text-blue-600">
+          <thead>
+            <tr className="text-pink-600 border-b border-pink-100">
+              <th className="p-2">ID</th>
+              <th className="p-2">Title</th>
+              <th className="p-2">Status</th>
+              <th className="p-2">Date</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {paginatedItems.length > 0 ? (
+              paginatedItems.map((listing) => (
+                <tr
+                  key={listing.ItemID}
+                  className="border-t border-pink-100"
+                >
+                  <td className="p-2">{listing.ItemID}</td>
+                  <td className="p-2">{listing.Title}</td>
+                  <td className="p-2">{listing.SellingStatus.ListingStatus}</td>
+                  <td className="p-2">{new Date(listing.ListingDetails.StartTime).toLocaleDateString()}</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={4} className="p-2 text-gray-600 text-lg">
+                  No listings match the selected status. ♡
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -155,8 +158,12 @@ export default function ListingsPage() {
   );
   const [error, setError] = useState<string | null>(null);
   const [dateError, setDateError] = useState<string | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
+  const [resetTriggered, setResetTriggered] = useState<boolean>(false);
 
-  const pageSize = 10;
+  // Define separate page sizes
+  const apiPageSize = 200; // For API requests
+  const clientPageSize = 10; // For client-side pagination
   const maxDaysPerChunk = 120;
 
   const formatDate = (date: Date): string => {
@@ -238,7 +245,7 @@ export default function ListingsPage() {
   ): Promise<Listings> => {
     const params = new URLSearchParams({
       user,
-      pageSize: pageSize.toString(),
+      pageSize: apiPageSize.toString(),
       pageIdx: pageIdx.toString(),
       startTo: formatDate(to),
       startFrom: formatDate(from),
@@ -286,7 +293,7 @@ export default function ListingsPage() {
       },
       HasMoreItems: false,
       ItemArray: { Items: [] },
-      ItemsPerPage: pageSize,
+      ItemsPerPage: apiPageSize,
       PageNumber: 1,
       ReturnedItemCountActual: 0,
     };
@@ -309,7 +316,7 @@ export default function ListingsPage() {
       ItemArray: { Items: allItems },
       ReturnedItemCountActual: allItems.length,
       PaginationResult: {
-        TotalNumberOfPages: Math.ceil(totalEntries / pageSize),
+        TotalNumberOfPages: Math.ceil(totalEntries / clientPageSize),
         TotalNumberOfEntries: totalEntries,
       },
     };
@@ -328,7 +335,6 @@ export default function ListingsPage() {
         }
       }
 
-      // Merge listings from all chunks
       const mergedItems = chunkListings.flatMap((listing) =>
         Array.isArray(listing.ItemArray.Items) ? listing.ItemArray.Items : []
       );
@@ -349,7 +355,7 @@ export default function ListingsPage() {
         },
         HasMoreItems: false,
         ItemArray: { Items: [] },
-        ItemsPerPage: pageSize,
+        ItemsPerPage: apiPageSize,
         PageNumber: 1,
         ReturnedItemCountActual: 0,
       };
@@ -362,7 +368,7 @@ export default function ListingsPage() {
         ReturnedItemCountActual: mergedItems.length,
         PaginationResult: {
           TotalNumberOfEntries: totalEntries,
-          TotalNumberOfPages: Math.ceil(totalEntries / pageSize),
+          TotalNumberOfPages: Math.ceil(totalEntries / clientPageSize),
         },
       };
 
@@ -373,7 +379,7 @@ export default function ListingsPage() {
 
       setUserTotalPages((prev) => ({
         ...prev,
-        [user]: Math.ceil(totalEntries / pageSize) || 1,
+        [user]: Math.ceil(totalEntries / clientPageSize) || 1,
       }));
     } catch (err) {
       setError(
@@ -386,44 +392,61 @@ export default function ListingsPage() {
     }
   };
 
-  // date range and filter submission
-  const handleApply = () => {
+  const handleApply = useCallback(() => {
     if (startFrom > startTo) {
       setDateError("Start date cannot be after end date");
       return;
     }
     setDateError(null);
+    setError(null);
     users.forEach((user) => {
       setUserPages((prev) => ({ ...prev, [user]: 1 }));
       fetchListingsForUser(user);
     });
-  };
+  }, [startFrom, startTo, users]);
 
-  // reset to default range
   const resetDateRange = () => {
-    setStartFrom(new Date(new Date().setDate(new Date().getDate() - 120)));
-    setStartTo(new Date());
+    const newStartFrom = new Date(new Date().setDate(new Date().getDate() - 120));
+    const newStartTo = new Date();
+    setStartFrom(newStartFrom);
+    setStartTo(newStartTo);
     setStatusFilter("ALL");
     setDateError(null);
-    handleApply();
+    setError(null);
+    setUserListings({});
+    setUserTotalPages(
+      users.reduce((acc, user) => {
+        acc[user] = 1;
+        return acc;
+      }, {} as { [user: string]: number })
+    );
+    setUserPages(
+      users.reduce((acc, user) => {
+        acc[user] = 1;
+        return acc;
+      }, {} as { [user: string]: number })
+    );
+    setResetTriggered(true); // Signal that a reset has occurred
   };
 
-// initial fetch
+  // Effect to handle initial fetch of users
   useEffect(() => {
     fetchUsers();
   }, []);
-
+  // Effect to handle initial data fetch and reset
   useEffect(() => {
-    if (users.length > 0) {
+    if (users.length > 0 && (isInitialLoad || resetTriggered)) {
       handleApply();
+      setIsInitialLoad(false); // Prevent re-fetching on subsequent user changes
+      setResetTriggered(false); // Reset the trigger
     }
-  }, [users]);
+  }, [users, isInitialLoad, resetTriggered, handleApply]);
 
   return (
     <div className={inconsolata.className}>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-purple-50 p-8">
         <h1 className="text-4xl text-pink-700 mb-8 drop-shadow-sm">Listings</h1>
-        <div className="mb-8 flex flex-col sm:flex-row gap-4 items-center">
+        <div className="mb-8 flex flex-col sm:flex-row gap-4 items-center flex-wrap">
           <div>
             <label className="text-pink-600 text-lg mr-2">From:</label>
             <input
@@ -482,6 +505,10 @@ export default function ListingsPage() {
         </div>
         {dateError && <p className="text-rose-500 text-lg mb-4">{dateError}</p>}
         {error && <p className="text-rose-500 text-lg mb-4">{error}</p>}
+        <p className="text-xl text-pink-600 mb-4">
+          Showing data from {formatDate(startFrom)} to {formatDate(startTo)} 📅
+          {statusFilter !== "ALL" && ` (Filtered by ${statusFilter} status)`}
+        </p>
         {userLoading.global ? (
           <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
             <p className="text-pink-600 text-lg">Loading Users... ♡</p>
@@ -503,7 +530,7 @@ export default function ListingsPage() {
                     userListings[user],
                     statusFilter,
                     userPages[user],
-                    pageSize
+                    clientPageSize
                   )
                 ) : (
                   <div className="mb-8 p-6 bg-white rounded-lg shadow-md">

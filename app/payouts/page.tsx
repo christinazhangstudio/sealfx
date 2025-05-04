@@ -52,7 +52,8 @@ export default function Payouts() {
   const [userLoading, setUserLoading] = useState<{ [user: string]: boolean }>({});
   const [error, setError] = useState<string | null>(null);
 
-  const pageSize = 4;
+  const apiPageSize = 200; // For API requests
+  const clientPageSize = 4; // For client-side pagination
 
   const fetchUsers = async () => {
     try {
@@ -111,7 +112,7 @@ export default function Payouts() {
 
     const params = new URLSearchParams({
       user,
-      pageSize: pageSize.toString(),
+      pageSize: apiPageSize.toString(), // Use apiPageSize for API requests
       pageIdx: pageIdx.toString(),
     });
 
@@ -131,39 +132,39 @@ export default function Payouts() {
       setUserLoading((prev) => ({ ...prev, [user]: true }));
       let allPayouts: Payout[] = [];
       let pageIdx = 0;
+      let hasMorePages = true;
 
-      // Fetch first page
-      const firstPage = await fetchPayoutsForUser(user, pageIdx);
-      allPayouts = Array.isArray(firstPage.payouts.payouts) ? [...firstPage.payouts.payouts] : [];
-      const total = firstPage.payouts.total || 0;
-      const totalPages = Math.ceil(total / pageSize);
-
-      // Fetch remaining pages using pageIdx
-      while (pageIdx < totalPages) {
-        pageIdx++;
+      // Fetch pages with apiPageSize until no more data
+      while (hasMorePages) {
         const pageData = await fetchPayoutsForUser(user, pageIdx);
-        allPayouts = [...allPayouts, ...(Array.isArray(pageData.payouts.payouts) ? pageData.payouts.payouts : [])];
+        const payouts = Array.isArray(pageData.payouts.payouts) ? pageData.payouts.payouts : [];
+        allPayouts = [...allPayouts, ...payouts];
+        const total = pageData.payouts.total || 0;
+        hasMorePages = pageData.payouts.next !== "" && payouts.length === apiPageSize;
+        pageIdx++;
+
+        // Update total pages based on clientPageSize
+        setUserTotalPages((prev) => ({
+          ...prev,
+          [user]: Math.ceil(total / clientPageSize) || 1,
+        }));
+
+        // Store all payouts for client-side pagination
+        const payoutsResponse: PayoutsResponse = {
+          href: pageData.payouts.href || "",
+          next: pageData.payouts.next || "",
+          prev: pageData.payouts.prev || "",
+          limit: apiPageSize,
+          offset: 0,
+          payouts: allPayouts,
+          total,
+        };
+
+        setUserPayouts((prev) => ({
+          ...prev,
+          [user]: { user, payouts: payoutsResponse },
+        }));
       }
-
-      const payoutsResponse: PayoutsResponse = {
-        href: firstPage.payouts.href || "",
-        next: "",
-        prev: "",
-        limit: pageSize,
-        offset: 0,
-        payouts: allPayouts,
-        total,
-      };
-
-      setUserPayouts((prev) => ({
-        ...prev,
-        [user]: { user, payouts: payoutsResponse },
-      }));
-
-      setUserTotalPages((prev) => ({
-        ...prev,
-        [user]: totalPages || 1,
-      }));
     } catch (err) {
       // Set a default UserPayouts object to avoid undefined access
       setUserPayouts((prev) => ({
@@ -174,7 +175,7 @@ export default function Payouts() {
             href: "",
             next: "",
             prev: "",
-            limit: pageSize,
+            limit: apiPageSize,
             offset: 0,
             payouts: [],
             total: 0,
@@ -241,8 +242,8 @@ export default function Payouts() {
 
     const payouts = Array.isArray(userPayouts.payouts.payouts) ? userPayouts.payouts.payouts : [];
     const total = userPayouts.payouts.total || 0;
-    const startIdx = (pageIdx - 1) * pageSize;
-    const paginatedPayouts = payouts.slice(startIdx, startIdx + pageSize);
+    const startIdx = (pageIdx - 1) * clientPageSize; // Use clientPageSize for pagination
+    const paginatedPayouts = payouts.slice(startIdx, startIdx + clientPageSize);
 
     return (
       <div
@@ -326,7 +327,7 @@ export default function Payouts() {
               </button>
               <span className="text-lg text-pink-600">
                 Showing {startIdx + 1} -{" "}
-                {Math.min(startIdx + pageSize, total)} of {total} ✿
+                {Math.min(startIdx + clientPageSize, total)} of {total} ✿
               </span>
               <button
                 onClick={() => {
