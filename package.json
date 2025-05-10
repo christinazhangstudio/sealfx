@@ -9,8 +9,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@types/chart.js": "^2.9.41",
-    "@types/chartjs-plugin-crosshair": "^1.1.4",
     "chart.js": "^4.4.9",
     "chartjs-adapter-moment": "^1.0.1",
     "chartjs-plugin-datalabels": "^2.2.0",

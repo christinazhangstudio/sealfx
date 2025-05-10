@@ -39,16 +39,16 @@ ChartJS.register(
           { intersect: false, axis: "x" },
           true
         );
-        chart.config.data.datasets[0].crosshairX = elements.length ? elements[0].element.x : null;
+        (chart.config.data.datasets[0] as any).crosshairX = elements.length ? elements[0].element.x : null;
         chart.draw();
       } else if (event.type === "mouseout") {
-        chart.config.data.datasets[0].crosshairX = null;
+        (chart.config.data.datasets[0] as any).crosshairX = null;
         chart.draw();
       }
     },
     afterDraw(chart) {
       const { ctx, chartArea } = chart;
-      const x = chart.config.data.datasets[0].crosshairX;
+      const x = (chart.config.data.datasets[0] as any).crosshairX;
       if (true) {
         ctx.save();
         ctx.beginPath();
