@@ -57,8 +57,8 @@ export default function TransactionPage() {
       .then((res) => {
         if (!res.ok) {
           // handle non-200 responses
-          return res.json().then((err: APIError) => {
-            throw new Error(err.message);
+          return res.json().then((err: string) => {
+            throw new Error(err);
           });
         }
         return res.json();
