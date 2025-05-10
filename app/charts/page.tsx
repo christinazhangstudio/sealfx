@@ -13,10 +13,10 @@ import {
   Tooltip,
   Legend,
   TimeScale,
+  ChartEvent,
 } from "chart.js";
 import "chartjs-adapter-moment";
 import ChartDataLabels from "chartjs-plugin-datalabels";
-import CrosshairPlugin from 'chartjs-plugin-crosshair';
 
 ChartJS.register(
   CategoryScale,
@@ -28,7 +28,40 @@ ChartJS.register(
   Legend,
   TimeScale,
   ChartDataLabels,
-  CrosshairPlugin
+  {
+    id: "customCrosshair",
+    afterEvent(chart, args: { event: ChartEvent }) {
+      const event = args.event;
+      if (event.type === "mousemove" && event.native) {
+        const elements = chart.getElementsAtEventForMode(
+          event.native,
+          "nearest",
+          { intersect: false, axis: "x" },
+          true
+        );
+        chart.config.data.datasets[0].crosshairX = elements.length ? elements[0].element.x : null;
+        chart.draw();
+      } else if (event.type === "mouseout") {
+        chart.config.data.datasets[0].crosshairX = null;
+        chart.draw();
+      }
+    },
+    afterDraw(chart) {
+      const { ctx, chartArea } = chart;
+      const x = chart.config.data.datasets[0].crosshairX;
+      if (true) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.strokeStyle = "#EC4899";
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]);
+        ctx.moveTo(x, chartArea.top);
+        ctx.lineTo(x, chartArea.bottom);
+        ctx.stroke();
+        ctx.restore();
+      }
+    },
+  }
 );
 
 const inconsolata = Inconsolata({ weight: "500", subsets: ["latin"] });
@@ -117,6 +150,7 @@ const processListingData = (items: Item[], startDate: Date, endDate: Date) => {
         pointHoverBackgroundColor: "#fff",
         pointHoverBorderColor: "#EC4899",
         fill: false,
+        crosshairX: null,
       },
     ],
     listingDetails,
@@ -124,10 +158,30 @@ const processListingData = (items: Item[], startDate: Date, endDate: Date) => {
 };
 
 export default function ListingsValuePage() {
-  const [month, setMonth] = useState("2024-12"); // Default to December 2024
+  const [range, setRange] = useState("last-month"); // Default to Last Month
   const [listings, setListings] = useState<ListingsResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Calculate API date range based on selection
+  const today = new Date("2025-05-09"); // Fixed for consistency
+  const endDate = new Date(today);
+  let startDate = new Date(today);
+
+  if (range === "last-month") {
+    startDate.setDate(today.getDate() - 30);
+  } else if (range === "last-3-months") {
+    startDate.setDate(today.getDate() - 90);
+  } else if (range === "last-12-months") {
+    startDate.setDate(today.getDate() - 120); // API limit: 120 days
+  }
+
+  // Ensure startDate doesn't exceed 120 days
+  const maxStartDate = new Date(today);
+  maxStartDate.setDate(today.getDate() - 120);
+  if (startDate < maxStartDate) {
+    startDate = maxStartDate;
+  }
 
   const fetchListings = async () => {
     setLoading(true);
@@ -137,8 +191,8 @@ export default function ListingsValuePage() {
       user: "czhang19",
       pageSize: "200",
       pageIdx: "1",
-      startTo: "2025-02-01",
-      startFrom: "2024-12-01",
+      startFrom: startDate.toISOString().slice(0, 10), // YYYY-MM-DD
+      startTo: endDate.toISOString().slice(0, 10),
     });
 
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -156,12 +210,6 @@ export default function ListingsValuePage() {
       setLoading(false);
     }
   };
-
-  // Calculate date range (last 30 days from selected month)
-  const endDate = new Date(`${month}-01T23:59:59.999Z`);
-  endDate.setMonth(endDate.getMonth() + 1); // End of selected month
-  const startDate = new Date(endDate);
-  startDate.setDate(startDate.getDate() - 30); // 30 days before
 
   const chartData = listings
     ? processListingData(listings.listings.ItemArray.Items, startDate, endDate)
@@ -196,13 +244,16 @@ export default function ListingsValuePage() {
         </h1>
         <div className="mb-8 flex flex-col sm:flex-row gap-4 items-center justify-center sm:justify-start flex-wrap">
           <div>
-            <label className="text-pink-600 text-lg mr-2">Month:</label>
-            <input
-              type="month"
-              value={month}
-              onChange={(e) => setMonth(e.target.value)}
+            <label className="text-pink-600 text-lg mr-2">Range:</label>
+            <select
+              value={range}
+              onChange={(e) => setRange(e.target.value)}
               className="p-2 rounded-lg border border-pink-200 text-blue-600 focus:outline-none focus:ring-2 focus:ring-pink-400"
-            />
+            >
+              <option value="last-month">Last Month</option>
+              <option value="last-3-months">Last 3 Months</option>
+              <option value="last-12-months">Last 12 Months</option>
+            </select>
           </div>
           <button
             onClick={fetchListings}
@@ -215,7 +266,12 @@ export default function ListingsValuePage() {
         {loading && (
           <p className="text-pink-600 text-lg mb-4">Loading Listings... ♡</p>
         )}
-        {chartData && (
+        {listings && listings.listings.ItemArray.Items.length === 0 && (
+          <p className="text-pink-600 text-lg mb-4">
+            No listings found for this time period.
+          </p>
+        )}
+        {chartData && chartData.labels.length > 0 && (
           <div className="chart-container bg-white p-6 rounded-lg shadow-md container-inline-size">
             <h2 className="text-xl text-blue-600 mb-4">Cumulative Listing Value Over Time</h2>
             <Line
@@ -238,6 +294,9 @@ export default function ListingsValuePage() {
                 },
                 plugins: {
                   tooltip: {
+                    mode: "nearest",
+                    axis: "x",
+                    intersect: false,
                     callbacks: {
                       label: (context) => {
                         const index = context.dataIndex;
@@ -263,16 +322,6 @@ export default function ListingsValuePage() {
                     offset: 4,
                     font: { size: 12 },
                     padding: 4,
-                  },
-                  crosshair: {
-                    line: {
-                      color: "#EC4899",
-                      width: 1,
-                      dashPattern: [5, 5],
-                    },
-                    sync: { enabled: false },
-                    zoom: { enabled: false },
-                    snap: { enabled: true },
                   },
                 },
               }}
