@@ -194,7 +194,6 @@ export default function ListingsPage() {
     to: Date
   ): Promise<Listings> => {
     const params = new URLSearchParams({
-      user,
       pageSize: apiPageSize.toString(),
       pageIdx: pageIdx.toString(),
       startTo: formatDate(to),
@@ -202,8 +201,8 @@ export default function ListingsPage() {
     });
 
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-    const uri = process.env.NEXT_PUBLIC_LISTINGS_FOR_USER_URI;
-    const apiUrl = `${apiBaseUrl}/${uri}?${params.toString()}`;
+    const uri = process.env.NEXT_PUBLIC_LISTINGS_URI;
+    const apiUrl = `${apiBaseUrl}/${uri}/${user}?${params.toString()}`;
 
     try {
       const response = await fetch(apiUrl);

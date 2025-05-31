@@ -104,19 +104,18 @@ export default function Payouts() {
 
   const fetchPayoutsForUser = async (user: string, pageIdx: number): Promise<UserPayouts> => {
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-    const payoutsUri = process.env.NEXT_PUBLIC_PAYOUTS_FOR_USER_URI;
+    const payoutsUri = process.env.NEXT_PUBLIC_PAYOUTS_URI;
 
     if (!apiBaseUrl || !payoutsUri) {
       throw new Error("API base URL or Payouts URI env not defined");
     }
 
     const params = new URLSearchParams({
-      user,
       pageSize: apiPageSize.toString(), // Use apiPageSize for API requests
       pageIdx: pageIdx.toString(),
     });
 
-    const apiUrl = `${apiBaseUrl}/${payoutsUri}?${params.toString()}`;
+    const apiUrl = `${apiBaseUrl}/${payoutsUri}/${user}?${params.toString()}`;
 
     const response = await fetch(apiUrl);
     if (!response.ok) {

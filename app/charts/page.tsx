@@ -483,15 +483,14 @@ export default function ChartsPage() {
     to: Date
   ): Promise<Listings> => {
     const params = new URLSearchParams({
-      user,
       pageSize: apiPageSize.toString(),
       pageIdx: pageIdx.toString(),
       startTo: formatDate(to),
       startFrom: formatDate(from),
     });
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-    const uri = process.env.NEXT_PUBLIC_LISTINGS_FOR_USER_URI;
-    const apiUrl = `${apiBaseUrl}/${uri}?${params.toString()}`;
+    const uri = process.env.NEXT_PUBLIC_LISTINGS_URI;
+    const apiUrl = `${apiBaseUrl}/${uri}/${user}?${params.toString()}`;
     try {
       const response = await fetch(apiUrl);
       if (!response.ok) {
@@ -513,19 +512,18 @@ export default function ChartsPage() {
     pageIdx: number
   ): Promise<UserPayouts> => {
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-    const payoutsUri = process.env.NEXT_PUBLIC_PAYOUTS_FOR_USER_URI;
+    const payoutsUri = process.env.NEXT_PUBLIC_PAYOUTS_URI;
 
     if (!apiBaseUrl || !payoutsUri) {
       throw new Error("API base URL or Payouts URI env not defined");
     }
 
     const params = new URLSearchParams({
-      user,
       pageSize: apiPageSize.toString(),
       pageIdx: pageIdx.toString(),
     });
 
-    const apiUrl = `${apiBaseUrl}/${payoutsUri}?${params.toString()}`;
+    const apiUrl = `${apiBaseUrl}/${payoutsUri}/${user}?${params.toString()}`;
 
     const response = await fetch(apiUrl);
     if (!response.ok) {

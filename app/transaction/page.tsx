@@ -38,7 +38,7 @@ export default function TransactionPage() {
   useEffect(() => {
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
     const transactionSummaryUri =
-      process.env.NEXT_PUBLIC_TRANSACTION_SUMMARY_URI;
+      process.env.NEXT_PUBLIC_TRANSACTION_SUMMARIES_URI;
     if (!apiBaseUrl) {
       setError("API base URL env not defined");
       setLoading(false);
