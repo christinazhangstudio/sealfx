@@ -6,6 +6,7 @@ import { Inconsolata } from "next/font/google";
 
 const inconsolata = Inconsolata({
   weight: "500",
+  subsets: ['latin']
 });
 
 interface UsersResponse {
@@ -42,9 +43,7 @@ export default function RegisterSellerPage() {
     fetch(apiUrl)
       .then((res) => {
         if (!res.ok) {
-          return res.json().then((err: { message: string }) => {
-            throw new Error(err.message);
-          });
+          throw new Error(`Failed to fetch users: ${res.status}`);
         }
         return res.json();
       })
@@ -55,7 +54,6 @@ export default function RegisterSellerPage() {
       })
       .catch((err: Error) => {
         setAPIError(err.message);
-        // console.log(err.message);
         setLoading(false);
       });
   }, []);
@@ -70,8 +68,25 @@ export default function RegisterSellerPage() {
 
     console.log("startOAuthFlow: Attempting to open window");
 
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
+    const registerSellerUri = process.env.NEXT_PUBLIC_REGISTER_SELLER_URI;
+
+    if (!apiBaseUrl) {
+      setAPIError("API base URL env not defined");
+      setLoading(false);
+      return;
+    }
+
+    if (!registerSellerUri) {
+      setAPIError("Register seller URI env not defined");
+      setLoading(false);
+      return;
+    }
+
+    const apiUrl = `${apiBaseUrl}/${registerSellerUri}`;
+
     const oauthWindow = window.open(
-      "http://localhost:443/api/register-seller",
+      apiUrl,
       "_blank",
       "width=600,height=700"
     );
@@ -256,10 +271,9 @@ export default function RegisterSellerPage() {
           <h2 className="text-2xl text-pink-700 mb-4 text-center animate-fade-in">
             registered sellers for sealift
           </h2>
+          {apiError && <p className="text-rose-500 text-lg hidden">{apiError}</p>}
           {loading ? (
             <p className="text-pink-600 text-lg">Loading users... ♡</p>
-          ) : apiError ? (
-            <p className="text-rose-500 text-lg">{apiError}</p>
           ) : users && users.length > 0 ? (
             <div className="text-gray-600 text-lg text-center">
               {users.map((user) => (
@@ -270,8 +284,8 @@ export default function RegisterSellerPage() {
               ))}
             </div>
           ) : (
-            <p className="text-gray-600 text-lg text-center">No users available. ♡</p>
-          )}
+            <p className="flex justify-center items-center text-gray-600 text-lg">No users available. ♡</p>
+        )}
         </div>
       </div>
     </div>

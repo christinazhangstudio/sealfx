@@ -437,7 +437,9 @@ export default function ChartsPage() {
       const uri = process.env.NEXT_PUBLIC_USERS_URI;
       const apiUrl = `${apiBaseUrl}/${uri}?`;
       const response = await fetch(apiUrl);
-      if (!response.ok) throw new Error("Failed to fetch users");
+      if (!response.ok) {
+        throw new Error(`Failed to fetch users: ${response.status}`);
+      }
       const data = await response.json();
       const usersData: string[] = data.users || [];
       setUsers(usersData);
@@ -469,7 +471,8 @@ export default function ChartsPage() {
         return newState;
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error fetching users");
+      setError(err instanceof Error ? err.message : "Failed to fetch user charts");
+      setUsersLoading(false)
       setDataLoading((prev) => {
         return { ...prev, global: false };
       });
@@ -494,7 +497,7 @@ export default function ChartsPage() {
     try {
       const response = await fetch(apiUrl);
       if (!response.ok) {
-        throw new Error(`HTTP error ${response.status} for user ${user}`);
+        throw new Error(`Failed to fetch listings for ${user}: ${response.status}`);
       }
       const data = await response.json();
       return data.listings as Listings;
@@ -527,8 +530,7 @@ export default function ChartsPage() {
 
     const response = await fetch(apiUrl);
     if (!response.ok) {
-      const errData = await response.json();
-      throw new Error(errData.message || `HTTP error ${response.status}`);
+      throw new Error(`Failed to fetch payouts for ${user}: ${response.status}`);
     }
     const data: UserPayouts = await response.json();
     return data;
@@ -802,12 +804,13 @@ export default function ChartsPage() {
           </button>
         </div>
         {dateError && <p className="text-rose-500 text-lg mb-4">{dateError}</p>}
-        {error && <p className="text-rose-500 text-lg mb-4">{error}</p>}
+        {error && <p className="text-rose-500 text-lg mb-4 hidden">{error}</p>}
         {usersLoading ? (
           <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
             <p className="text-pink-600 text-lg">Loading Users... ♡</p>
           </div>
-        ) : dataLoading ? (
+        ) : users.length > 0 ? (
+          dataLoading ? (
           <div>
             {users.map((user) => (
               <div key={user}>
@@ -833,6 +836,10 @@ export default function ChartsPage() {
                 )}
               </div>
             ))}
+          </div>
+        ) : 
+          <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
+            <p className="text-gray-600 text-lg">No data available. ♡</p>
           </div>
         ) : (
           <div className="mb-8 p-6 bg-white rounded-lg shadow-md">

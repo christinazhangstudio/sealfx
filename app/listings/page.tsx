@@ -5,6 +5,7 @@ import { Inconsolata } from "next/font/google";
 
 const inconsolata = Inconsolata({
   weight: "500",
+  subsets: ['latin']
 });
 
 interface PackageDetails {
@@ -212,7 +213,9 @@ export default function ListingsPage() {
       const apiUrl = `${apiBaseUrl}/${uri}?`;
 
       const response = await fetch(apiUrl);
-      if (!response.ok) throw new Error("Failed to fetch users");
+      if (!response.ok) {
+        throw new Error(`Failed to fetch users: ${response.status}`);
+      }
       const data = await response.json();
 
       const usersData: string[] = data.users || [];
@@ -266,13 +269,13 @@ export default function ListingsPage() {
     try {
       const response = await fetch(apiUrl);
       if (!response.ok) {
-        throw new Error(`HTTP error ${response.status} for user ${user}`);
+        throw new Error(`Failed to fetch listings for ${user}: ${response.status}`);
       }
       const data = await response.json();
       return data.listings as Listings;
     } catch (err) {
       throw new Error(
-        `Failed to fetch listings for user ${user}: ${
+        `Failed to fetch listings for ${user}: ${
           err instanceof Error ? err.message : "Unknown error"
         }`
       );
@@ -516,7 +519,7 @@ export default function ListingsPage() {
           </div>
         </div>
         {dateError && <p className="text-rose-500 text-lg mb-4">{dateError}</p>}
-        {error && <p className="text-rose-500 text-lg mb-4">{error}</p>}
+        {error && <p className="text-rose-500 text-lg mb-4 hidden">{error}</p>}
         {userLoading.global ? (
           <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
             <p className="text-pink-600 text-lg">Loading Users... ♡</p>

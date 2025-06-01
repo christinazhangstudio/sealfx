@@ -4,6 +4,12 @@
 npm run dev --turbo
 ```
 
+Didn't find a good way of decoupling env configuration (the client-side ones!)
+from the actual build step of this application, which makes K8s envs not great.
+https://stackoverflow.com/questions/59877588/nextjs-and-environment-variables-getting-values-to-client-side
+
+This leads us to maintain .env.local for now...
+
 ![csr and ssr](csr-vs-ssr.png)
 
 ![ts and tsx](ts-vs-tsx.png)

@@ -10,6 +10,7 @@ import { Comfortaa } from "next/font/google";
 
 const comfortaa = Comfortaa({
   weight: "400",
+  subsets: ['latin']
 });
 
 export default function NavMenu() {

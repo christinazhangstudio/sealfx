@@ -5,6 +5,7 @@ import { Inconsolata } from "next/font/google";
 
 const inconsolata = Inconsolata({
   weight: "500",
+  subsets: ['latin']
 });
 
 interface UserSummary {
@@ -56,10 +57,7 @@ export default function TransactionPage() {
     fetch(apiUrl)
       .then((res) => {
         if (!res.ok) {
-          // handle non-200 responses
-          return res.json().then((err: string) => {
-            throw new Error(err);
-          });
+          throw new Error(`Failed to fetch transactions: ${res.status}`);
         }
         return res.json();
       })
@@ -85,7 +83,7 @@ export default function TransactionPage() {
           <p className="text-pink-600 text-lg">Loading summaries... ♡</p>
         ) : error ? (
           <p className="text-rose-500 text-lg">{error}</p>
-        ) : summaries.length > 0 ? (
+        ) : summaries && summaries.length > 0 ? (
           <div className="space-y-5">
             {summaries.map((s, index) => (
               <div
@@ -152,7 +150,9 @@ export default function TransactionPage() {
             ))}
           </div>
         ) : (
-          <p className="text-gray-600 text-lg">No summaries available. ♡</p>
+          <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
+            <p className="text-gray-600 text-lg">No summaries available. ♡</p>
+          </div>
         )}
       </div>
     </div>

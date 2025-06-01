@@ -5,6 +5,7 @@ import NavMenu from "./navmenu";
 
 const comfortaa = Comfortaa({
   weight: "400",
+  subsets: ['latin']
 });
 
 export const metadata: Metadata = {

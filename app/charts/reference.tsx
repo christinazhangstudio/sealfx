@@ -186,7 +186,7 @@ export default function PayoutsPage() {
             Fetch Payouts 🌸
           </button>
         </div>
-        {error && <p className="text-rose-500 text-lg mb-4">{error}</p>}
+        {error && <p className="text-rose-500 text-lg mb-4 hidden">{error}</p>}
         {loading && (
           <p className="text-pink-600 text-lg mb-4">Loading Payouts... ♡</p>
         )}

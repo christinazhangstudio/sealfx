@@ -2,10 +2,19 @@ import { Comfortaa } from "next/font/google";
 
 const comfortaa = Comfortaa({
   weight: "400",
+  subsets: ['latin']
 });
 
 export default function Changelog() {
   const changes = [
+    {
+      version: "pre-release",
+      date: "May 31 2025",
+      updates: [
+        "Built production artifacts and released Docker images of sealfx",
+        "Improved error presentation"
+      ],
+    },
     {
       version: "pre-release",
       date: "May 10 2025",

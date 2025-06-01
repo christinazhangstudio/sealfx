@@ -5,6 +5,7 @@ import { Inconsolata } from "next/font/google";
 
 const inconsolata = Inconsolata({
   weight: "500",
+  subsets: ['latin']
 });
 
 interface UserPayouts {
@@ -67,8 +68,7 @@ export default function Payouts() {
 
       const response = await fetch(`${apiBaseUrl}/${usersUri}`);
       if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.message || "Failed to fetch users");
+          throw new Error(`Failed to fetch users: ${response.status}`);
       }
       const data = await response.json();
       const usersData: string[] = data.users || [];
@@ -119,8 +119,7 @@ export default function Payouts() {
 
     const response = await fetch(apiUrl);
     if (!response.ok) {
-      const errData = await response.json();
-      throw new Error(errData.message || `HTTP error ${response.status}`);
+      throw new Error(`Failed to fetch payouts for ${user}: ${response.status}`);
     }
     const data: UserPayouts = await response.json();
     return data;
@@ -357,10 +356,11 @@ export default function Payouts() {
             Total: {calculateTotalPayoutAmount().toFixed(2)} {currency} 💰
           </p>
         )}
+        {error && <p className="text-rose-500 text-lg mb-4 hidden">{error}</p>}
         {userLoading.global ? (
-          <p className="text-pink-600 text-lg">Loading users... ♡</p>
-        ) : error ? (
-          <p className="text-rose-500 text-lg">{error}</p>
+        <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
+          <p className="text-pink-600 text-lg">Loading Users... ♡</p>
+        </div>
         ) : users.length > 0 ? (
           <div className="space-y-6">
             {users.map((user) =>
@@ -378,7 +378,9 @@ export default function Payouts() {
             )}
           </div>
         ) : (
-          <p className="text-gray-600 text-lg">No users available. ♡</p>
+          <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
+            <p className="text-gray-600 text-lg">No users available. ♡</p>
+          </div>
         )}
       </div>
     </div>
