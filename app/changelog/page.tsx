@@ -11,7 +11,7 @@ export default function Changelog() {
       version: "beta",
       date: "August 17 2025",
       updates: [
-        "Notes can be created and stored locally."
+        "Notes can be created, edited, and deleted through DB server, optional localStorage reference."
       ],
     },
     {
