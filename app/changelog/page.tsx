@@ -9,17 +9,24 @@ export default function Changelog() {
   const changes = [
     {
       version: "beta",
+      date: "August 17 2025",
+      updates: [
+        "Notes can be created and stored locally."
+      ],
+    },
+    {
+      version: "beta",
       date: "August 12 2025",
       updates: [
-        "Added DELETE user(s)"
+        "User(s) can be deleted."
       ],
     },
     {
       version: "pre-release",
       date: "May 31 2025",
       updates: [
-        "Built production artifacts and released Docker images of sealfx",
-        "Improved error presentation"
+        "Built production artifacts and released Docker images of sealfx.",
+        "Improved error presentation."
       ],
     },
     {

@@ -10,6 +10,8 @@ https://stackoverflow.com/questions/59877588/nextjs-and-environment-variables-ge
 
 This leads us to maintain .env.local for now...
 
+Replace `NEXT_PUBLIC_API_URL` with `http://localhost:443` for dev.
+
 ![csr and ssr](csr-vs-ssr.png)
 
 ![ts and tsx](ts-vs-tsx.png)
