@@ -50,6 +50,12 @@ export default function NavMenu() {
             </div>
             <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-8 text-center md:text-left">
               <a
+                href="/accounts"
+                className="text-pink-700 hover:text-pink-900 transition-colors duration-200 text-sm md:text-base whitespace-nowrap"
+              >
+                Accounts
+              </a>
+              <a
                 href="/payouts"
                 className="text-pink-700 hover:text-pink-900 transition-colors duration-200 text-sm md:text-base whitespace-nowrap"
               >

@@ -1,6 +1,6 @@
 # Build stage
 
-# this doesn't work for whatever reason (lightningcss).
+# thought this doesn't work for whatever reason (see below).
 # FROM alpine:latest AS builder
 
 # # much more minimal in size than using node: base image.
@@ -9,7 +9,7 @@
 # # Install build tools for native modules (lightningcss, PostCSS)
 # RUN apk add --no-cache build-base python3
 
-FROM node:20-slim AS builder
+FROM node:24-slim AS builder
 
 # Use a clean working dir
 WORKDIR /app

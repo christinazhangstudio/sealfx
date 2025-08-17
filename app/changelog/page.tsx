@@ -8,6 +8,13 @@ const comfortaa = Comfortaa({
 export default function Changelog() {
   const changes = [
     {
+      version: "beta",
+      date: "August 12 2025",
+      updates: [
+        "Added DELETE user(s)"
+      ],
+    },
+    {
       version: "pre-release",
       date: "May 31 2025",
       updates: [

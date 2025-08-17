@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-
 import { Inconsolata } from "next/font/google";
 
 const inconsolata = Inconsolata({
   weight: "500",
-  subsets: ['latin']
+  subsets: ["latin"],
 });
 
 interface UsersResponse {
@@ -21,6 +20,8 @@ export default function RegisterSellerPage() {
   const [users, setUsers] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [apiError, setAPIError] = useState<string | null>(null);
+  const [showDeletePopup, setShowDeletePopup] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -48,7 +49,6 @@ export default function RegisterSellerPage() {
         return res.json();
       })
       .then((data: UsersResponse) => {
-        // console.log(data);
         setUsers(data.users);
         setLoading(false);
       })
@@ -57,6 +57,52 @@ export default function RegisterSellerPage() {
         setLoading(false);
       });
   }, []);
+
+  const deleteUser = async (user: string) => {
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
+    const usersUri = process.env.NEXT_PUBLIC_USERS_URI;
+
+    if (!apiBaseUrl || !usersUri) {
+      setAPIError("API base URL or Users URI env not defined");
+      return;
+    }
+
+    const apiUrl = `${apiBaseUrl}/${usersUri}/${user}`;
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete user: ${response.status}`);
+      }
+
+      // Update the users list by filtering out the deleted user
+      setUsers(users.filter((u) => u !== user));
+    } catch (err: any) {
+      setAPIError(err.message);
+    } finally {
+      setShowDeletePopup(false);
+      setUserToDelete(null);
+    }
+  };
+
+  const handleDeleteClick = (user: string) => {
+    setUserToDelete(user);
+    setShowDeletePopup(true);
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeletePopup(false);
+    setUserToDelete(null);
+  };
+
+  const handleConfirmDelete = () => {
+    if (userToDelete) {
+      deleteUser(userToDelete);
+    }
+  };
 
   const startOAuthFlow = () => {
     if (isLoading) {
@@ -85,21 +131,13 @@ export default function RegisterSellerPage() {
 
     const apiUrl = `${apiBaseUrl}/${registerSellerUri}`;
 
-    const oauthWindow = window.open(
-      apiUrl,
-      "_blank",
-      "width=600,height=700"
-    );
+    const oauthWindow = window.open(apiUrl, "_blank", "width=600,height=700");
 
     console.log("startOAuthFlow: oauthWindow =", oauthWindow);
 
     if (!oauthWindow) {
-      console.log(
-        "startOAuthFlow: oauthWindow is null, but checking for messages"
-      );
-      setError(
-        "Window may have opened, but we couldn't track it. Please complete authorization."
-      );
+      console.log("startOAuthFlow: oauthWindow is null, but checking for messages");
+      setError("Window may have opened, but we couldn't track it. Please complete authorization.");
     }
 
     const handleMessage = (event: MessageEvent) => {
@@ -142,9 +180,7 @@ export default function RegisterSellerPage() {
           }
         }
       }, 500);
-    } else {
-      console.log("checkWindowClosed: No oauthWindow, relying on postMessage");
-    }
+    } else console.log("checkWindowClosed: No oauthWindow, relying on postMessage");
 
     return () => {
       console.log("startOAuthFlow: Cleaning up");
@@ -164,9 +200,9 @@ export default function RegisterSellerPage() {
 
   return (
     <div
-      className={`${inconsolata.className} min-h-screen flex justify-center bg-gradient-to-br from-purple-50 to-gray-100 pt-8 px-4 sm:px-6 lg:px-8`}
+      className={`${inconsolata.className} min-h-screen flex justify-center bg-gradient-to-br from-purple-50 to-gray-100 pt-8 px-4 sm:px-6 lg:px-8 relative`}
     >
-      <div className="max-w-md w-full space-y-6">
+      <div className={`max-w-md w-full space-y-6 ${showDeletePopup ? 'blur-sm' : ''}`}>
         <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl mt-8">
           <h1 className="text-4xl text-pink-700 mb-6 text-center animate-fade-in">
             add sellers
@@ -188,9 +224,7 @@ export default function RegisterSellerPage() {
                   d="M5 13l4 4L19 7"
                 />
               </svg>
-              <p className="text-green-700 text-lg">
-                Authorization successful!
-              </p>
+              <p className="text-green-700 text-lg">Authorization successful!</p>
             </div>
           ) : error ? (
             <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
@@ -215,13 +249,9 @@ export default function RegisterSellerPage() {
                 <div className="mt-4 text-sm text-gray-600 bg-gray-100 p-4 rounded-lg">
                   <p className="font-medium">To allow pop-ups:</p>
                   <ul className="list-disc pl-5 mt-2 space-y-1">
-                    <li>
-                      Chrome: Click lock icon → Site settings → Allow Pop-ups.
-                    </li>
+                    <li>Chrome: Click lock icon → Site settings → Allow Pop-ups.</li>
                     <li>Firefox: Click shield icon → Disable blocking.</li>
-                    <li>
-                      Safari: Preferences → Websites → Allow Pop-up Windows.
-                    </li>
+                    <li>Safari: Preferences → Websites → Allow Pop-up Windows.</li>
                   </ul>
                 </div>
               )}
@@ -265,29 +295,80 @@ export default function RegisterSellerPage() {
           )}
         </div>
 
-        {/* second card */}
-
+        {/* Second card */}
         <div className="bg-white rounded-xl shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl">
           <h2 className="text-2xl text-pink-700 mb-4 text-center animate-fade-in">
             registered sellers for sealift
           </h2>
-          {apiError && <p className="text-rose-500 text-lg hidden">{apiError}</p>}
+          {apiError && <p className="text-rose-500 text-lg">{apiError}</p>}
           {loading ? (
             <p className="text-pink-600 text-lg">Loading users... ♡</p>
           ) : users && users.length > 0 ? (
             <div className="text-gray-600 text-lg text-center">
               {users.map((user) => (
-                <p key={user}
-                 className="border-b border-pink-100">
-                  {user}
-                </p>
+                <div
+                  key={user}
+                  className="border-b border-pink-100 flex justify-between items-center py-2"
+                >
+                  <p>{user}</p>
+                  <button
+                    onClick={() => handleDeleteClick(user)}
+                    className="text-red-500 hover:text-red-700 transition-colors duration-200"
+                    title="Delete user"
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4M3 7h18"
+                      />
+                    </svg>
+                  </button>
+                </div>
               ))}
             </div>
           ) : (
-            <p className="flex justify-center items-center text-gray-600 text-lg">No users available. ♡</p>
-        )}
+            <p className="flex justify-center items-center text-gray-600 text-lg">
+              No users available. ♡
+            </p>
+          )}
         </div>
       </div>
+
+      {/* Delete Confirmation Popup */}
+      {showDeletePopup && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className={`${inconsolata.className} bg-white rounded-xl shadow-lg p-6 max-w-sm w-full z-50`}>
+            <h3 className="text-xl text-pink-700 mb-4 text-center">
+              Confirm Deletion
+            </h3>
+            <p className="text-gray-600 text-center mb-6">
+              Are you sure you want to delete user "{userToDelete}"?
+            </p>
+            <div className="flex justify-center space-x-4">
+              <button
+                onClick={handleCancelDelete}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
