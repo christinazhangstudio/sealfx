@@ -1,12 +1,7 @@
 "use client"; // Next.js 13+ App Router client component
 
 import { useState, useEffect, useCallback } from "react";
-import { Inconsolata } from "next/font/google";
-
-const inconsolata = Inconsolata({
-  weight: "500",
-  subsets: ['latin']
-});
+// Fonts handled globally
 
 interface PackageDetails {
   Weight: { Value: number; Unit: string };
@@ -216,8 +211,7 @@ export default function ListingsPage() {
       return data.listings as Listings;
     } catch (err) {
       throw new Error(
-        `Failed to fetch listings for user ${user}: ${
-          err instanceof Error ? err.message : "Unknown error"
+        `Failed to fetch listings for user ${user}: ${err instanceof Error ? err.message : "Unknown error"
         }`
       );
     }
@@ -431,8 +425,8 @@ export default function ListingsPage() {
       statusFilter === "ALL"
         ? items
         : items.filter(
-            (item) => item.SellingStatus.ListingStatus === statusFilter
-          );
+          (item) => item.SellingStatus.ListingStatus === statusFilter
+        );
 
     const startIdx = (pageIdx - 1) * clientPageSize;
     const paginatedItems = filteredItems.slice(startIdx, startIdx + clientPageSize);
@@ -440,10 +434,10 @@ export default function ListingsPage() {
     return (
       <div
         key={user}
-        className="bg-white p-6 rounded-2xl shadow-md border border-pink-100 mb-8"
+        className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
       >
-        <h2 className="text-2xl text-blue-600 mb-4">{user}</h2>
-        <p className="text-xl text-pink-600 mb-8">
+        <h2 className="text-2xl text-primary mb-4">{user}</h2>
+        <p className="text-xl text-primary mb-8">
           Total Items: {filteredItems.length} 📦
         </p>
         {paginatedItems.length > 0 ? (
@@ -472,7 +466,7 @@ export default function ListingsPage() {
                             sizeStyles[displaySize].placeholder;
                         }}
                       />
-                      <div className="text-transform: uppercase absolute bottom-0 left-0 right-0 bg-gradient-to-br from-blue-50 via-pink-50 to-purple-100 text-pink-500 text-center py-2 rounded-b-lg transition-transform">
+                      <div className="text-transform: uppercase absolute bottom-0 left-0 right-0 bg-[var(--nav-bg)] text-primary text-center py-2 rounded-b-lg transition-transform">
                         <p className={sizeStyles[displaySize].captionSize}>
                           {item.SellingStatus.ListingStatus}
                         </p>
@@ -484,7 +478,7 @@ export default function ListingsPage() {
             })}
           </div>
         ) : (
-          <p className="text-gray-600 text-lg">
+          <p className="text-text-secondary text-lg">
             No items available for {user}. ♡
           </p>
         )}
@@ -493,16 +487,16 @@ export default function ListingsPage() {
   };
 
   return (
-    <div className={inconsolata.className}>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-purple-50 p-8">
+    <div>
+      <div className="min-h-screen bg-background p-8">
         <div className="flex justify-between items-center mb-8 flex-col sm:flex-row gap-4">
-          <h1 className="text-4xl text-pink-700 drop-shadow-sm">
+          <h1 className="text-4xl text-primary drop-shadow-sm font-heading">
             Listings Gallery
           </h1>
         </div>
         <div className="mb-8 flex flex-col sm:flex-row gap-4 items-center flex-wrap">
           <div>
-            <label className="text-pink-600 text-lg mr-2">From:</label>
+            <label className="text-primary text-lg mr-2">From:</label>
             <input
               type="date"
               value={formatDate(startFrom)}
@@ -512,12 +506,12 @@ export default function ListingsPage() {
                   setStartFrom(newDate);
                 }
               }}
-              className="p-2 rounded-lg border border-pink-200 text-blue-600 focus:outline-none focus:ring-2 focus:ring-pink-400"
+              className="p-2 rounded-lg border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-primary bg-surface"
               max={formatDate(new Date())}
             />
           </div>
           <div>
-            <label className="text-pink-600 text-lg mr-2">To:</label>
+            <label className="text-primary text-lg mr-2">To:</label>
             <input
               type="date"
               value={formatDate(startTo)}
@@ -527,29 +521,29 @@ export default function ListingsPage() {
                   setStartTo(newDate);
                 }
               }}
-              className="p-2 rounded-lg border border-pink-200 text-blue-600 focus:outline-none focus:ring-2 focus:ring-pink-400"
+              className="p-2 rounded-lg border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-primary bg-surface"
               max={formatDate(new Date())}
             />
           </div>
           <button
             onClick={handleApply}
-            className="px-3 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
+            className="px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
           >
             Apply 🌸
           </button>
           <button
             onClick={resetDateRange}
-            className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-3 py-2 bg-secondary text-white rounded-lg hover:bg-opacity-90 transition-colors"
           >
             Reset ✿
           </button>
-          <div className="flex flex-col gap-2 bg-white rounded-lg shadow-md p-1">
+          <div className="flex flex-col gap-2 bg-surface rounded-lg shadow-md p-1">
             <div>
-              <label className="text-pink-600 text-md mr-2">Status:</label>
+              <label className="text-primary text-md mr-2">Status:</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="p-2 rounded-lg border border-pink-200 text-blue-600 focus:outline-none focus:ring-2 focus:ring-pink-400 w-full sm:w-auto"
+                className="p-2 rounded-lg border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-primary w-full sm:w-auto bg-surface"
               >
                 <option value="ALL">ALL</option>
                 <option value="Active">Active</option>
@@ -558,13 +552,13 @@ export default function ListingsPage() {
               </select>
             </div>
             <div>
-              <label className="text-pink-600 text-md mr-2">Size:</label>
+              <label className="text-primary text-md mr-2">Size:</label>
               <select
                 value={displaySize}
                 onChange={(e) =>
                   setDisplaySize(e.target.value as "small" | "medium" | "big")
                 }
-                className="p-2 rounded-lg border border-pink-200 text-blue-600 focus:outline-none focus:ring-2 focus:ring-pink-400 w-full sm:w-auto"
+                className="p-2 rounded-lg border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-primary w-full sm:w-auto bg-surface"
               >
                 <option value="small">Small</option>
                 <option value="medium">Medium</option>
@@ -573,20 +567,20 @@ export default function ListingsPage() {
             </div>
           </div>
         </div>
-        {dateError && <p className="text-rose-500 text-lg mb-4">{dateError}</p>}
-        {error && <p className="text-rose-500 text-lg mb-4 hidden">{error}</p>}
+        {dateError && <p className="text-error-text text-lg mb-4">{dateError}</p>}
+        {error && <p className="text-error-text text-lg mb-4 hidden">{error}</p>}
         {userLoading.global ? (
-          <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
-            <p className="text-pink-600 text-lg">Loading Users... ♡</p>
+          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+            <p className="text-primary text-lg">Loading Users... ♡</p>
           </div>
         ) : users.length > 0 ? (
           <div>
             {users.map((user) => (
               <div key={user}>
                 {userLoading[user] ? (
-                  <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
-                    <h2 className="text-2xl text-blue-600 mb-4">{user}</h2>
-                    <p className="text-pink-600 text-lg">
+                  <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+                    <h2 className="text-2xl text-primary mb-4">{user}</h2>
+                    <p className="text-primary text-lg">
                       Loading Listings... ♡
                     </p>
                   </div>
@@ -599,9 +593,9 @@ export default function ListingsPage() {
                     clientPageSize
                   )
                 ) : (
-                  <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
-                    <h2 className="text-2xl text-blue-600 mb-4">{user}</h2>
-                    <p className="text-gray-600 text-lg">
+                  <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+                    <h2 className="text-2xl text-primary mb-4">{user}</h2>
+                    <p className="text-text-secondary text-lg">
                       No listings for {user}. ♡
                     </p>
                   </div>
@@ -616,11 +610,11 @@ export default function ListingsPage() {
                         }));
                       }}
                       disabled={userPages[user] === 1}
-                      className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                      className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:bg-border disabled:cursor-not-allowed transition-colors"
                     >
                       Previous
                     </button>
-                    <span className="text-pink-600 text-lg flex items-center">
+                    <span className="text-primary text-lg flex items-center">
                       Page {userPages[user]} of {userTotalPages[user] || 1}
                     </span>
                     <button
@@ -631,7 +625,7 @@ export default function ListingsPage() {
                         }));
                       }}
                       disabled={userPages[user] >= (userTotalPages[user] || 1)}
-                      className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                      className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:bg-border disabled:cursor-not-allowed transition-colors"
                     >
                       Next
                     </button>
@@ -641,8 +635,8 @@ export default function ListingsPage() {
             ))}
           </div>
         ) : (
-          <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
-            <p className="text-gray-600 text-lg">No listings available. ♡</p>
+          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+            <p className="text-text-secondary text-lg">No listings available. ♡</p>
           </div>
         )}
       </div>

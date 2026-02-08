@@ -68,7 +68,7 @@ ChartJS.register(
   }
 );
 
-const inconsolata = Inconsolata({ weight: "500", subsets: ["latin"] });
+// Fonts handled globally
 
 interface Amount {
   Value: number;
@@ -159,8 +159,8 @@ interface PayoutInstrument {
 
 const renderUserChart = (user: string, chartData: any) => {
   return (
-    <div className="chart-container bg-white p-6 rounded-lg shadow-md container-inline-size">
-      <h2 className="text-xl text-blue-600 mb-4">{user}</h2>
+    <div className="chart-container bg-surface p-6 rounded-lg shadow-md container-inline-size">
+      <h2 className="text-xl text-primary mb-4">{user}</h2>
       <Line
         data={chartData}
         options={{
@@ -202,8 +202,7 @@ const renderUserChart = (user: string, chartData: any) => {
                     return [
                       `Date: ${date}`,
                       `Total Listing Value: $${totalValue.toFixed(2)}`,
-                      `${listing.title || "Unknown"} (Qty: ${
-                        listing.quantity || 0
+                      `${listing.title || "Unknown"} (Qty: ${listing.quantity || 0
                       }, Price: $${price.toFixed(2)})`,
                     ];
                   } else {
@@ -503,8 +502,7 @@ export default function ChartsPage() {
       return data.listings as Listings;
     } catch (err) {
       throw new Error(
-        `Failed to fetch listings for user ${user}: ${
-          err instanceof Error ? err.message : "Unknown error"
+        `Failed to fetch listings for user ${user}: ${err instanceof Error ? err.message : "Unknown error"
         }`
       );
     }
@@ -757,7 +755,7 @@ export default function ChartsPage() {
   }, [dataLoading]);
 
   return (
-    <div className={inconsolata.className}>
+    <div>
       <style jsx>{`
         .container-inline-size {
           container-type: inline-size;
@@ -779,17 +777,17 @@ export default function ChartsPage() {
           }
         }
       `}</style>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-purple-50 p-8">
-        <h1 className="text-4xl text-pink-700 mb-8 drop-shadow-sm">
+      <div className="min-h-screen bg-background p-8">
+        <h1 className="text-4xl text-primary mb-8 drop-shadow-sm font-heading">
           Listings and Payouts Value Tracker
         </h1>
         <div className="mb-8 flex flex-col sm:flex-row gap-4 items-center justify-center sm:justify-start flex-wrap">
           <div>
-            <label className="text-pink-600 text-lg mr-2">Range:</label>
+            <label className="text-primary text-lg mr-2">Range:</label>
             <select
               value={range}
               onChange={(e) => setRange(e.target.value)}
-              className="p-2 rounded-lg border border-pink-200 text-blue-600 focus:outline-none focus:ring-2 focus:ring-pink-400"
+              className="p-2 rounded-lg border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-primary bg-surface"
             >
               <option value="last-month">Last Month</option>
               <option value="last-3-months">Last 3 Months</option>
@@ -798,55 +796,55 @@ export default function ChartsPage() {
           </div>
           <button
             onClick={handleApply}
-            className="px-3 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
+            className="px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
           >
             Apply 🌸
           </button>
         </div>
-        {dateError && <p className="text-rose-500 text-lg mb-4">{dateError}</p>}
-        {error && <p className="text-rose-500 text-lg mb-4 hidden">{error}</p>}
+        {dateError && <p className="text-error-text text-lg mb-4">{dateError}</p>}
+        {error && <p className="text-error-text text-lg mb-4 hidden">{error}</p>}
         {usersLoading ? (
-          <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
-            <p className="text-pink-600 text-lg">Loading Users... ♡</p>
+          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+            <p className="text-primary text-lg">Loading Users... ♡</p>
           </div>
         ) : users.length > 0 ? (
           dataLoading ? (
-          <div>
-            {users.map((user) => (
-              <div key={user}>
-                {dataLoading[user] ? (
-                  <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
-                    <h2 className="text-2xl text-blue-600 mb-4">{user}</h2>
-                    <p className="text-pink-600 text-lg">Loading Data... ♡</p>
-                  </div>
-                ) : userCharts[user] &&
-                  userCharts[user]?.labels?.length &&
-                  userCharts[user]?.labels?.length > 0 &&
-                  userCharts[user]?.datasets?.some(
-                    (d: any) => d.data.length > 0
-                  ) ? (
-                  renderUserChart(user, userCharts[user])
-                ) : (
-                  <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
-                    <h2 className="text-2xl text-blue-600 mb-4">{user}</h2>
-                    <p className="text-gray-600 text-lg">
-                      No data for {user}. ♡
-                    </p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : 
-          <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
-            <p className="text-gray-600 text-lg">No data available. ♡</p>
-          </div>
+            <div>
+              {users.map((user) => (
+                <div key={user}>
+                  {dataLoading[user] ? (
+                    <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+                      <h2 className="text-2xl text-primary mb-4">{user}</h2>
+                      <p className="text-primary text-lg">Loading Data... ♡</p>
+                    </div>
+                  ) : userCharts[user] &&
+                    userCharts[user]?.labels?.length &&
+                    userCharts[user]?.labels?.length > 0 &&
+                    userCharts[user]?.datasets?.some(
+                      (d: any) => d.data.length > 0
+                    ) ? (
+                    renderUserChart(user, userCharts[user])
+                  ) : (
+                    <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+                      <h2 className="text-2xl text-primary mb-4">{user}</h2>
+                      <p className="text-text-secondary text-lg">
+                        No data for {user}. ♡
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) :
+            <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+              <p className="text-text-secondary text-lg">No data available. ♡</p>
+            </div>
         ) : (
-          <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
-            <p className="text-gray-600 text-lg">No users available. ♡</p>
+          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+            <p className="text-text-secondary text-lg">No users available. ♡</p>
           </div>
         )}
       </div>
-    </div>
+    </div >
   );
 }

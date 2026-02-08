@@ -1,12 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Inconsolata } from "next/font/google";
-
-const inconsolata = Inconsolata({
-  weight: "500",
-  subsets: ["latin"],
-});
+// Fonts handled globally
 
 interface AmountType {
   value: number;
@@ -254,11 +249,11 @@ export default function Accounts() {
       return (
         <div
           key={user}
-          className="bg-white p-6 rounded-2xl shadow-md border border-pink-100 mb-8"
+          className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
         >
-          <h2 className="text-3xl text-pink-600 mb-4">{user} 🌸</h2>
+          <h2 className="text-3xl text-primary mb-4">{user} 🌸</h2>
           {errors.length > 0 && (
-            <p className="text-red-500 text-lg mb-4">
+            <p className="text-error-text text-lg mb-4">
               {errors.map((error, index) => (
                 <span key={index}>
                   {renderErrorMessage(error)}
@@ -268,7 +263,7 @@ export default function Accounts() {
             </p>
           )}
           {errors.length === 0 && (
-            <p className="text-gray-600 text-lg">
+            <p className="text-text-secondary text-lg">
               No account summary for {user}. ♡
             </p>
           )}
@@ -280,40 +275,40 @@ export default function Accounts() {
     return (
       <div
         key={user}
-        className="bg-white p-6 rounded-2xl shadow-md border border-pink-100 mb-8"
+        className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
       >
-        <h2 className="text-3xl text-pink-600 mb-4">{user} 🌸</h2>
-        <p className="text-xl text-pink-600 mb-4">
+        <h2 className="text-3xl text-primary mb-4">{user} 🌸</h2>
+        <p className="text-xl text-primary mb-4">
           Current Balance: {summary.CurrentBalance && typeof summary.CurrentBalance.value === 'number' ? summary.CurrentBalance.value.toFixed(2) : "N/A"} {account.Currency || "N/A"} 💸
         </p>
         <div className="overflow-x-auto">
-          <table className="w-full text-xl text-blue-600 border-collapse">
+          <table className="w-full text-xl text-text-primary border-collapse">
             <thead>
-              <tr className="border-b border-pink-100">
+              <tr className="border-b border-border">
                 <th className="py-2 text-left w-1/5 min-w-[140px]">
-                  <span className="text-pink-500 mr-2">✦</span>
+                  <span className="text-secondary mr-2">✦</span>
                   Account State
                 </th>
                 <th className="py-2 text-left w-1/5 min-w-[140px]">
-                  <span className="text-pink-500 mr-2">✦</span>
+                  <span className="text-secondary mr-2">✦</span>
                   Invoice Balance
                 </th>
                 <th className="py-2 text-left w-1/5 min-w-[140px]">
-                  <span className="text-pink-500 mr-2">✦</span>
+                  <span className="text-secondary mr-2">✦</span>
                   Last Payment
                 </th>
                 <th className="py-2 text-left w-1/5 min-w-[140px]">
-                  <span className="text-pink-500 mr-2">✦</span>
+                  <span className="text-secondary mr-2">✦</span>
                   Payment Method
                 </th>
                 <th className="py-2 text-left w-1/5 min-w-[140px]">
-                  <span className="text-pink-500 mr-2">✦</span>
+                  <span className="text-secondary mr-2">✦</span>
                   Past Due
                 </th>
               </tr>
             </thead>
             <tbody>
-              <tr className="border-b border-pink-100">
+              <tr className="border-b border-border">
                 <td className="py-2">{summary.AccountState || "N/A"}</td>
                 <td className="py-2">
                   {summary.InvoiceBalance && typeof summary.InvoiceBalance.value === 'number' ? summary.InvoiceBalance.value.toFixed(2) : "N/A"} {summary.InvoiceBalance?.currencyID || ""}
@@ -333,17 +328,17 @@ export default function Accounts() {
   };
 
   return (
-    <div className={inconsolata.className}>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-purple-50 p-8">
-        <h1 className="text-4xl text-pink-700 mb-8 drop-shadow-sm">Account Summaries</h1>
+    <div>
+      <div className="min-h-screen bg-background p-8">
+        <h1 className="text-4xl text-primary mb-8 drop-shadow-sm font-heading">Account Summaries</h1>
         {!error && Object.keys(userAccounts).length > 0 && (
-          <p className="text-2xl text-pink-600 mb-8">
+          <p className="text-2xl text-primary mb-8">
             Total Balance: {calculateTotalAccountBalance().toFixed(2)} 💰
           </p>
         )}
         {userLoading.global ? (
-          <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
-            <p className="text-pink-600 text-lg">Loading Users... ♡</p>
+          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+            <p className="text-primary text-lg">Loading Users... ♡</p>
           </div>
         ) : users.length > 0 ? (
           <div className="space-y-6">
@@ -351,10 +346,10 @@ export default function Accounts() {
               userLoading[user] ? (
                 <div
                   key={user}
-                  className="bg-white p-6 rounded-2xl shadow-md border border-pink-100 mb-8"
+                  className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
                 >
-                  <h2 className="text-3xl text-pink-600 mb-4">{user} 🌸</h2>
-                  <p className="text-pink-600 text-lg">Loading account summary... ♡</p>
+                  <h2 className="text-3xl text-primary mb-4">{user} 🌸</h2>
+                  <p className="text-primary text-lg">Loading account summary... ♡</p>
                 </div>
               ) : (
                 renderUserAccountSummary(user, userAccounts[user])
@@ -362,8 +357,8 @@ export default function Accounts() {
             )}
           </div>
         ) : (
-          <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
-            <p className="text-gray-600 text-lg">No users available. ♡</p>
+          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+            <p className="text-text-secondary text-lg">No users available. ♡</p>
           </div>
         )}
       </div>

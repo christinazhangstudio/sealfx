@@ -1,15 +1,38 @@
 @import "tailwindcss";
+@import "./themes/default.css";
+@import "./themes/ebay.css";
 
 :root {
-  --background: #ffffff;
-  --foreground: #000000;
+  --background: var(--color-background-start);
+  --foreground: var(--color-text-primary);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-heading);
+  --font-mono: var(--font-body);
+
+  /* Semantic Colors */
+  --color-primary: var(--color-primary);
+  --color-primary-hover: var(--color-primary-hover);
+  --color-secondary: var(--color-secondary);
+  --color-surface: var(--color-surface);
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-border: var(--color-border);
+
+  /* Status */
+  --color-success-bg: var(--color-success-bg);
+  --color-success-border: var(--color-success-border);
+  --color-success-text: var(--color-success-text);
+
+  --color-error-bg: var(--color-error-bg);
+  --color-error-border: var(--color-error-border);
+  --color-error-text: var(--color-error-text);
+
+  /* Nav */
+  --nav-bg: var(--nav-bg);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -26,8 +49,13 @@ body {
 }
 
 @keyframes fadeOut {
-  0% { opacity: 1; }
-  100% { opacity: 0; }
+  0% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
 }
 
 .fade-out {

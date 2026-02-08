@@ -1,12 +1,7 @@
 "use client"; // Next.JS 13+ defaults to server components in the app router.
 
 import { useEffect, useState } from "react";
-import { Inconsolata } from "next/font/google";
-
-const inconsolata = Inconsolata({
-  weight: "500",
-  subsets: ['latin']
-});
+// Fonts handled globally
 
 interface UserSummary {
   user: string;
@@ -74,28 +69,28 @@ export default function TransactionPage() {
   }, []);
 
   return (
-    <div className={inconsolata.className}>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-purple-50 p-8">
-        <h1 className="text-4xl text-pink-700 mb-8 drop-shadow-sm">
+    <div>
+      <div className="min-h-screen bg-background p-8">
+        <h1 className="text-4xl text-primary mb-8 drop-shadow-sm font-heading">
           Transaction Summaries
         </h1>
         {loading ? (
-          <p className="text-pink-600 text-lg">Loading summaries... ♡</p>
+          <p className="text-primary text-lg">Loading summaries... ♡</p>
         ) : error ? (
-          <p className="text-rose-500 text-lg">{error}</p>
+          <p className="text-error-text text-lg">{error}</p>
         ) : summaries && summaries.length > 0 ? (
           <div className="space-y-5">
             {summaries.map((s, index) => (
               <div
                 key={index}
-                className="bg-white p-6 rounded-2xl shadow-md border border-pink-100 hover:shadow-lg transition-all duration-300 hover:scale-102"
+                className="bg-surface p-6 rounded-2xl shadow-md border border-border hover:shadow-lg transition-all duration-300 hover:scale-102"
               >
-                <h2 className="text-3xl text-pink-600 mb-4">{s.user} 🌸</h2>
-                <table className="w-full text-2xl text-blue-600 border-collapse">
+                <h2 className="text-3xl text-primary mb-4">{s.user} 🌸</h2>
+                <table className="w-full text-2xl text-text-primary border-collapse">
                   <tbody>
-                    <tr className="border-b border-pink-100">
+                    <tr className="border-b border-border">
                       <td className="py-2 w-80">
-                        <span className="text-pink-500 mr-2">✦</span>
+                        <span className="text-secondary mr-2">✦</span>
                         Credits
                       </td>
                       <td className="py-2 text-left">
@@ -103,9 +98,9 @@ export default function TransactionPage() {
                         {s.summary.creditAmount.currency})
                       </td>
                     </tr>
-                    <tr className="border-b border-pink-100">
+                    <tr className="border-b border-border">
                       <td className="py-2 w-80">
-                        <span className="text-pink-500 mr-2">✦</span>
+                        <span className="text-secondary mr-2">✦</span>
                         Debits
                       </td>
                       <td className="py-2 text-left">
@@ -113,9 +108,9 @@ export default function TransactionPage() {
                         {s.summary.debitAmount.currency})
                       </td>
                     </tr>
-                    <tr className="border-b border-pink-100">
+                    <tr className="border-b border-border">
                       <td className="py-2 w-80">
-                        <span className="text-pink-500 mr-2">✦</span>
+                        <span className="text-secondary mr-2">✦</span>
                         On Hold
                       </td>
                       <td className="py-2 text-left">
@@ -123,9 +118,9 @@ export default function TransactionPage() {
                         {s.summary.onHoldAmount.currency})
                       </td>
                     </tr>
-                    <tr className="border-b border-pink-100">
+                    <tr className="border-b border-border">
                       <td className="py-2 w-80">
-                        <span className="text-pink-500 mr-2">✦</span>
+                        <span className="text-secondary mr-2">✦</span>
                         Total
                       </td>
                       <td className="py-2 text-left">
@@ -135,7 +130,7 @@ export default function TransactionPage() {
                     </tr>
                     <tr>
                       <td className="py-2 w-80">
-                        <span className="text-pink-500 mr-2">✦</span>
+                        <span className="text-secondary mr-2">✦</span>
                         Processing
                       </td>
                       <td className="py-2 text-left">
@@ -150,8 +145,8 @@ export default function TransactionPage() {
             ))}
           </div>
         ) : (
-          <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
-            <p className="text-gray-600 text-lg">No summaries available. ♡</p>
+          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+            <p className="text-text-secondary text-lg">No summaries available. ♡</p>
           </div>
         )}
       </div>

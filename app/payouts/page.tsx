@@ -1,12 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Inconsolata } from "next/font/google";
-
-const inconsolata = Inconsolata({
-  weight: "500",
-  subsets: ['latin']
-});
+// Fonts handled globally
 
 interface UserPayouts {
   user: string;
@@ -68,7 +63,7 @@ export default function Payouts() {
 
       const response = await fetch(`${apiBaseUrl}/${usersUri}`);
       if (!response.ok) {
-          throw new Error(`Failed to fetch users: ${response.status}`);
+        throw new Error(`Failed to fetch users: ${response.status}`);
       }
       const data = await response.json();
       const usersData: string[] = data.users || [];
@@ -228,10 +223,10 @@ export default function Payouts() {
       return (
         <div
           key={user}
-          className="bg-white p-6 rounded-2xl shadow-md border border-pink-100 mb-8"
+          className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
         >
-          <h2 className="text-3xl text-pink-600 mb-4">{user} 🌸</h2>
-          <p className="text-gray-600 text-lg">
+          <h2 className="text-3xl text-primary mb-4">{user} 🌸</h2>
+          <p className="text-text-secondary text-lg">
             No payouts available for {user}. ♡
           </p>
         </div>
@@ -246,38 +241,38 @@ export default function Payouts() {
     return (
       <div
         key={user}
-        className="bg-white p-6 rounded-2xl shadow-md border border-pink-100 mb-8"
+        className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
       >
-        <h2 className="text-3xl text-pink-600 mb-4">{user} 🌸</h2>
+        <h2 className="text-3xl text-primary mb-4">{user} 🌸</h2>
         {total > 0 && (
-          <p className="text-xl text-pink-600 mb-4">
+          <p className="text-xl text-primary mb-4">
             Total for user: {calculateUserPayoutTotal(payouts).toFixed(2)} {currency} 💸
           </p>
         )}
         {total > 0 && paginatedPayouts.length > 0 ? (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-xl text-blue-600 border-collapse">
+              <table className="w-full text-xl text-text-primary border-collapse">
                 <thead>
-                  <tr className="border-b border-pink-100">
+                  <tr className="border-b border-border">
                     <th className="py-2 text-left w-1/5 min-w-[120px]">
-                      <span className="text-pink-500 mr-2">✦</span>
+                      <span className="text-secondary mr-2">✦</span>
                       Date
                     </th>
                     <th className="py-2 text-left w-1/5 min-w-[120px]">
-                      <span className="text-pink-500 mr-2">✦</span>
+                      <span className="text-secondary mr-2">✦</span>
                       Status
                     </th>
                     <th className="py-2 text-left w-1/5 min-w-[140px]">
-                      <span className="text-pink-500 mr-2">✦</span>
+                      <span className="text-secondary mr-2">✦</span>
                       Amount
                     </th>
                     <th className="py-2 text-left w-1/5 min-w-[160px]">
-                      <span className="text-pink-500 mr-2">✦</span>
+                      <span className="text-secondary mr-2">✦</span>
                       Transactions
                     </th>
                     <th className="py-2 text-left w-1/5 min-w-[140px]">
-                      <span className="text-pink-500 mr-2">✦</span>
+                      <span className="text-secondary mr-2">✦</span>
                       Payment Method
                     </th>
                   </tr>
@@ -286,7 +281,7 @@ export default function Payouts() {
                   {paginatedPayouts.map((payout) => (
                     <tr
                       key={payout.payoutId}
-                      className="border-b border-pink-100"
+                      className="border-b border-border"
                     >
                       <td className="py-2 whitespace-nowrap">
                         {new Date(payout.payoutDate).toLocaleDateString()}
@@ -294,7 +289,7 @@ export default function Payouts() {
                       <td className="py-2">
                         {payout.payoutStatus}
                         <br />
-                        <small className="text-pink-500 text-base truncate block">
+                        <small className="text-secondary text-base truncate block">
                           {payout.payoutStatusDescription}
                         </small>
                       </td>
@@ -319,11 +314,11 @@ export default function Payouts() {
                   setUserPages((prev) => ({ ...prev, [user]: prev[user] - 1 }));
                 }}
                 disabled={pageIdx === 1}
-                className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:bg-pink-300 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:bg-border disabled:cursor-not-allowed transition-colors"
               >
                 Previous
               </button>
-              <span className="text-lg text-pink-600">
+              <span className="text-lg text-primary">
                 Showing {startIdx + 1} -{" "}
                 {Math.min(startIdx + clientPageSize, total)} of {total} ✿
               </span>
@@ -332,14 +327,14 @@ export default function Payouts() {
                   setUserPages((prev) => ({ ...prev, [user]: prev[user] + 1 }));
                 }}
                 disabled={pageIdx >= userTotalPages[user]}
-                className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:bg-pink-300 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:bg-border disabled:cursor-not-allowed transition-colors"
               >
                 Next
               </button>
             </div>
           </>
         ) : (
-          <p className="text-gray-600 text-lg">
+          <p className="text-text-secondary text-lg">
             No payouts available for {user}. ♡
           </p>
         )}
@@ -348,29 +343,29 @@ export default function Payouts() {
   };
 
   return (
-    <div className={inconsolata.className}>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-purple-50 p-8">
-        <h1 className="text-4xl text-pink-700 mb-8 drop-shadow-sm">Payouts</h1>
+    <div>
+      <div className="min-h-screen bg-background p-8">
+        <h1 className="text-4xl text-primary mb-8 drop-shadow-sm font-heading">Payouts</h1>
         {Object.keys(userPayouts).length > 0 && (
-          <p className="text-2xl text-pink-600 mb-8">
+          <p className="text-2xl text-primary mb-8">
             Total: {calculateTotalPayoutAmount().toFixed(2)} {currency} 💰
           </p>
         )}
-        {error && <p className="text-rose-500 text-lg mb-4 hidden">{error}</p>}
+        {error && <p className="text-error-text text-lg mb-4 hidden">{error}</p>}
         {userLoading.global ? (
-        <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
-          <p className="text-pink-600 text-lg">Loading Users... ♡</p>
-        </div>
+          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+            <p className="text-primary text-lg">Loading Users... ♡</p>
+          </div>
         ) : users.length > 0 ? (
           <div className="space-y-6">
             {users.map((user) =>
               userLoading[user] ? (
                 <div
                   key={user}
-                  className="bg-white p-6 rounded-2xl shadow-md border border-pink-100 mb-8"
+                  className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
                 >
-                  <h2 className="text-3xl text-pink-600 mb-4">{user} 🌸</h2>
-                  <p className="text-pink-600 text-lg">Loading payouts... ♡</p>
+                  <h2 className="text-3xl text-primary mb-4">{user} 🌸</h2>
+                  <p className="text-primary text-lg">Loading payouts... ♡</p>
                 </div>
               ) : (
                 renderUserPayouts(user, userPayouts[user], userPages[user] || 1)
@@ -378,8 +373,8 @@ export default function Payouts() {
             )}
           </div>
         ) : (
-          <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
-            <p className="text-gray-600 text-lg">No users available. ♡</p>
+          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+            <p className="text-text-secondary text-lg">No users available. ♡</p>
           </div>
         )}
       </div>

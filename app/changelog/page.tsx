@@ -1,9 +1,4 @@
-import { Comfortaa } from "next/font/google";
-
-const comfortaa = Comfortaa({
-  weight: "400",
-  subsets: ['latin']
-});
+// Fonts handled globally
 
 export default function Changelog() {
   const changes = [
@@ -49,22 +44,22 @@ export default function Changelog() {
   ];
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-purple-50 p-8 ${comfortaa.className}`}>
+    <div className={`min-h-screen bg-background p-8`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-4xl text-pink-600 mb-8 text-center drop-shadow-sm">
+        <h1 className="text-4xl text-primary mb-8 text-center drop-shadow-sm font-heading">
           changelog
         </h1>
-        <div className="relative border-l-4 border-pink-300">
+        <div className="relative border-l-4 border-primary-hover">
           {changes.map((change, index) => (
             <div key={index} className="mb-10 ml-6">
-              <div className="bg-white rounded-lg shadow-md p-6 border border-pink-100">
-                <h2 className="text-2xl text-pink-700 font-semibold">
+              <div className="bg-surface rounded-lg shadow-md p-6 border border-border">
+                <h2 className="text-2xl text-primary font-semibold">
                   version {change.version}
                 </h2>
-                <p className="text-pink-600 text-sm mb-4">{change.date}</p>
+                <p className="text-text-secondary text-sm mb-4">{change.date}</p>
                 <ul className="list-disc pl-5 space-y-2">
                   {change.updates.map((update, idx) => (
-                    <p key={idx} className="text-pink-700 text-base">
+                    <p key={idx} className="text-primary-hover text-base">
                       ♡ {update}
                     </p>
                   ))}

@@ -1,12 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Inconsolata } from "next/font/google";
+// Font imports removed as they are handled globally
 
-const inconsolata = Inconsolata({
-  weight: "500",
-  subsets: ["latin"],
-});
 
 interface UsersResponse {
   users: string[];
@@ -200,18 +196,18 @@ export default function RegisterSellerPage() {
 
   return (
     <div
-      className={`${inconsolata.className} min-h-screen flex justify-center bg-gradient-to-br from-purple-50 to-gray-100 pt-8 px-4 sm:px-6 lg:px-8 relative`}
+      className={`min-h-screen flex justify-center bg-[var(--background)] pt-8 px-4 sm:px-6 lg:px-8 relative`}
     >
       <div className={`max-w-md w-full space-y-6 ${showDeletePopup ? 'blur-sm' : ''}`}>
-        <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl mt-8">
-          <h1 className="text-4xl text-pink-700 mb-6 text-center animate-fade-in">
+        <div className="max-w-md w-full bg-surface rounded-xl shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl mt-8">
+          <h1 className="text-4xl text-text-primary mb-6 text-center animate-fade-in">
             add sellers
           </h1>
 
           {isAuthorized ? (
-            <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-lg flex items-center space-x-3">
+            <div className="bg-success-bg border-l-4 border-success-border p-4 rounded-lg flex items-center space-x-3">
               <svg
-                className="w-6 h-6 text-green-500"
+                className="w-6 h-6 text-success-border"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -224,13 +220,13 @@ export default function RegisterSellerPage() {
                   d="M5 13l4 4L19 7"
                 />
               </svg>
-              <p className="text-green-700 text-lg">Authorization successful!</p>
+              <p className="text-success-text text-lg">Authorization successful!</p>
             </div>
           ) : error ? (
-            <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
+            <div className="bg-error-bg border-l-4 border-error-border p-4 rounded-lg">
               <div className="flex items-center space-x-3">
                 <svg
-                  className="w-6 h-6 text-red-500"
+                  className="w-6 h-6 text-error-border"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -243,7 +239,7 @@ export default function RegisterSellerPage() {
                     d="M6 18L18 6M6 6l12 12"
                   />
                 </svg>
-                <p className="text-red-700 text-lg">{error}</p>
+                <p className="text-error-text text-lg">{error}</p>
               </div>
               {error.includes("track it") && (
                 <div className="mt-4 text-sm text-gray-600 bg-gray-100 p-4 rounded-lg">
@@ -263,7 +259,7 @@ export default function RegisterSellerPage() {
               className={`w-full flex justify-center items-center px-6 py-3 rounded-lg text-white text-lg font-medium transition-all duration-200 transform ${
                 isLoading
                   ? "bg-gray-300 cursor-not-allowed"
-                  : "bg-pink-600 duration-200 hover:bg-pink-700 hover:scale-105 shadow-md hover:shadow-lg focus:ring-4 focus:ring-pink-300 focus:outline-none"
+                  : "bg-primary duration-200 hover:bg-primary-hover hover:scale-105 shadow-md hover:shadow-lg focus:ring-4 focus:ring-pink-300 focus:outline-none"
               }`}
             >
               {isLoading ? (
@@ -296,24 +292,24 @@ export default function RegisterSellerPage() {
         </div>
 
         {/* Second card */}
-        <div className="bg-white rounded-xl shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl">
-          <h2 className="text-2xl text-pink-700 mb-4 text-center animate-fade-in">
+        <div className="bg-surface rounded-xl shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl">
+          <h2 className="text-2xl text-text-primary mb-4 text-center animate-fade-in">
             registered sellers for sealift
           </h2>
-          {apiError && <p className="text-rose-500 text-lg">{apiError}</p>}
+          {apiError && <p className="text-error-text text-lg">{apiError}</p>}
           {loading ? (
-            <p className="text-pink-600 text-lg">Loading users... ♡</p>
+            <p className="text-secondary text-lg">Loading users... ♡</p>
           ) : users && users.length > 0 ? (
             <div className="text-gray-600 text-lg text-center">
               {users.map((user) => (
                 <div
                   key={user}
-                  className="border-b border-pink-100 flex justify-between items-center py-2"
+                  className="border-b border-border flex justify-between items-center py-2"
                 >
                   <p>{user}</p>
                   <button
                     onClick={() => handleDeleteClick(user)}
-                    className="text-red-500 hover:text-red-700 transition-colors duration-200"
+                    className="text-error-text hover:text-error-border transition-colors duration-200"
                     title="Delete user"
                   >
                     <svg
@@ -345,8 +341,8 @@ export default function RegisterSellerPage() {
       {/* Delete Confirmation Popup */}
       {showDeletePopup && (
         <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div className={`${inconsolata.className} bg-white rounded-xl shadow-lg p-6 max-w-sm w-full z-50`}>
-            <h3 className="text-xl text-pink-700 mb-4 text-center">
+          <div className={`bg-surface rounded-xl shadow-lg p-6 max-w-sm w-full z-50`}>
+            <h3 className="text-xl text-text-primary mb-4 text-center">
               Confirm Deletion
             </h3>
             <p className="text-gray-600 text-center mb-6">
