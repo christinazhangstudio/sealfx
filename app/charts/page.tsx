@@ -86,8 +86,8 @@ ChartJS.register(
 
 const renderUserChart = (user: string, chartData: any) => {
   return (
-    <div className="chart-container bg-surface p-6 rounded-lg shadow-md container-inline-size">
-      <h2 className="text-xl text-primary mb-4">{user}</h2>
+    <div className="chart-container bg-surface p-8 rounded-lg shadow-md container-inline-size mb-8">
+      <h2 className="text-2xl text-primary mb-4">{user} 🌸</h2>
       <Line
         data={chartData}
         options={{
@@ -95,6 +95,7 @@ const renderUserChart = (user: string, chartData: any) => {
           scales: {
             x: {
               type: "time",
+              offset: false,
               time: {
                 unit: "day",
                 displayFormats: { day: "MMM D" },
@@ -113,18 +114,22 @@ const renderUserChart = (user: string, chartData: any) => {
               intersect: false,
               callbacks: {
                 label: (context) => {
+                  if (!context.raw) return "";
                   const datasetIndex = context.datasetIndex;
-                  const index = context.dataIndex;
-                  const totalValue = context.parsed.y ?? 0;
-                  const date = new Date(
-                    chartData.labels[index]
-                  ).toLocaleDateString("en-US", {
+                  const rawData = context.raw as { x: string; y: number; detail: any };
+                  const totalValue = rawData.y ?? 0;
+                  const dateString = rawData.x;
+
+                  if (!dateString) return "";
+
+                  const date = new Date(dateString).toLocaleDateString("en-US", {
                     month: "long",
                     day: "numeric",
                     year: "numeric",
                   });
+
                   if (datasetIndex === 0) {
-                    const listing = chartData.listingDetails[index] || {};
+                    const listing = rawData.detail || {};
                     const price = listing.price ?? 0;
                     return [
                       `Date: ${date}`,
@@ -133,7 +138,7 @@ const renderUserChart = (user: string, chartData: any) => {
                       }, Price: $${formatCurrency(price)})`,
                     ];
                   } else {
-                    const payout = chartData.payoutDetails[index] || {};
+                    const payout = rawData.detail || {};
                     const amount = payout.amount ?? 0;
                     return [
                       `Date: ${date}`,
@@ -145,8 +150,10 @@ const renderUserChart = (user: string, chartData: any) => {
               },
             },
             datalabels: {
-              formatter: (value) =>
-                typeof value === "number" ? `$${formatCurrency(value)}` : "$0.00",
+              formatter: (value) => {
+                const yValue = (value && typeof value === "object") ? (value as any).y : value;
+                return typeof yValue === "number" ? `$${formatCurrency(yValue)}` : "$0.00";
+              },
               color: (context) => {
                 if (typeof window === 'undefined') return "#000";
                 const style = getComputedStyle(document.documentElement);
@@ -485,7 +492,7 @@ export default function ChartsPage() {
       };
 
       const chartData = combineChartData(listingData, payoutData, colors);
-      setUserCharts((prev) => ({ ...prev, [user]: chartData }));
+      setUserCharts((prev) => ({ ...prev, [user]: chartData as any }));
       setDataLoading((prev) => ({ ...prev, [user]: false }));
     } catch (err) {
       setError(
@@ -627,7 +634,7 @@ export default function ChartsPage() {
                     <div key={user} id={`user-section-${user}`}>
                       {dataLoading[user] ? (
                         <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
-                          <h2 className="text-2xl text-primary mb-4">{user}</h2>
+                          <h2 className="text-2xl text-primary mb-4">{user} 🌸</h2>
                           <p className="text-primary text-lg">Loading Data... </p>
                         </div>
                       ) : userCharts[user] &&
@@ -639,7 +646,7 @@ export default function ChartsPage() {
                         renderUserChart(user, userCharts[user])
                       ) : (
                         <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
-                          <h2 className="text-2xl text-primary mb-4">{user}</h2>
+                          <h2 className="text-2xl text-primary mb-4">{user} 🌸</h2>
                           <p className="text-text-secondary text-lg">
                             No data for {user}.
                           </p>

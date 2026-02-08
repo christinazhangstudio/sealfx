@@ -104,7 +104,7 @@ const renderUserTable = (
       id={`user-section-${user}`}
       className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border"
     >
-      <h2 className="text-2xl text-primary mb-4">{user}</h2>
+      <h2 className="text-2xl text-primary mb-4">{user} 🌸</h2>
       <p className="text-xl text-primary mb-4">
         Total Items: {filteredItems.length} 📦
       </p>
@@ -528,7 +528,7 @@ export default function ListingsPage() {
                 <div key={user}>
                   {userLoading[user] ? (
                     <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
-                      <h2 className="text-2xl text-primary mb-4">{user}</h2>
+                      <h2 className="text-2xl text-primary mb-4">{user} 🌸</h2>
                       <p className="text-primary text-lg">
                         Loading Listings...
                       </p>
@@ -543,7 +543,7 @@ export default function ListingsPage() {
                     )
                   ) : (
                     <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
-                      <h2 className="text-2xl text-primary mb-4">{user}</h2>
+                      <h2 className="text-2xl text-primary mb-4">{user} 🌸</h2>
                       <p className="text-text-secondary text-lg">
                         No listings for {user}.
                       </p>

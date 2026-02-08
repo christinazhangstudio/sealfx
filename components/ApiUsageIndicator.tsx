@@ -50,7 +50,7 @@ export default function ApiUsageIndicator() {
                     </div>
                     <div className="mt-3 pt-2 border-t border-border flex justify-between items-center text-[9px] text-text-secondary">
                         <span>Resets daily</span>
-                        <button
+                        {/* <button
                             onClick={() => {
                                 localStorage.removeItem("sealfx_api_usage");
                                 window.location.reload();
@@ -58,7 +58,7 @@ export default function ApiUsageIndicator() {
                             className="hover:text-primary underline"
                         >
                             Reset
-                        </button>
+                        </button> */}
                     </div>
                 </div>
             )}

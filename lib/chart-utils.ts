@@ -94,7 +94,9 @@ export const processListingData = (items: Item[], startDate: Date, endDate: Date
     sortedItems.forEach((item) => {
         const value = item.SellingStatus.CurrentPrice.Value * item.Quantity;
         cumulativeValue += value;
-        labels.push(item.ListingDetails.StartTime);
+        // Snap to start of day for grid alignment
+        const dateOnly = item.ListingDetails.StartTime.split("T")[0];
+        labels.push(dateOnly);
         data.push(cumulativeValue);
         listingDetails.push({
             title: item.Title,
@@ -130,7 +132,9 @@ export const processPayoutData = (
     sortedPayouts.forEach((payout) => {
         const value = parseFloat(payout.amount.value);
         cumulativeValue += value;
-        labels.push(payout.payoutDate);
+        // Snap to start of day for grid alignment
+        const dateOnly = payout.payoutDate.split("T")[0];
+        labels.push(dateOnly);
         data.push(cumulativeValue);
         payoutDetails.push({
             title: payout.payoutId,
@@ -147,45 +151,23 @@ export const combineChartData = (
     payoutData: { labels: string[]; data: number[]; payoutDetails: any[] },
     colors: { chart1: string; chart2: string }
 ) => {
+    // We use independent data points {x, y, detail} to allow direct diagonal lines between events
+    // This avoids horizontal "stair-steps" and ensures dots align with Y-axis grid lines
+
     const allLabels = Array.from(
         new Set([...listingData.labels, ...payoutData.labels])
     ).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
-
-    let lastListingValue = 0;
-    const listingInterpolated = allLabels.map((label) => {
-        const index = listingData.labels.indexOf(label);
-        if (index !== -1) {
-            lastListingValue = listingData.data[index];
-            return {
-                value: lastListingValue,
-                detail: listingData.listingDetails[index],
-            };
-        }
-        return {
-            value: lastListingValue, // Stay at last known value
-            detail: { title: "No Listing Change", quantity: 0, price: 0 },
-        };
-    });
-
-    let lastPayoutValue = 0;
-    const payoutInterpolated = allLabels.map((label) => {
-        const index = payoutData.labels.indexOf(label);
-        if (index !== -1) {
-            lastPayoutValue = payoutData.data[index];
-            return {
-                value: lastPayoutValue,
-                detail: payoutData.payoutDetails[index],
-            };
-        }
-        return { value: lastPayoutValue, detail: { title: "No Payout Change", amount: 0 } };
-    });
 
     return {
         labels: allLabels,
         datasets: [
             {
-                label: "Cumulative Listing Value",
-                data: listingInterpolated.map((item) => item.value),
+                label: "Total Listing Value",
+                data: listingData.labels.map((label, index) => ({
+                    x: label,
+                    y: listingData.data[index],
+                    detail: listingData.listingDetails[index],
+                })),
                 borderColor: colors.chart1,
                 backgroundColor: colors.chart1,
                 pointBackgroundColor: colors.chart1,
@@ -195,11 +177,15 @@ export const combineChartData = (
                 pointRadius: 6,
                 pointHoverRadius: 8,
                 fill: false,
-                tension: 0.1,
+                tension: 0, // Perfectly straight segments
             },
             {
-                label: "Cumulative Payout Value",
-                data: payoutInterpolated.map((item) => item.value),
+                label: "Total Payout Value",
+                data: payoutData.labels.map((label, index) => ({
+                    x: label,
+                    y: payoutData.data[index],
+                    detail: payoutData.payoutDetails[index],
+                })),
                 borderColor: colors.chart2,
                 backgroundColor: colors.chart2,
                 pointBackgroundColor: colors.chart2,
@@ -209,10 +195,8 @@ export const combineChartData = (
                 pointRadius: 6,
                 pointHoverRadius: 8,
                 fill: false,
-                tension: 0.1,
+                tension: 0, // Perfectly straight segments
             },
         ],
-        listingDetails: listingInterpolated.map((item) => item.detail),
-        payoutDetails: payoutInterpolated.map((item) => item.detail),
     };
 };

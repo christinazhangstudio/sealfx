@@ -39,12 +39,12 @@ export default function UserTableOfContents({ users }: UserTableOfContentsProps)
     return (
         <>
             {/* Desktop Sidebar */}
-            <aside className="hidden lg:block w-64 shrink-0">
-                <div className="sticky top-24 space-y-2 p-4 bg-surface rounded-xl border border-border shadow-sm">
+            <aside className="hidden lg:block w-64 shrink-0 sticky top-28 self-start">
+                <div className="space-y-2 p-4 bg-surface rounded-xl border border-border shadow-sm max-h-[calc(100vh-theme(spacing.36))] overflow-y-auto">
                     <h3 className="text-sm font-bold text-primary uppercase tracking-wider font-heading">
                         Users
                     </h3>
-                    <nav className="flex flex-col space-y-0">
+                    <nav className="flex flex-col space-y-0 relative">
                         {users.map((user) => (
                             <button
                                 key={user}
@@ -83,7 +83,7 @@ export default function UserTableOfContents({ users }: UserTableOfContentsProps)
 
                 {/* Mobile Drawer */}
                 <div className={`fixed right-0 top-0 h-full w-72 bg-surface shadow-2xl z-50 transform transition-transform duration-300 ease-in-out border-l border-border ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-                    <div className="p-6">
+                    <div className="p-6 h-full flex flex-col">
                         <div className="flex items-center justify-between mb-8">
                             <h3 className="text-lg font-bold text-primary uppercase tracking-wider font-heading">
                                 Jump to User
@@ -97,7 +97,7 @@ export default function UserTableOfContents({ users }: UserTableOfContentsProps)
                                 </svg>
                             </button>
                         </div>
-                        <nav className="flex flex-col space-y-2">
+                        <nav className="flex-1 overflow-y-auto flex flex-col space-y-2 pr-2">
                             {users.map((user) => (
                                 <button
                                     key={user}
@@ -108,7 +108,7 @@ export default function UserTableOfContents({ users }: UserTableOfContentsProps)
                                 </button>
                             ))}
                         </nav>
-                        <div className="mt-8 pt-8 border-t border-border">
+                        <div className="mt-8 pt-8 border-t border-border shrink-0">
                             <p className="text-xs text-text-secondary opacity-70 italic text-center">
                                 Select a user to scroll to their section
                             </p>
