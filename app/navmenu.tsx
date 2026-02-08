@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
+import ApiUsageIndicator from "@/components/ApiUsageIndicator";
 // Font imports removed as they are handled globally
 
 // Font initialization removed
@@ -29,7 +30,10 @@ export default function NavMenu() {
   }, []);
 
   return (
-    <nav className="bg-[var(--nav-bg)] shadow-md sticky top-0 z-10">
+    <nav
+      className="shadow-md sticky top-0 z-10"
+      style={{ background: 'var(--nav-bg)' }}
+    >
       <div>
         <div className="max-w-9xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-2 sm:py-4 flex-col md:flex-row gap-2 md:gap-0 min-h-[4rem] md:h-auto">
@@ -124,7 +128,10 @@ export default function NavMenu() {
                   </div>
                 </div>
               </div>
-              <ThemeSwitcher />
+              <div className="flex items-center space-x-2">
+                <ApiUsageIndicator />
+                <ThemeSwitcher />
+              </div>
             </div>
           </div>
         </div>

@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { trackedFetch as fetch } from "@/lib/api-tracker";
+import UserTableOfContents from "@/components/UserTableOfContents";
 import { Inconsolata } from "next/font/google";
+import { formatCurrency } from "@/lib/format-utils";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -18,7 +21,16 @@ import {
 } from "chart.js";
 import "chartjs-adapter-moment";
 import ChartDataLabels from "chartjs-plugin-datalabels";
-import Payouts from "../payouts/page";
+import {
+  processListingData,
+  processPayoutData,
+  combineChartData,
+  Item,
+  Payout,
+  Listings,
+  UserPayouts
+} from "@/lib/chart-utils";
+import { useTheme } from "next-themes";
 
 ChartJS.register(
   CategoryScale,
@@ -56,7 +68,7 @@ ChartJS.register(
       if (x) {
         ctx.save();
         ctx.beginPath();
-        ctx.strokeStyle = "#EC4899";
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-chart-1').trim() || "#EC4899";
         ctx.lineWidth = 1;
         ctx.setLineDash([5, 5]);
         ctx.moveTo(x, chartArea.top);
@@ -68,94 +80,9 @@ ChartJS.register(
   }
 );
 
-// Fonts handled globally
 
-interface Amount {
-  Value: number;
-  CurrencyID: string;
-}
 
-interface SellingStatus {
-  CurrentPrice: Amount;
-  ListingStatus: string;
-}
-
-interface ListingDetails {
-  StartTime: string;
-  EndTime: string;
-  ViewItemURL: string;
-}
-
-interface Item {
-  ItemID: string;
-  Title: string;
-  Quantity: number;
-  SellingStatus: SellingStatus;
-  ListingDetails: ListingDetails;
-}
-
-interface ItemArray {
-  Items: Item[];
-}
-
-interface Listings {
-  XMLName: { Space: string; Local: string };
-  Timestamp: string;
-  Ack: string;
-  Version: string;
-  Build: string;
-  PaginationResult: {
-    TotalNumberOfPages: number;
-    TotalNumberOfEntries: number;
-  };
-  HasMoreItems: boolean;
-  ItemArray: ItemArray;
-  ItemsPerPage: number;
-  PageNumber: number;
-  ReturnedItemCountActual: number;
-}
-
-interface ListingsResponse {
-  user: string;
-  listings: Listings;
-}
-
-interface UserPayouts {
-  user: string;
-  payouts: PayoutsResponse;
-}
-
-interface PayoutsResponse {
-  href: string;
-  next: string;
-  prev: string;
-  limit: number;
-  offset: number;
-  payouts: Payout[];
-  total: number;
-}
-
-interface Payout {
-  payoutId: string;
-  payoutStatus: string;
-  payoutStatusDescription: string;
-  amount: PayoutAmount;
-  payoutDate: string;
-  lastAttemptedPayoutDate: string;
-  transactionCount: number;
-  payoutInstrument: PayoutInstrument;
-}
-
-interface PayoutAmount {
-  value: string;
-  currency: string;
-}
-
-interface PayoutInstrument {
-  instrumentType: string;
-  nickname: string;
-  accountLastFourDigits: string;
-}
+// Types moved to lib/chart-utils.ts
 
 const renderUserChart = (user: string, chartData: any) => {
   return (
@@ -176,7 +103,7 @@ const renderUserChart = (user: string, chartData: any) => {
             },
             y: {
               beginAtZero: true,
-              title: { display: true, text: "Total Value (USD)" },
+              title: { display: true, text: "Total Value" },
             },
           },
           plugins: {
@@ -201,19 +128,17 @@ const renderUserChart = (user: string, chartData: any) => {
                     const price = listing.price ?? 0;
                     return [
                       `Date: ${date}`,
-                      `Total Listing Value: $${totalValue.toFixed(2)}`,
+                      `Total Listing Value: $${formatCurrency(totalValue)}`,
                       `${listing.title || "Unknown"} (Qty: ${listing.quantity || 0
-                      }, Price: $${price.toFixed(2)})`,
+                      }, Price: $${formatCurrency(price)})`,
                     ];
                   } else {
                     const payout = chartData.payoutDetails[index] || {};
                     const amount = payout.amount ?? 0;
                     return [
                       `Date: ${date}`,
-                      `Total Payout Value: $${totalValue.toFixed(2)}`,
-                      `${payout.title || "Unknown"} (Amount: $${amount.toFixed(
-                        2
-                      )})`,
+                      `Total Payout Value: $${formatCurrency(totalValue)}`,
+                      `${payout.title || "Unknown"} (Amount: $${formatCurrency(amount)})`,
                     ];
                   }
                 },
@@ -221,9 +146,14 @@ const renderUserChart = (user: string, chartData: any) => {
             },
             datalabels: {
               formatter: (value) =>
-                typeof value === "number" ? `$${value.toFixed(2)}` : "$0.00",
-              color: (context) =>
-                context.datasetIndex === 0 ? "#EC4899" : "#3B82F6",
+                typeof value === "number" ? `$${formatCurrency(value)}` : "$0.00",
+              color: (context) => {
+                if (typeof window === 'undefined') return "#000";
+                const style = getComputedStyle(document.documentElement);
+                return context.datasetIndex === 0
+                  ? style.getPropertyValue('--color-chart-1').trim() || "#EC4899"
+                  : style.getPropertyValue('--color-chart-2').trim() || "#3B82F6";
+              },
               align: "top",
               offset: 4,
               font: { size: 12 },
@@ -240,145 +170,7 @@ const renderUserChart = (user: string, chartData: any) => {
   );
 };
 
-// Process listing data for cumulative line chart
-const processListingData = (items: Item[], startDate: Date, endDate: Date) => {
-  const filteredItems = items.filter((item) => {
-    const startTime = new Date(item.ListingDetails.StartTime);
-    return startTime >= startDate && startTime <= endDate;
-  });
-
-  const sortedItems = filteredItems.sort(
-    (a, b) =>
-      new Date(a.ListingDetails.StartTime).getTime() -
-      new Date(b.ListingDetails.StartTime).getTime()
-  );
-
-  let cumulativeValue = 0;
-  const labels: string[] = [];
-  const data: number[] = [];
-  const listingDetails: { title: string; quantity: number; price: number }[] = [];
-
-  sortedItems.forEach((item) => {
-    const value = item.SellingStatus.CurrentPrice.Value * item.Quantity;
-    cumulativeValue += value;
-    labels.push(item.ListingDetails.StartTime);
-    data.push(cumulativeValue);
-    listingDetails.push({
-      title: item.Title,
-      quantity: item.Quantity,
-      price: item.SellingStatus.CurrentPrice.Value,
-    });
-  });
-
-  return { labels, data, listingDetails };
-};
-
-// Process payout data for cumulative line chart
-const processPayoutData = (
-  payouts: Payout[],
-  startDate: Date,
-  endDate: Date
-) => {
-  const filteredPayouts = payouts.filter((payout) => {
-    const payoutTime = new Date(payout.payoutDate);
-    return payoutTime >= startDate && payoutTime <= endDate;
-  });
-
-  const sortedPayouts = filteredPayouts.sort(
-    (a, b) =>
-      new Date(a.payoutDate).getTime() - new Date(b.payoutDate).getTime()
-  );
-
-  let cumulativeValue = 0;
-  const labels: string[] = [];
-  const data: number[] = [];
-  const payoutDetails: { title: string; amount: number }[] = [];
-
-  sortedPayouts.forEach((payout) => {
-    const value = parseFloat(payout.amount.value);
-    cumulativeValue += value;
-    labels.push(payout.payoutDate);
-    data.push(cumulativeValue);
-    payoutDetails.push({
-      title: payout.payoutId,
-      amount: value,
-    });
-  });
-
-  return { labels, data, payoutDetails };
-};
-
-// Combine listing and payout data
-const combineChartData = (
-  listingData: { labels: string[]; data: number[]; listingDetails: any[] },
-  payoutData: { labels: string[]; data: number[]; payoutDetails: any[] }
-) => {
-  const allLabels = Array.from(
-    new Set([...listingData.labels, ...payoutData.labels])
-  ).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
-
-  let lastListingValue = 0;
-  const listingInterpolated = allLabels.map((label) => {
-    const index = listingData.labels.indexOf(label);
-    if (index !== -1) {
-      lastListingValue = listingData.data[index];
-      return {
-        value: lastListingValue,
-        detail: listingData.listingDetails[index],
-      };
-    }
-    return {
-      value: null,
-      detail: { title: "No Listing", quantity: 0, price: 0 },
-    };
-  });
-
-  let lastPayoutValue = 0;
-  const payoutInterpolated = allLabels.map((label) => {
-    const index = payoutData.labels.indexOf(label);
-    if (index !== -1) {
-      lastPayoutValue = payoutData.data[index];
-      return {
-        value: lastPayoutValue,
-        detail: payoutData.payoutDetails[index],
-      };
-    }
-    return { value: null, detail: { title: "No Payout", amount: 0 } };
-  });
-
-  return {
-    labels: allLabels,
-    datasets: [
-      {
-        label: "Cumulative Listing Value (USD)",
-        data: listingInterpolated.map((item) => item.value),
-        borderColor: "#EC4899",
-        pointBackgroundColor: "#EC4899",
-        pointBorderColor: "#fff",
-        pointHoverBackgroundColor: "#fff",
-        pointHoverBorderColor: "#EC4899",
-        pointRadius: 6,
-        pointHoverRadius: 8,
-        fill: false,
-        crosshairX: null,
-      },
-      {
-        label: "Cumulative Payout Value (USD)",
-        data: payoutInterpolated.map((item) => item.value),
-        borderColor: "#3B82F6",
-        pointBackgroundColor: "#3B82F6",
-        pointBorderColor: "#fff",
-        pointHoverBackgroundColor: "#fff",
-        pointHoverBorderColor: "#3B82F6",
-        pointRadius: 6,
-        pointHoverRadius: 8,
-        fill: false,
-      },
-    ],
-    listingDetails: listingInterpolated.map((item) => item.detail),
-    payoutDetails: payoutInterpolated.map((item) => item.detail),
-  };
-};
+// Logic moved to lib/chart-utils.ts
 
 export default function ChartsPage() {
   const [users, setUsers] = useState<string[]>([]);
@@ -400,6 +192,7 @@ export default function ChartsPage() {
     return start;
   });
   const [startTo, setStartTo] = useState<Date>(new Date());
+  const { theme } = useTheme();
 
   const apiPageSize = 200;
   const maxDaysPerChunk = 120;
@@ -672,10 +465,10 @@ export default function ChartsPage() {
       const [listings, payouts] = await Promise.all([
         fetchListingsForUser(user),
         fetchAllPayoutsForUser(user),
-      ]);
+      ]) as [Listings, Payout[]];
 
       const listingData = processListingData(
-        listings.ItemArray.Items,
+        listings.ItemArray.Items as Item[],
         startFrom,
         startTo
       );
@@ -685,7 +478,13 @@ export default function ChartsPage() {
         startTo
       );
 
-      const chartData = combineChartData(listingData, payoutData);
+      const style = getComputedStyle(document.documentElement);
+      const colors = {
+        chart1: style.getPropertyValue('--color-chart-1').trim() || "#EC4899",
+        chart2: style.getPropertyValue('--color-chart-2').trim() || "#3B82F6",
+      };
+
+      const chartData = combineChartData(listingData, payoutData, colors);
       setUserCharts((prev) => ({ ...prev, [user]: chartData }));
       setDataLoading((prev) => ({ ...prev, [user]: false }));
     } catch (err) {
@@ -751,8 +550,15 @@ export default function ChartsPage() {
   }, [users, isInitialLoad, handleApply]);
 
   useEffect(() => {
-    console.log("dataLoading changed:", dataLoading, userCharts);
-  }, [dataLoading]);
+    // Re-process chart data when theme changes to update CSS variable colors in Chart.js
+    if (users.length > 0 && !isInitialLoad) {
+      users.forEach((user) => {
+        if (userCharts[user]) {
+          fetchDataForUser(user);
+        }
+      });
+    }
+  }, [theme]);
 
   return (
     <div>
@@ -802,46 +608,52 @@ export default function ChartsPage() {
           </button>
         </div>
         {dateError && <p className="text-error-text text-lg mb-4">{dateError}</p>}
-        {error && <p className="text-error-text text-lg mb-4 hidden">{error}</p>}
+        {error && <p className="text-error-text text-lg mb-4">{error}</p>}
         {usersLoading ? (
           <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
-            <p className="text-primary text-lg">Loading Users... ♡</p>
+            <p className="text-primary text-lg">Loading Users... </p>
           </div>
         ) : users.length > 0 ? (
-          dataLoading ? (
-            <div>
-              {users.map((user) => (
-                <div key={user}>
-                  {dataLoading[user] ? (
-                    <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
-                      <h2 className="text-2xl text-primary mb-4">{user}</h2>
-                      <p className="text-primary text-lg">Loading Data... ♡</p>
-                    </div>
-                  ) : userCharts[user] &&
-                    userCharts[user]?.labels?.length &&
-                    userCharts[user]?.labels?.length > 0 &&
-                    userCharts[user]?.datasets?.some(
-                      (d: any) => d.data.length > 0
-                    ) ? (
-                    renderUserChart(user, userCharts[user])
-                  ) : (
-                    <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
-                      <h2 className="text-2xl text-primary mb-4">{user}</h2>
-                      <p className="text-text-secondary text-lg">
-                        No data for {user}. ♡
-                      </p>
-                    </div>
-                  )}
+          <div className="flex flex-col lg:flex-row gap-8 items-start">
+            <UserTableOfContents users={users} />
+            <div className="flex-1 w-full">
+              {Object.keys(dataLoading).length > 0 && Object.values(dataLoading).some(v => v) ? (
+                <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+                  <p className="text-primary text-lg">Loading Charts...</p>
                 </div>
-              ))}
+              ) : (
+                <div>
+                  {users.map((user) => (
+                    <div key={user} id={`user-section-${user}`}>
+                      {dataLoading[user] ? (
+                        <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+                          <h2 className="text-2xl text-primary mb-4">{user}</h2>
+                          <p className="text-primary text-lg">Loading Data... </p>
+                        </div>
+                      ) : userCharts[user] &&
+                        userCharts[user]?.labels?.length &&
+                        userCharts[user]?.labels?.length > 0 &&
+                        userCharts[user]?.datasets?.some(
+                          (d: any) => d.data.length > 0
+                        ) ? (
+                        renderUserChart(user, userCharts[user])
+                      ) : (
+                        <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+                          <h2 className="text-2xl text-primary mb-4">{user}</h2>
+                          <p className="text-text-secondary text-lg">
+                            No data for {user}.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          ) :
-            <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
-              <p className="text-text-secondary text-lg">No data available. ♡</p>
-            </div>
+          </div>
         ) : (
           <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
-            <p className="text-text-secondary text-lg">No users available. ♡</p>
+            <p className="text-text-secondary text-lg">No users available. </p>
           </div>
         )}
       </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Inconsolata } from "next/font/google";
+import { formatCurrency } from "@/lib/format-utils";
 
 const inconsolata = Inconsolata({
   weight: "500",
@@ -267,47 +268,47 @@ export default function Accounts() {
       setUserAccounts((prev) => ({
         ...prev,
         [user]: {
-            AccountEntries: { AccountEntry: [] },
-            AccountID: "",
-            AccountSummary: {
-              AccountState: "",
-              AdditionalAccount: [],
-              AmountPastDue: { value: 0, currencyID: "" },
-              BankAccountInfo: "",
-              BankModifyDate: "",
-              BillingCycleDate: 0,
-              CreditCardExpiration: "",
-              CreditCardInfo: "",
-              CreditCardModifyDate: "",
-              CurrentBalance: { value: 0, currencyID: "" },
-              InvoiceBalance: { value: 0, currencyID: "" },
-              InvoiceCredit: { value: 0, currencyID: "" },
-              InvoiceDate: "",
-              InvoiceNewFee: { value: 0, currencyID: "" },
-              InvoicePayment: { value: 0, currencyID: "" },
-              LastAmountPaid: { value: 0, currencyID: "" },
-              LastPaymentDate: "",
-              NettedTransactionSummary: {
-                TotalNettedChargeAmount: { value: 0, currencyID: "" },
-                TotalNettedCreditAmount: { value: 0, currencyID: "" },
-              },
-              PastDue: false,
-              PaymentMethod: "",
+          AccountEntries: { AccountEntry: [] },
+          AccountID: "",
+          AccountSummary: {
+            AccountState: "",
+            AdditionalAccount: [],
+            AmountPastDue: { value: 0, currencyID: "" },
+            BankAccountInfo: "",
+            BankModifyDate: "",
+            BillingCycleDate: 0,
+            CreditCardExpiration: "",
+            CreditCardInfo: "",
+            CreditCardModifyDate: "",
+            CurrentBalance: { value: 0, currencyID: "" },
+            InvoiceBalance: { value: 0, currencyID: "" },
+            InvoiceCredit: { value: 0, currencyID: "" },
+            InvoiceDate: "",
+            InvoiceNewFee: { value: 0, currencyID: "" },
+            InvoicePayment: { value: 0, currencyID: "" },
+            LastAmountPaid: { value: 0, currencyID: "" },
+            LastPaymentDate: "",
+            NettedTransactionSummary: {
+              TotalNettedChargeAmount: { value: 0, currencyID: "" },
+              TotalNettedCreditAmount: { value: 0, currencyID: "" },
             },
-            Currency: "",
-            EntriesPerPage: 0,
-            FeeNettingStatus: "",
-            HasMoreEntries: false,
-            PageNumber: 0,
-            PaginationResult: { TotalNumberOfEntries: 0, TotalNumberOfPages: 0 },
-            Ack: "",
-            Build: "",
-            CorrelationID: "",
-            Errors: [],
-            HardExpirationWarning: "",
-            Timestamp: "",
-            Version: "",
-          }
+            PastDue: false,
+            PaymentMethod: "",
+          },
+          Currency: "",
+          EntriesPerPage: 0,
+          FeeNettingStatus: "",
+          HasMoreEntries: false,
+          PageNumber: 0,
+          PaginationResult: { TotalNumberOfEntries: 0, TotalNumberOfPages: 0 },
+          Ack: "",
+          Build: "",
+          CorrelationID: "",
+          Errors: [],
+          HardExpirationWarning: "",
+          Timestamp: "",
+          Version: "",
+        }
       }));
       setError(errorMessage);
     } finally {
@@ -364,11 +365,11 @@ export default function Accounts() {
       return (
         <div
           key={user}
-          className="bg-white p-6 rounded-2xl shadow-md border border-pink-100 mb-8"
+          className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
         >
-          <h2 className="text-3xl text-pink-600 mb-4">{user} 🌸</h2>
+          <h2 className="text-3xl text-primary mb-4">{user} 🌸</h2>
           {errors.length > 0 && (
-            <p className="text-red-500 text-lg mb-4">
+            <p className="text-error-text text-lg mb-4">
               {errors.map((error, index) => (
                 <span key={index}>
                   {renderErrorMessage(error)}
@@ -379,7 +380,7 @@ export default function Accounts() {
           )}
           {errors.length === 0 && (
             <p className="text-gray-600 text-lg">
-              No account entries for {user}. ♡
+              No account entries for {user}.
             </p>
           )}
         </div>
@@ -393,37 +394,37 @@ export default function Accounts() {
     return (
       <div
         key={user}
-        className="bg-white p-6 rounded-2xl shadow-md border border-pink-100 mb-8"
+        className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
       >
         {(
-          <p className="text-xl text-pink-600 mb-4">
-            Total Balance: {calculateUserAccountBalance(entries).toFixed(2)} {userAccounts.Currency || "N/A"} 💸
+          <p className="text-xl text-primary mb-4">
+            Total Balance: {formatCurrency(calculateUserAccountBalance(entries))} {userAccounts.Currency || "N/A"} 💸
           </p>
         )}
         {paginatedEntries.length > 0 ? (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-xl text-blue-600 border-collapse">
+              <table className="w-full text-xl text-text-primary border-collapse">
                 <thead>
-                  <tr className="border-b border-pink-100">
+                  <tr className="border-b border-border">
                     <th className="py-2 text-left w-1/5 min-w-[120px]">
-                      <span className="text-pink-500 mr-2">✦</span>
+                      <span className="text-primary mr-2">✦</span>
                       Date
                     </th>
                     <th className="py-2 text-left w-1/5 min-w-[140px]">
-                      <span className="text-pink-500 mr-2">✦</span>
+                      <span className="text-primary mr-2">✦</span>
                       Description
                     </th>
                     <th className="py-2 text-left w-1/5 min-w-[120px]">
-                      <span className="text-pink-500 mr-2">✦</span>
+                      <span className="text-primary mr-2">✦</span>
                       Balance
                     </th>
                     <th className="py-2 text-left w-1/5 min-w-[140px]">
-                      <span className="text-pink-500 mr-2">✦</span>
+                      <span className="text-primary mr-2">✦</span>
                       Item ID
                     </th>
                     <th className="py-2 text-left w-1/5 min-w-[140px]">
-                      <span className="text-pink-500 mr-2">✦</span>
+                      <span className="text-primary mr-2">✦</span>
                       Transaction ID
                     </th>
                   </tr>
@@ -432,7 +433,7 @@ export default function Accounts() {
                   {paginatedEntries.map((entry) => (
                     <tr
                       key={entry.TransactionID || `entry-${Math.random()}`} // Fallback key
-                      className="border-b border-pink-100"
+                      className="border-b border-border"
                     >
                       <td className="py-2 whitespace-nowrap">
                         {entry.Date ? new Date(entry.Date).toLocaleDateString() : "N/A"}
@@ -441,7 +442,7 @@ export default function Accounts() {
                         {entry.Description || "N/A"}
                       </td>
                       <td className="py-2">
-                        {entry.Balance?.value ?? "N/A"} {entry.Balance?.currencyID || ""}
+                        {entry.Balance?.value !== undefined ? formatCurrency(entry.Balance.value) : "N/A"} {entry.Balance?.currencyID || ""}
                       </td>
                       <td className="py-2 truncate">
                         {entry.ItemID || "N/A"}
@@ -460,11 +461,11 @@ export default function Accounts() {
                   setUserPages((prev) => ({ ...prev, [user]: prev[user] - 1 }));
                 }}
                 disabled={pageIdx === 1}
-                className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:bg-pink-300 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Previous
               </button>
-              <span className="text-lg text-pink-600">
+              <span className="text-lg text-primary">
                 Showing {startIdx + 1} -{" "}
                 {/* {Math.min(startIdx + clientPageSize, total)} of {total} ✿ */}
               </span>
@@ -473,7 +474,7 @@ export default function Accounts() {
                   setUserPages((prev) => ({ ...prev, [user]: prev[user] + 1 }));
                 }}
                 disabled={pageIdx >= (userTotalPages[user] || 1)}
-                className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:bg-pink-300 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Next
               </button>
@@ -481,7 +482,7 @@ export default function Accounts() {
           </>
         ) : (
           <p className="text-gray-600 text-lg">
-            No account entries available for {user}. ♡
+            No account entries available for {user}.
           </p>
         )}
       </div>
@@ -490,36 +491,30 @@ export default function Accounts() {
 
   return (
     <div className={inconsolata.className}>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-purple-50 p-8">
-        <h1 className="text-4xl text-pink-700 mb-8 drop-shadow-sm">Accounts</h1>
+      <div className="min-h-screen bg-background p-8">
+        <h1 className="text-4xl text-primary mb-8 drop-shadow-sm">Accounts</h1>
         {!error && Object.keys(userAccounts).length > 0 && (
-          <p className="text-2xl text-pink-600 mb-8">
-            Total Balance: {calculateTotalAccountBalance().toFixed(2)} 💰
+          <p className="text-2xl text-primary mb-8">
+            Total Balance: {formatCurrency(calculateTotalAccountBalance())} 💰
           </p>
         )}
         {userLoading.global ? (
-          <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
-            <p className="text-pink-600 text-lg">Loading Users... ♡</p>
-          </div>
+          <p className="text-primary text-lg animate-pulse">Loading Users... </p>
         ) : users.length > 0 ? (
           <div className="space-y-6">
             {users.map((user) =>
               userLoading[user] ? (
-                <div
-                  key={user}
-                  className="bg-white p-6 rounded-2xl shadow-md border border-pink-100 mb-8"
-                >
-                  <h2 className="text-3xl text-pink-600 mb-4">{user} 🌸</h2>
-                  <p className="text-pink-600 text-lg">Loading accounts... ♡</p>
-                </div>
+                <p key={user} className="text-primary text-lg animate-pulse mb-8">
+                  {user}: Loading accounts...
+                </p>
               ) : (
                 renderUserAccounts(user, userAccounts[user], userPages[user] || 1)
               )
             )}
           </div>
         ) : (
-          <div className="mb-8 p-6 bg-white rounded-lg shadow-md">
-            <p className="text-gray-600 text-lg">No users available. ♡</p>
+          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+            <p className="text-text-secondary text-lg">No users available. </p>
           </div>
         )}
       </div>

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-// Fonts handled globally
+import { trackedFetch as fetch } from "@/lib/api-tracker";
+import UserTableOfContents from "@/components/UserTableOfContents";
+import { formatCurrency } from "@/lib/format-utils";
 
 interface AmountType {
   value: number;
@@ -264,7 +266,7 @@ export default function Accounts() {
           )}
           {errors.length === 0 && (
             <p className="text-text-secondary text-lg">
-              No account summary for {user}. ♡
+              No account summary for {user}.
             </p>
           )}
         </div>
@@ -275,11 +277,12 @@ export default function Accounts() {
     return (
       <div
         key={user}
+        id={`user-section-${user}`}
         className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
       >
         <h2 className="text-3xl text-primary mb-4">{user} 🌸</h2>
         <p className="text-xl text-primary mb-4">
-          Current Balance: {summary.CurrentBalance && typeof summary.CurrentBalance.value === 'number' ? summary.CurrentBalance.value.toFixed(2) : "N/A"} {account.Currency || "N/A"} 💸
+          Current Balance: ${summary.CurrentBalance && typeof summary.CurrentBalance.value === 'number' ? formatCurrency(summary.CurrentBalance.value) : "0.00"} 💸
         </p>
         <div className="overflow-x-auto">
           <table className="w-full text-xl text-text-primary border-collapse">
@@ -311,10 +314,10 @@ export default function Accounts() {
               <tr className="border-b border-border">
                 <td className="py-2">{summary.AccountState || "N/A"}</td>
                 <td className="py-2">
-                  {summary.InvoiceBalance && typeof summary.InvoiceBalance.value === 'number' ? summary.InvoiceBalance.value.toFixed(2) : "N/A"} {summary.InvoiceBalance?.currencyID || ""}
+                  ${summary.InvoiceBalance && typeof summary.InvoiceBalance.value === 'number' ? formatCurrency(summary.InvoiceBalance.value) : "0.00"}
                 </td>
                 <td className="py-2">
-                  {summary.LastAmountPaid && typeof summary.LastAmountPaid.value === 'number' ? summary.LastAmountPaid.value.toFixed(2) : "N/A"} {summary.LastAmountPaid?.currencyID || ""} <br />
+                  ${summary.LastAmountPaid && typeof summary.LastAmountPaid.value === 'number' ? formatCurrency(summary.LastAmountPaid.value) : "0.00"} <br />
                   {summary.LastPaymentDate ? new Date(summary.LastPaymentDate).toLocaleDateString() : "N/A"}
                 </td>
                 <td className="py-2">{summary.PaymentMethod || "N/A"}</td>
@@ -333,32 +336,29 @@ export default function Accounts() {
         <h1 className="text-4xl text-primary mb-8 drop-shadow-sm font-heading">Account Summaries</h1>
         {!error && Object.keys(userAccounts).length > 0 && (
           <p className="text-2xl text-primary mb-8">
-            Total Balance: {calculateTotalAccountBalance().toFixed(2)} 💰
+            Total Balance: ${formatCurrency(calculateTotalAccountBalance())} 💰
           </p>
         )}
         {userLoading.global ? (
-          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
-            <p className="text-primary text-lg">Loading Users... ♡</p>
-          </div>
+          <p className="text-primary text-lg animate-pulse">Loading Users... </p>
         ) : users.length > 0 ? (
-          <div className="space-y-6">
-            {users.map((user) =>
-              userLoading[user] ? (
-                <div
-                  key={user}
-                  className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
-                >
-                  <h2 className="text-3xl text-primary mb-4">{user} 🌸</h2>
-                  <p className="text-primary text-lg">Loading account summary... ♡</p>
-                </div>
-              ) : (
-                renderUserAccountSummary(user, userAccounts[user])
-              )
-            )}
+          <div className="flex flex-col lg:flex-row gap-8 items-start">
+            <UserTableOfContents users={users} />
+            <div className="flex-1 w-full space-y-6">
+              {users.map((user) =>
+                userLoading[user] ? (
+                  <p key={user} className="text-primary text-lg animate-pulse mb-8">
+                    {user}: Loading account summary...
+                  </p>
+                ) : (
+                  renderUserAccountSummary(user, userAccounts[user])
+                )
+              )}
+            </div>
           </div>
         ) : (
           <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
-            <p className="text-text-secondary text-lg">No users available. ♡</p>
+            <p className="text-text-secondary text-lg">No users available. </p>
           </div>
         )}
       </div>

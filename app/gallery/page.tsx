@@ -1,7 +1,8 @@
 "use client"; // Next.js 13+ App Router client component
 
 import { useState, useEffect, useCallback } from "react";
-// Fonts handled globally
+import { trackedFetch as fetch } from "@/lib/api-tracker";
+import UserTableOfContents from "@/components/UserTableOfContents";
 
 interface PackageDetails {
   Weight: { Value: number; Unit: string };
@@ -97,7 +98,7 @@ export default function ListingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [dateError, setDateError] = useState<string | null>(null);
   const [displaySize, setDisplaySize] = useState<"small" | "medium" | "big">(
-    "small"
+    "medium"
   );
 
   // initial page load  
@@ -109,7 +110,12 @@ export default function ListingsPage() {
 
   // Define separate page sizes
   const apiPageSize = 200; // For API requests
-  const clientPageSize = 10; // For client-side pagination
+  const pageSizeMap: { [key in "small" | "medium" | "big"]: number } = {
+    small: 20,
+    medium: 12,
+    big: 6,
+  };
+  const clientPageSize = pageSizeMap[displaySize];
   const maxDaysPerChunk = 120;
 
   const formatDate = (date: Date): string => {
@@ -389,10 +395,39 @@ export default function ListingsPage() {
     }
   }, [users, isInitialLoad, resetTriggered, handleApply]);
 
+  // Effect to handle pagination adjustments when displaySize changes
+  useEffect(() => {
+    if (Object.keys(userListings).length > 0) {
+      // Update total pages for all users based on the new clientPageSize
+      const newTotalPages = { ...userTotalPages };
+      const newCurrentPages = { ...userPages };
+
+      Object.keys(userListings).forEach((user) => {
+        const items = Array.isArray(userListings[user]?.ItemArray?.Items)
+          ? userListings[user].ItemArray.Items
+          : [];
+
+        // Apply same status filter logic as in renderUserGallery to get accurate total count
+        const filteredItems =
+          statusFilter === "ALL"
+            ? items
+            : items.filter(
+              (item) => item.SellingStatus.ListingStatus === statusFilter
+            );
+
+        newTotalPages[user] = Math.ceil(filteredItems.length / clientPageSize) || 1;
+        newCurrentPages[user] = 1; // Reset to page 1 to avoid out-of-bounds
+      });
+
+      setUserTotalPages(newTotalPages);
+      setUserPages(newCurrentPages);
+    }
+  }, [displaySize, statusFilter]); // Also update when statusFilter changes
+
   const sizeStyles = {
     small: {
       grid: "grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-10",
-      imageHeight: "h-[120px]",
+      imageHeight: "h-[160px]",
       captionSize: "text-sm",
       placeholder: "https://via.placeholder.com/150x112?text=No+Image",
     },
@@ -408,6 +443,34 @@ export default function ListingsPage() {
       captionSize: "text-lg",
       placeholder: "https://via.placeholder.com/450x337?text=No+Image",
     },
+  };
+
+  // dedicated image component to handle image loading errors (flickers otherwise?)
+  const GalleryImage = ({ src, alt, placeholder, className }: { src: string, alt: string, placeholder: string, className: string }) => {
+    const [imgSrc, setImgSrc] = useState(src);
+    const [hasError, setHasError] = useState(false);
+
+    // Update src if it changes from props (e.g. pagination or filter change)
+    useEffect(() => {
+      setImgSrc(src);
+      setHasError(false);
+    }, [src]);
+
+    const handleError = () => {
+      if (!hasError) {
+        setImgSrc(placeholder);
+        setHasError(true);
+      }
+    };
+
+    return (
+      <img
+        src={imgSrc}
+        alt={alt}
+        className={className}
+        onError={handleError}
+      />
+    );
   };
 
   const renderUserGallery = (
@@ -434,6 +497,7 @@ export default function ListingsPage() {
     return (
       <div
         key={user}
+        id={`user-section-${user}`}
         className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
       >
         <h2 className="text-2xl text-primary mb-4">{user}</h2>
@@ -457,14 +521,11 @@ export default function ListingsPage() {
                     className="block"
                   >
                     <div className="duration-500 group-hover:scale-105">
-                      <img
+                      <GalleryImage
                         src={imageUrl}
                         alt={`Image for ${item.Title}`}
+                        placeholder={sizeStyles[displaySize].placeholder}
                         className={`w-full ${sizeStyles[displaySize].imageHeight} max-w-full object-contain rounded-lg transition-transform`}
-                        onError={(e) => {
-                          e.currentTarget.src =
-                            sizeStyles[displaySize].placeholder;
-                        }}
                       />
                       <div className="text-transform: uppercase absolute bottom-0 left-0 right-0 bg-[var(--nav-bg)] text-primary text-center py-2 rounded-b-lg transition-transform">
                         <p className={sizeStyles[displaySize].captionSize}>
@@ -479,7 +540,7 @@ export default function ListingsPage() {
           </div>
         ) : (
           <p className="text-text-secondary text-lg">
-            No items available for {user}. ♡
+            No items available for {user}.
           </p>
         )}
       </div>
@@ -552,7 +613,7 @@ export default function ListingsPage() {
               </select>
             </div>
             <div>
-              <label className="text-primary text-md mr-2">Size:</label>
+              <label className="text-primary text-md mr-2">View:</label>
               <select
                 value={displaySize}
                 onChange={(e) =>
@@ -571,72 +632,75 @@ export default function ListingsPage() {
         {error && <p className="text-error-text text-lg mb-4 hidden">{error}</p>}
         {userLoading.global ? (
           <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
-            <p className="text-primary text-lg">Loading Users... ♡</p>
+            <p className="text-primary text-lg">Loading Users... </p>
           </div>
         ) : users.length > 0 ? (
-          <div>
-            {users.map((user) => (
-              <div key={user}>
-                {userLoading[user] ? (
-                  <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
-                    <h2 className="text-2xl text-primary mb-4">{user}</h2>
-                    <p className="text-primary text-lg">
-                      Loading Listings... ♡
-                    </p>
-                  </div>
-                ) : userListings[user]?.ReturnedItemCountActual > 0 ? (
-                  renderUserGallery(
-                    user,
-                    userListings[user],
-                    statusFilter,
-                    userPages[user],
-                    clientPageSize
-                  )
-                ) : (
-                  <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
-                    <h2 className="text-2xl text-primary mb-4">{user}</h2>
-                    <p className="text-text-secondary text-lg">
-                      No listings for {user}. ♡
-                    </p>
-                  </div>
-                )}
-                {userListings[user]?.ReturnedItemCountActual > 0 && (
-                  <div className="flex gap-4 mt-2 mb-6 justify-center">
-                    <button
-                      onClick={() => {
-                        setUserPages((prev) => ({
-                          ...prev,
-                          [user]: prev[user] - 1,
-                        }));
-                      }}
-                      disabled={userPages[user] === 1}
-                      className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:bg-border disabled:cursor-not-allowed transition-colors"
-                    >
-                      Previous
-                    </button>
-                    <span className="text-primary text-lg flex items-center">
-                      Page {userPages[user]} of {userTotalPages[user] || 1}
-                    </span>
-                    <button
-                      onClick={() => {
-                        setUserPages((prev) => ({
-                          ...prev,
-                          [user]: prev[user] + 1,
-                        }));
-                      }}
-                      disabled={userPages[user] >= (userTotalPages[user] || 1)}
-                      className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:bg-border disabled:cursor-not-allowed transition-colors"
-                    >
-                      Next
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
+          <div className="flex flex-col lg:flex-row gap-8 items-start">
+            <UserTableOfContents users={users} />
+            <div className="flex-1 w-full">
+              {users.map((user) => (
+                <div key={user}>
+                  {userLoading[user] ? (
+                    <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+                      <h2 className="text-2xl text-primary mb-4">{user}</h2>
+                      <p className="text-primary text-lg">
+                        Loading Listings...
+                      </p>
+                    </div>
+                  ) : userListings[user]?.ReturnedItemCountActual > 0 ? (
+                    renderUserGallery(
+                      user,
+                      userListings[user],
+                      statusFilter,
+                      userPages[user],
+                      clientPageSize
+                    )
+                  ) : (
+                    <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+                      <h2 className="text-2xl text-primary mb-4">{user}</h2>
+                      <p className="text-text-secondary text-lg">
+                        No listings for {user}.
+                      </p>
+                    </div>
+                  )}
+                  {userListings[user]?.ReturnedItemCountActual > 0 && (
+                    <div className="flex gap-4 mt-2 mb-6 justify-center">
+                      <button
+                        onClick={() => {
+                          setUserPages((prev) => ({
+                            ...prev,
+                            [user]: prev[user] - 1,
+                          }));
+                        }}
+                        disabled={userPages[user] === 1}
+                        className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Previous
+                      </button>
+                      <span className="text-primary text-lg flex items-center">
+                        Page {userPages[user]} of {userTotalPages[user] || 1}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setUserPages((prev) => ({
+                            ...prev,
+                            [user]: prev[user] + 1,
+                          }));
+                        }}
+                        disabled={userPages[user] >= (userTotalPages[user] || 1)}
+                        className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:bg-border disabled:cursor-not-allowed transition-colors"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         ) : (
           <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
-            <p className="text-text-secondary text-lg">No listings available. ♡</p>
+            <p className="text-text-secondary text-lg">No listings available. </p>
           </div>
         )}
       </div>

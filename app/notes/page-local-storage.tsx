@@ -78,8 +78,8 @@ export default function StickyNotesPage() {
   // Get random color for note backgrounds
   const getRandomColor = () => {
     const colors = [
-      "bg-yellow-100",
-      "bg-pink-200",
+      "bg-surface",
+      "bg-primary",
       "bg-green-200",
       "bg-blue-200",
       "bg-purple-200",
@@ -88,21 +88,21 @@ export default function StickyNotesPage() {
   };
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-purple-50 p-8 ${comfortaa.className}`}>
-      <h1 className="text-3xl font-bold mb-6 text-center text-pink-700">
+    <div className={`min-h-screen bg-background p-8 ${comfortaa.className}`}>
+      <h1 className="text-3xl font-bold mb-6 text-center text-primary">
         Notes
       </h1>
 
       {/* Create Note Form */}
       <div className="mb-6 flex justify-center">
         <textarea
-          className="h-50 w-full max-w-md hover:bg-none focus:outline-none border-2 border-pink-300 text-pink-700 py-4 px-4 shadow-sm rounded-lg placeholder-pink-500"
+          className="h-50 w-full max-w-md hover:bg-none focus:outline-none border-2 border-primary-hover text-note-text py-4 px-4 shadow-sm rounded-lg placeholder-text-secondary bg-surface"
           placeholder="Write a new note..."
           value={newNoteContent}
           onChange={(e) => setNewNoteContent(e.target.value)}
         />
         <button
-          className="h-16 ml-2 px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:bg-pink-300 disabled:cursor-not-allowed transition-colors"
+          className="h-16 ml-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           onClick={createNote}
           disabled={!newNoteContent.trim()}
         >
@@ -115,11 +115,10 @@ export default function StickyNotesPage() {
         {notes.map((note) => (
           <div
             key={note.id}
-            className={`${
-              expandedNoteId === note.id
-                ? "fixed inset-0 z-50 bg-opacity-90"
-                : "relative"
-            } ${note.color} p-4 rounded-lg flex flex-col justify-between border-2 border-pink-100`}
+            className={`${expandedNoteId === note.id
+              ? "fixed inset-0 z-50 bg-opacity-90"
+              : "relative"
+              } ${note.color} p-4 rounded-lg flex flex-col justify-between border-2 border-border`}
             style={{
               height: expandedNoteId === note.id ? "80vh" : "200px",
               width: expandedNoteId === note.id ? "80vw" : "100%",
@@ -130,20 +129,20 @@ export default function StickyNotesPage() {
             {expandedNoteId === note.id ? (
               <>
                 <textarea
-                  className="w-full h-full p-2 hover:bg-none focus:outline-none text-blue-800"
+                  className="w-full h-full p-2 hover:bg-none focus:outline-none text-text-primary bg-transparent"
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
                 />
                 <div className="flex justify-end mt-2">
                   <button
-                    className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:bg-pink-300 disabled:cursor-not-allowed transition-colors mr-2"
+                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors mr-2"
                     onClick={() => saveNote(note.id)}
                     disabled={!editContent.trim()}
                   >
                     Save
                   </button>
                   <button
-                    className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
+                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
                     onClick={() => setExpandedNoteId(null)}
                   >
                     Cancel
@@ -152,12 +151,12 @@ export default function StickyNotesPage() {
               </>
             ) : (
               <>
-                <div className="resize-none whitespace-normal break-words text-sm text-blue-900 overflow-auto">
+                <div className="resize-none whitespace-normal break-words text-sm text-note-text overflow-auto">
                   {note.content}
                 </div>
                 <div className="flex justify-end mt-2">
                   <button
-                    className="px-2 py-1 text-pink-600 hover:text-pink-800 mr-2"
+                    className="px-2 py-1 text-primary hover:text-primary-hover mr-2"
                     onClick={() => {
                       setExpandedNoteId(note.id);
                       setEditContent(note.content);
@@ -166,13 +165,13 @@ export default function StickyNotesPage() {
                     Expand
                   </button>
                   <button
-                    className="px-2 py-1 text-pink-600 hover:text-pink-800 mr-2"
+                    className="px-2 py-1 text-primary hover:text-primary-hover mr-2"
                     onClick={() => copyNote(note.content)}
                   >
                     Copy
                   </button>
                   <button
-                    className="px-2 py-1 text-pink-600 hover:text-pink-800"
+                    className="px-2 py-1 text-primary hover:text-primary-hover"
                     onClick={() => deleteNote(note.id)}
                   >
                     Delete
@@ -186,7 +185,7 @@ export default function StickyNotesPage() {
 
       {/* Copy Popup */}
       {showCopyPopup && (
-        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 text-pink-500 px-4 py-2 rounded-lg shadow-md fade-out">
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 text-primary-hover bg-surface border border-border px-4 py-2 rounded-lg shadow-md fade-out">
           Copied!
         </div>
       )}

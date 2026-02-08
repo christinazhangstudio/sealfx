@@ -1,0 +1,44 @@
+[data-theme="dark"] {
+    /* Colors - Dark Theme */
+    --color-primary: #be185d;
+    --color-primary-hover: #9d174d;
+    --color-secondary: #db2777;
+
+    --color-background-start: #0f172a;
+    --color-background-end: #1e293b;
+    --color-surface: #1e293b;
+
+    --color-text-primary: #f8fafc;
+    --color-text-secondary: #cbd5e1;
+    --color-note-text: #334155;
+    --color-border: #334155;
+
+    /* Chart Colors */
+    --color-chart-1: #be185d;
+    --color-chart-2: #38bdf8;
+
+    /* Status Colors */
+    --color-success-bg: #064e3b;
+    --color-success-border: #059669;
+    --color-success-text: #34d399;
+
+    --color-error-bg: #450a0a;
+    --color-error-border: #dc2626;
+    --color-error-text: #f87171;
+
+    /* Fonts (same as default) */
+    --font-heading: 'Inconsolata', monospace;
+    --font-body: 'Inconsolata', monospace;
+    --font-nav: 'Comfortaa', cursive;
+
+
+    /* Nav */
+    --nav-bg: #1e293b;
+
+    /* Theme Switcher */
+    --color-switcher-bg: #1e293b;
+    --color-switcher-border: #6e7987;
+    --color-switcher-text: #cbd5e1;
+    --color-switcher-button-text: #94a3b8;
+    --color-switcher-button-hover: #ffffff;
+}

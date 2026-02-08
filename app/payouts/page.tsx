@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-// Fonts handled globally
+import { trackedFetch as fetch } from "@/lib/api-tracker";
+import UserTableOfContents from "@/components/UserTableOfContents";
+import { formatCurrency } from "@/lib/format-utils";
 
 interface UserPayouts {
   user: string;
@@ -215,9 +217,6 @@ export default function Payouts() {
     );
   };
 
-  // Hardcode currency to USD as per your code
-  const currency: string = "USD";
-
   const renderUserPayouts = (user: string, userPayouts: UserPayouts | undefined, pageIdx: number) => {
     if (!userPayouts || !userPayouts.payouts) {
       return (
@@ -227,7 +226,7 @@ export default function Payouts() {
         >
           <h2 className="text-3xl text-primary mb-4">{user} 🌸</h2>
           <p className="text-text-secondary text-lg">
-            No payouts available for {user}. ♡
+            No payouts available for {user}.
           </p>
         </div>
       );
@@ -241,12 +240,13 @@ export default function Payouts() {
     return (
       <div
         key={user}
+        id={`user-section-${user}`}
         className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
       >
         <h2 className="text-3xl text-primary mb-4">{user} 🌸</h2>
         {total > 0 && (
           <p className="text-xl text-primary mb-4">
-            Total for user: {calculateUserPayoutTotal(payouts).toFixed(2)} {currency} 💸
+            Total: ${formatCurrency(calculateUserPayoutTotal(payouts))} 💸
           </p>
         )}
         {total > 0 && paginatedPayouts.length > 0 ? (
@@ -294,7 +294,7 @@ export default function Payouts() {
                         </small>
                       </td>
                       <td className="py-2">
-                        {payout.amount.value} {payout.amount.currency}
+                        ${formatCurrency(payout.amount.value)}
                       </td>
                       <td className="py-2">
                         {payout.transactionCount}
@@ -314,7 +314,7 @@ export default function Payouts() {
                   setUserPages((prev) => ({ ...prev, [user]: prev[user] - 1 }));
                 }}
                 disabled={pageIdx === 1}
-                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:bg-border disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Previous
               </button>
@@ -327,7 +327,7 @@ export default function Payouts() {
                   setUserPages((prev) => ({ ...prev, [user]: prev[user] + 1 }));
                 }}
                 disabled={pageIdx >= userTotalPages[user]}
-                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:bg-border disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Next
               </button>
@@ -335,7 +335,7 @@ export default function Payouts() {
           </>
         ) : (
           <p className="text-text-secondary text-lg">
-            No payouts available for {user}. ♡
+            No payouts available for {user}.
           </p>
         )}
       </div>
@@ -348,33 +348,36 @@ export default function Payouts() {
         <h1 className="text-4xl text-primary mb-8 drop-shadow-sm font-heading">Payouts</h1>
         {Object.keys(userPayouts).length > 0 && (
           <p className="text-2xl text-primary mb-8">
-            Total: {calculateTotalPayoutAmount().toFixed(2)} {currency} 💰
+            Total: ${formatCurrency(calculateTotalPayoutAmount())} 💰
           </p>
         )}
         {error && <p className="text-error-text text-lg mb-4 hidden">{error}</p>}
         {userLoading.global ? (
           <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
-            <p className="text-primary text-lg">Loading Users... ♡</p>
+            <p className="text-primary text-lg">Loading Users... </p>
           </div>
         ) : users.length > 0 ? (
-          <div className="space-y-6">
-            {users.map((user) =>
-              userLoading[user] ? (
-                <div
-                  key={user}
-                  className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
-                >
-                  <h2 className="text-3xl text-primary mb-4">{user} 🌸</h2>
-                  <p className="text-primary text-lg">Loading payouts... ♡</p>
-                </div>
-              ) : (
-                renderUserPayouts(user, userPayouts[user], userPages[user] || 1)
-              )
-            )}
+          <div className="flex flex-col lg:flex-row gap-8 items-start">
+            <UserTableOfContents users={users} />
+            <div className="flex-1 w-full space-y-6">
+              {users.map((user) =>
+                userLoading[user] ? (
+                  <div
+                    key={user}
+                    className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
+                  >
+                    <h2 className="text-3xl text-primary mb-4">{user} 🌸</h2>
+                    <p className="text-primary text-lg">Loading payouts... </p>
+                  </div>
+                ) : (
+                  renderUserPayouts(user, userPayouts[user], userPages[user] || 1)
+                )
+              )}
+            </div>
           </div>
         ) : (
           <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
-            <p className="text-text-secondary text-lg">No users available. ♡</p>
+            <p className="text-text-secondary text-lg">No users available. </p>
           </div>
         )}
       </div>

@@ -1,7 +1,13 @@
-// Fonts handled globally
-
 export default function Changelog() {
   const changes = [
+    {
+      version: "beta",
+      date: "February 7 2026",
+      updates: [
+        "Theme support.",
+        "API usage tracking."
+      ],
+    },
     {
       version: "beta",
       date: "August 17 2025",
@@ -37,7 +43,7 @@ export default function Changelog() {
       updates: [
         "Initial version of Sealift.",
         "Added Transaction, Payouts, Listings, and Gallery pages.",
-        "Support for views for multiple users.",
+        "Support multiple users.",
         "Improved latency by decoupling client and server side pagination.",
       ],
     },
@@ -60,7 +66,7 @@ export default function Changelog() {
                 <ul className="list-disc pl-5 space-y-2">
                   {change.updates.map((update, idx) => (
                     <p key={idx} className="text-primary-hover text-base">
-                      ♡ {update}
+                      ✎ {update}
                     </p>
                   ))}
                 </ul>

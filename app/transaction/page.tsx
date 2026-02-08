@@ -1,7 +1,9 @@
 "use client"; // Next.JS 13+ defaults to server components in the app router.
 
 import { useEffect, useState } from "react";
-// Fonts handled globally
+import { trackedFetch as fetch } from "@/lib/api-tracker";
+import UserTableOfContents from "@/components/UserTableOfContents";
+import { formatCurrency } from "@/lib/format-utils";
 
 interface UserSummary {
   user: string;
@@ -75,78 +77,76 @@ export default function TransactionPage() {
           Transaction Summaries
         </h1>
         {loading ? (
-          <p className="text-primary text-lg">Loading summaries... ♡</p>
+          <p className="text-primary text-lg">Loading summaries... </p>
         ) : error ? (
           <p className="text-error-text text-lg">{error}</p>
         ) : summaries && summaries.length > 0 ? (
-          <div className="space-y-5">
-            {summaries.map((s, index) => (
-              <div
-                key={index}
-                className="bg-surface p-6 rounded-2xl shadow-md border border-border hover:shadow-lg transition-all duration-300 hover:scale-102"
-              >
-                <h2 className="text-3xl text-primary mb-4">{s.user} 🌸</h2>
-                <table className="w-full text-2xl text-text-primary border-collapse">
-                  <tbody>
-                    <tr className="border-b border-border">
-                      <td className="py-2 w-80">
-                        <span className="text-secondary mr-2">✦</span>
-                        Credits
-                      </td>
-                      <td className="py-2 text-left">
-                        {s.summary.creditCount} ({s.summary.creditAmount.value}{" "}
-                        {s.summary.creditAmount.currency})
-                      </td>
-                    </tr>
-                    <tr className="border-b border-border">
-                      <td className="py-2 w-80">
-                        <span className="text-secondary mr-2">✦</span>
-                        Debits
-                      </td>
-                      <td className="py-2 text-left">
-                        {s.summary.debitCount} ({s.summary.debitAmount.value}{" "}
-                        {s.summary.debitAmount.currency})
-                      </td>
-                    </tr>
-                    <tr className="border-b border-border">
-                      <td className="py-2 w-80">
-                        <span className="text-secondary mr-2">✦</span>
-                        On Hold
-                      </td>
-                      <td className="py-2 text-left">
-                        {s.summary.onHoldCount} ({s.summary.onHoldAmount.value}{" "}
-                        {s.summary.onHoldAmount.currency})
-                      </td>
-                    </tr>
-                    <tr className="border-b border-border">
-                      <td className="py-2 w-80">
-                        <span className="text-secondary mr-2">✦</span>
-                        Total
-                      </td>
-                      <td className="py-2 text-left">
-                        {s.summary.totalCount} ({s.summary.totalAmount.value}{" "}
-                        {s.summary.totalAmount.currency})
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 w-80">
-                        <span className="text-secondary mr-2">✦</span>
-                        Processing
-                      </td>
-                      <td className="py-2 text-left">
-                        {s.summary.processingCount} (
-                        {s.summary.processingAmount.value}{" "}
-                        {s.summary.processingAmount.currency})
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            ))}
+          <div className="flex flex-col lg:flex-row gap-8 items-start">
+            <UserTableOfContents users={summaries.map(s => s.user)} />
+            <div className="flex-1 w-full space-y-5">
+              {summaries.map((s, index) => (
+                <div
+                  key={index}
+                  id={`user-section-${s.user}`}
+                  className="bg-surface p-6 rounded-2xl shadow-md border border-border"
+                >
+                  <h2 className="text-3xl text-primary mb-4">{s.user} 🌸</h2>
+                  <table className="w-full text-2xl text-text-primary border-collapse">
+                    <tbody>
+                      <tr className="border-b border-border">
+                        <td className="py-2 w-80">
+                          <span className="text-secondary mr-2">✦</span>
+                          Credits
+                        </td>
+                        <td className="py-2 text-left">
+                          {s.summary.creditCount} (${formatCurrency(s.summary.creditAmount.value)})
+                        </td>
+                      </tr>
+                      <tr className="border-b border-border">
+                        <td className="py-2 w-80">
+                          <span className="text-secondary mr-2">✦</span>
+                          Debits
+                        </td>
+                        <td className="py-2 text-left">
+                          {s.summary.debitCount} (${formatCurrency(s.summary.debitAmount.value)})
+                        </td>
+                      </tr>
+                      <tr className="border-b border-border">
+                        <td className="py-2 w-80">
+                          <span className="text-secondary mr-2">✦</span>
+                          On Hold
+                        </td>
+                        <td className="py-2 text-left">
+                          {s.summary.onHoldCount} (${formatCurrency(s.summary.onHoldAmount.value)})
+                        </td>
+                      </tr>
+                      <tr className="border-b border-border">
+                        <td className="py-2 w-80">
+                          <span className="text-secondary mr-2">✦</span>
+                          Total
+                        </td>
+                        <td className="py-2 text-left">
+                          {s.summary.totalCount} (${formatCurrency(s.summary.totalAmount.value)})
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 w-80">
+                          <span className="text-secondary mr-2">✦</span>
+                          Processing
+                        </td>
+                        <td className="py-2 text-left">
+                          {s.summary.processingCount} (${formatCurrency(s.summary.processingAmount.value)})
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+            </div>
           </div>
         ) : (
           <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
-            <p className="text-text-secondary text-lg">No summaries available. ♡</p>
+            <p className="text-text-secondary text-lg">No summaries available. </p>
           </div>
         )}
       </div>

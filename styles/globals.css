@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "./themes/default.css";
 @import "./themes/ebay.css";
+@import "./themes/dark.css";
 
 :root {
   --background: var(--color-background-start);
@@ -20,6 +21,7 @@
   --color-surface: var(--color-surface);
   --color-text-primary: var(--color-text-primary);
   --color-text-secondary: var(--color-text-secondary);
+  --color-note-text: var(--color-note-text);
   --color-border: var(--color-border);
 
   /* Status */
@@ -33,14 +35,20 @@
 
   /* Nav */
   --nav-bg: var(--nav-bg);
+
+  /* Charts */
+  --color-chart-1: var(--color-chart-1);
+  --color-chart-2: var(--color-chart-2);
+
+  /* Theme Switcher */
+  --color-switcher-bg: var(--color-switcher-bg);
+  --color-switcher-border: var(--color-switcher-border);
+  --color-switcher-text: var(--color-switcher-text);
+  --color-switcher-button-text: var(--color-switcher-button-text);
+  --color-switcher-button-hover: var(--color-switcher-button-hover);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #ffffff;
-    --foreground: #ffffff;
-  }
-}
+/* Dark mode is handled by next-themes [data-theme] attribute now */
 
 body {
   background: var(--background);

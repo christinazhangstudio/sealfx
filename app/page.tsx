@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { trackedFetch as fetch } from "@/lib/api-tracker";
 // Font imports removed as they are handled globally
 
 
@@ -190,7 +191,7 @@ export default function RegisterSellerPage() {
   useEffect(() => {
     return () => {
       console.log("useEffect: Cleaning up on unmount");
-      window.removeEventListener("message", () => {});
+      window.removeEventListener("message", () => { });
     };
   }, []);
 
@@ -256,11 +257,10 @@ export default function RegisterSellerPage() {
             <button
               onClick={startOAuthFlow}
               disabled={isLoading}
-              className={`w-full flex justify-center items-center px-6 py-3 rounded-lg text-white text-lg font-medium transition-all duration-200 transform ${
-                isLoading
-                  ? "bg-gray-300 cursor-not-allowed"
-                  : "bg-primary duration-200 hover:bg-primary-hover hover:scale-105 shadow-md hover:shadow-lg focus:ring-4 focus:ring-pink-300 focus:outline-none"
-              }`}
+              className={`w-full flex justify-center items-center px-6 py-3 rounded-lg text-white text-lg font-medium transition-all duration-200 transform ${isLoading
+                ? "bg-gray-300 cursor-not-allowed"
+                : "bg-primary duration-200 hover:bg-primary-hover hover:scale-105 shadow-md hover:shadow-lg focus:ring-4 focus:ring-secondary focus:outline-none"
+                }`}
             >
               {isLoading ? (
                 <>
@@ -298,7 +298,7 @@ export default function RegisterSellerPage() {
           </h2>
           {apiError && <p className="text-error-text text-lg">{apiError}</p>}
           {loading ? (
-            <p className="text-secondary text-lg">Loading users... ♡</p>
+            <p className="text-secondary text-lg">Loading users... </p>
           ) : users && users.length > 0 ? (
             <div className="text-gray-600 text-lg text-center">
               {users.map((user) => (
@@ -332,7 +332,7 @@ export default function RegisterSellerPage() {
             </div>
           ) : (
             <p className="flex justify-center items-center text-gray-600 text-lg">
-              No users available. ♡
+              No users available.
             </p>
           )}
         </div>
@@ -357,7 +357,7 @@ export default function RegisterSellerPage() {
               </button>
               <button
                 onClick={handleConfirmDelete}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200"
+                className="px-4 py-2 bg-error-border text-white rounded-lg hover:bg-error-text transition-all duration-200 shadow-md"
               >
                 Delete
               </button>

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-// Fonts handled globally
+import { trackedFetch as fetch } from "@/lib/api-tracker";
+import UserTableOfContents from "@/components/UserTableOfContents";
 
 interface PackageDetails {
   Weight: { Value: number; Unit: string };
@@ -100,11 +101,12 @@ const renderUserTable = (
   return (
     <div
       key={user}
+      id={`user-section-${user}`}
       className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border"
     >
       <h2 className="text-2xl text-primary mb-4">{user}</h2>
       <p className="text-xl text-primary mb-4">
-        Total Item: {filteredItems.length} 📦
+        Total Items: {filteredItems.length} 📦
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-text-primary">
@@ -133,7 +135,7 @@ const renderUserTable = (
             ) : (
               <tr>
                 <td colSpan={4} className="p-2 text-text-secondary text-lg">
-                  No listings match the selected status. ♡
+                  No listings match the selected status.
                 </td>
               </tr>
             )}
@@ -516,72 +518,75 @@ export default function ListingsPage() {
         {error && <p className="text-error-text text-lg mb-4 hidden">{error}</p>}
         {userLoading.global ? (
           <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
-            <p className="text-primary text-lg">Loading Users... ♡</p>
+            <p className="text-primary text-lg">Loading Users... </p>
           </div>
         ) : users.length > 0 ? (
-          <div>
-            {users.map((user) => (
-              <div key={user}>
-                {userLoading[user] ? (
-                  <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
-                    <h2 className="text-2xl text-primary mb-4">{user}</h2>
-                    <p className="text-primary text-lg">
-                      Loading Listings... ♡
-                    </p>
-                  </div>
-                ) : userListings[user]?.ReturnedItemCountActual > 0 ? (
-                  renderUserTable(
-                    user,
-                    userListings[user],
-                    statusFilter,
-                    userPages[user],
-                    clientPageSize
-                  )
-                ) : (
-                  <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
-                    <h2 className="text-2xl text-primary mb-4">{user}</h2>
-                    <p className="text-text-secondary text-lg">
-                      No listings for {user}. ♡
-                    </p>
-                  </div>
-                )}
-                {userListings[user]?.ReturnedItemCountActual > 0 && (
-                  <div className="flex gap-4 mt-2 mb-6 justify-center">
-                    <button
-                      onClick={() => {
-                        setUserPages((prev) => ({
-                          ...prev,
-                          [user]: prev[user] - 1,
-                        }));
-                      }}
-                      disabled={userPages[user] === 1}
-                      className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:bg-border disabled:cursor-not-allowed transition-colors"
-                    >
-                      Previous
-                    </button>
-                    <span className="text-primary text-lg flex items-center">
-                      Page {userPages[user]} of {userTotalPages[user] || 1}
-                    </span>
-                    <button
-                      onClick={() => {
-                        setUserPages((prev) => ({
-                          ...prev,
-                          [user]: prev[user] + 1,
-                        }));
-                      }}
-                      disabled={userPages[user] >= (userTotalPages[user] || 1)}
-                      className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:bg-border disabled:cursor-not-allowed transition-colors"
-                    >
-                      Next
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
+          <div className="flex flex-col lg:flex-row gap-8 items-start">
+            <UserTableOfContents users={users} />
+            <div className="flex-1 w-full">
+              {users.map((user) => (
+                <div key={user}>
+                  {userLoading[user] ? (
+                    <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+                      <h2 className="text-2xl text-primary mb-4">{user}</h2>
+                      <p className="text-primary text-lg">
+                        Loading Listings...
+                      </p>
+                    </div>
+                  ) : userListings[user]?.ReturnedItemCountActual > 0 ? (
+                    renderUserTable(
+                      user,
+                      userListings[user],
+                      statusFilter,
+                      userPages[user],
+                      clientPageSize
+                    )
+                  ) : (
+                    <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+                      <h2 className="text-2xl text-primary mb-4">{user}</h2>
+                      <p className="text-text-secondary text-lg">
+                        No listings for {user}.
+                      </p>
+                    </div>
+                  )}
+                  {userListings[user]?.ReturnedItemCountActual > 0 && (
+                    <div className="flex gap-4 mt-2 mb-6 justify-center">
+                      <button
+                        onClick={() => {
+                          setUserPages((prev) => ({
+                            ...prev,
+                            [user]: prev[user] - 1,
+                          }));
+                        }}
+                        disabled={userPages[user] === 1}
+                        className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Previous
+                      </button>
+                      <span className="text-primary text-lg flex items-center">
+                        Page {userPages[user]} of {userTotalPages[user] || 1}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setUserPages((prev) => ({
+                            ...prev,
+                            [user]: prev[user] + 1,
+                          }));
+                        }}
+                        disabled={userPages[user] >= (userTotalPages[user] || 1)}
+                        className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         ) : (
           <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
-            <p className="text-text-secondary text-lg">No users available. ♡</p>
+            <p className="text-text-secondary text-lg">No users available. </p>
           </div>
         )}
       </div>
