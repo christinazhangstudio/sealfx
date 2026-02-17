@@ -25,8 +25,8 @@ export default function StickyNotesPage() {
 
   // Color options
   const colorOptions = [
-    { value: "bg-surface", name: "Default" },
-    { value: "bg-primary", name: "Primary" },
+    { value: "bg-orange-200", name: "Orange" },
+    { value: "bg-yellow-200", name: "Yellow" },
     { value: "bg-green-200", name: "Green" },
     { value: "bg-blue-200", name: "Blue" },
     { value: "bg-purple-200", name: "Purple" },
@@ -137,8 +137,8 @@ export default function StickyNotesPage() {
   // Get random color for new notes
   const getRandomColor = () => {
     const colors = [
-      "bg-surface",
-      "bg-primary",
+      "bg-orange-200",
+      "bg-yellow-200",
       "bg-green-200",
       "bg-blue-200",
       "bg-purple-200",
@@ -147,8 +147,8 @@ export default function StickyNotesPage() {
   };
 
   return (
-    <div className={`min-h-screen bg-background p-8`}>
-      <h1 className="text-3xl font-bold mb-6 text-center text-primary font-heading">
+    <div className={`min-h-screen bg-background p-4 sm:p-6 md:p-8`}>
+      <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center drop-shadow-sm font-heading break-words">
         Notes
       </h1>
 
@@ -162,17 +162,17 @@ export default function StickyNotesPage() {
       {/* Create Note Form */}
       <div className="mb-6 flex justify-center">
         <textarea
-          className="h-50 w-full max-w-md hover:bg-none focus:outline-none border-2 border-primary-hover text-note-text py-4 px-4 shadow-sm rounded-lg placeholder-text-secondary bg-surface"
+          className="h-50 w-full max-w-md hover:bg-none focus:outline-none border-2 border-border text-text-secondary py-4 px-4 shadow-sm rounded-lg placeholder-text-secondary/90 bg-surface"
           placeholder="Write a new note..."
           value={newNoteContent}
           onChange={(e) => setNewNoteContent(e.target.value)}
         />
         <button
-          className="h-16 ml-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="h-16 w-20 ml-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           onClick={createNote}
           disabled={!newNoteContent.trim()}
         >
-          Add Note
+          Add
         </button>
       </div>
 

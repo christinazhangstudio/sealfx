@@ -85,94 +85,132 @@ ChartJS.register(
 // Types moved to lib/chart-utils.ts
 
 const renderUserChart = (user: string, chartData: any) => {
+  const isServer = typeof window === "undefined";
+  const style = !isServer ? getComputedStyle(document.documentElement) : null;
+  const textColor = style?.getPropertyValue("--color-chart-axis-text").trim() || "#333333";
+  const gridColor = style?.getPropertyValue("--color-chart-axis-grid").trim() || "#e0e0e040";
+
   return (
-    <div className="chart-container bg-surface p-8 rounded-lg shadow-md container-inline-size mb-8">
+    <div className="chart-container bg-surface p-4 sm:p-6 md:p-8 rounded-lg shadow-md container-inline-size mb-8">
       <h2 className="text-2xl text-primary mb-4">{user} 🌸</h2>
-      <Line
-        data={chartData}
-        options={{
-          responsive: true,
-          scales: {
-            x: {
-              type: "time",
-              offset: false,
-              time: {
-                unit: "day",
-                displayFormats: { day: "MMM D" },
+      <div className="relative h-[350px] sm:h-[450px] md:h-[500px]">
+        <Line
+          data={chartData}
+          options={{
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: {
+                type: "time",
+                offset: false,
+                time: {
+                  unit: "day",
+                  displayFormats: { day: "MMM D" },
+                },
+                title: {
+                  display: true,
+                  text: "Time",
+                  color: textColor,
+                  font: { weight: "bold" }
+                },
+                ticks: {
+                  color: textColor,
+                },
+                grid: {
+                  color: gridColor,
+                }
               },
-              title: { display: true, text: "Time" },
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: "Total Value",
+                  color: textColor,
+                  font: { weight: "bold" }
+                },
+                ticks: {
+                  color: textColor,
+                },
+                grid: {
+                  color: gridColor,
+                }
+              },
             },
-            y: {
-              beginAtZero: true,
-              title: { display: true, text: "Total Value" },
-            },
-          },
-          plugins: {
-            tooltip: {
-              mode: "nearest",
-              axis: "x",
-              intersect: false,
-              callbacks: {
-                label: (context) => {
-                  if (!context.raw) return "";
-                  const datasetIndex = context.datasetIndex;
-                  const rawData = context.raw as { x: string; y: number; detail: any };
-                  const totalValue = rawData.y ?? 0;
-                  const dateString = rawData.x;
+            plugins: {
+              tooltip: {
+                mode: "nearest",
+                axis: "x",
+                intersect: false,
+                callbacks: {
+                  label: (context) => {
+                    if (!context.raw) return "";
+                    const datasetIndex = context.datasetIndex;
+                    const rawData = context.raw as { x: string; y: number; detail: any };
+                    const totalValue = rawData.y ?? 0;
+                    const dateString = rawData.x;
 
-                  if (!dateString) return "";
+                    if (!dateString) return "";
 
-                  const date = new Date(dateString).toLocaleDateString("en-US", {
-                    month: "long",
-                    day: "numeric",
-                    year: "numeric",
-                  });
+                    const date = new Date(dateString).toLocaleDateString("en-US", {
+                      month: "long",
+                      day: "numeric",
+                      year: "numeric",
+                    });
 
-                  if (datasetIndex === 0) {
-                    const listing = rawData.detail || {};
-                    const price = listing.price ?? 0;
-                    return [
-                      `Date: ${date}`,
-                      `Total Listing Value: $${formatCurrency(totalValue)}`,
-                      `${listing.title || "Unknown"} (Qty: ${listing.quantity || 0
-                      }, Price: $${formatCurrency(price)})`,
-                    ];
-                  } else {
-                    const payout = rawData.detail || {};
-                    const amount = payout.amount ?? 0;
-                    return [
-                      `Date: ${date}`,
-                      `Total Payout Value: $${formatCurrency(totalValue)}`,
-                      `${payout.title || "Unknown"} (Amount: $${formatCurrency(amount)})`,
-                    ];
-                  }
+                    if (datasetIndex === 0) {
+                      const listing = rawData.detail || {};
+                      const price = listing.price ?? 0;
+                      return [
+                        `Date: ${date}`,
+                        `Total Listing Value: $${formatCurrency(totalValue)}`,
+                        `${listing.title || "Unknown"} (Qty: ${listing.quantity || 0
+                        }, Price: $${formatCurrency(price)})`,
+                      ];
+                    } else {
+                      const payout = rawData.detail || {};
+                      const amount = payout.amount ?? 0;
+                      return [
+                        `Date: ${date}`,
+                        `Total Payout Value: $${formatCurrency(totalValue)}`,
+                        `${payout.title || "Unknown"} (Amount: $${formatCurrency(amount)})`,
+                      ];
+                    }
+                  },
                 },
               },
-            },
-            datalabels: {
-              formatter: (value) => {
-                const yValue = (value && typeof value === "object") ? (value as any).y : value;
-                return typeof yValue === "number" ? `$${formatCurrency(yValue)}` : "$0.00";
+              datalabels: {
+                formatter: (value) => {
+                  const yValue = (value && typeof value === "object") ? (value as any).y : value;
+                  return typeof yValue === "number" ? `$${formatCurrency(yValue)}` : "$0.00";
+                },
+                color: (context) => {
+                  if (typeof window === 'undefined') return "#000";
+                  const style = getComputedStyle(document.documentElement);
+                  return context.datasetIndex === 0
+                    ? style.getPropertyValue('--color-chart-1').trim() || "#EC4899"
+                    : style.getPropertyValue('--color-chart-2').trim() || "#3B82F6";
+                },
+                align: "top",
+                offset: 4,
+                font: { size: 10 }, // Smaller font for data labels on mobile
+                padding: 4,
               },
-              color: (context) => {
-                if (typeof window === 'undefined') return "#000";
-                const style = getComputedStyle(document.documentElement);
-                return context.datasetIndex === 0
-                  ? style.getPropertyValue('--color-chart-1').trim() || "#EC4899"
-                  : style.getPropertyValue('--color-chart-2').trim() || "#3B82F6";
+              legend: {
+                display: true,
+                position: "top",
+                labels: {
+                  boxWidth: 12,
+                  padding: 10,
+                  color: textColor,
+                  font: {
+                    size: 11
+                  }
+                }
               },
-              align: "top",
-              offset: 4,
-              font: { size: 12 },
-              padding: 4,
             },
-            legend: {
-              display: true,
-              position: "top",
-            },
-          },
-        }}
-      />
+          }}
+        />
+      </div>
     </div>
   );
 };
@@ -590,29 +628,31 @@ export default function ChartsPage() {
           }
         }
       `}</style>
-      <div className="min-h-screen bg-background p-8">
-        <h1 className="text-4xl text-primary mb-8 drop-shadow-sm font-heading">
-          Listings and Payouts Value Tracker
+      <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
+        <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center lg:text-left drop-shadow-sm font-heading break-words">
+          Charts
         </h1>
-        <div className="mb-8 flex flex-col sm:flex-row gap-4 items-center justify-center sm:justify-start flex-wrap">
-          <div>
-            <label className="text-primary text-lg mr-2">Range:</label>
-            <select
-              value={range}
-              onChange={(e) => setRange(e.target.value)}
-              className="p-2 rounded-lg border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-primary bg-surface"
+        <div className="mb-8 flex flex-col lg:flex-row gap-4 items-center xl:items-center">
+          <div className="flex flex-wrap justify-center xl:justify-start gap-4">
+            <div className="flex items-center gap-2 bg-surface rounded-lg shadow-sm border border-border p-1">
+              <label className="text-primary font-bold text-sm uppercase tracking-wider px-2 border-r border-border">Range:</label>
+              <select
+                value={range}
+                onChange={(e) => setRange(e.target.value)}
+                className="p-2 rounded-lg border-none text-text-primary focus:outline-none focus:ring-0 bg-transparent cursor-pointer font-heading"
+              >
+                <option value="last-month" className="bg-surface text-text-primary">Last Month</option>
+                <option value="last-3-months" className="bg-surface text-text-primary">Last 3 Months</option>
+                <option value="last-12-months" className="bg-surface text-text-primary">Last 12 Months</option>
+              </select>
+            </div>
+            <button
+              onClick={handleApply}
+              className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-all shadow-sm font-bold active:scale-95"
             >
-              <option value="last-month">Last Month</option>
-              <option value="last-3-months">Last 3 Months</option>
-              <option value="last-12-months">Last 12 Months</option>
-            </select>
+              Apply 🌸
+            </button>
           </div>
-          <button
-            onClick={handleApply}
-            className="px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
-          >
-            Apply 🌸
-          </button>
         </div>
         {dateError && <p className="text-error-text text-lg mb-4">{dateError}</p>}
         {error && <p className="text-error-text text-lg mb-4">{error}</p>}
@@ -621,9 +661,9 @@ export default function ChartsPage() {
             <p className="text-primary text-lg">Loading Users... </p>
           </div>
         ) : users.length > 0 ? (
-          <div className="flex flex-col lg:flex-row gap-8 items-start">
+          <div className="flex flex-col xl:flex-row gap-8 items-start">
             <UserTableOfContents users={users} />
-            <div className="flex-1 w-full">
+            <div className="flex-1 w-full min-w-0">
               {Object.keys(dataLoading).length > 0 && Object.values(dataLoading).some(v => v) ? (
                 <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
                   <p className="text-primary text-lg">Loading Charts...</p>

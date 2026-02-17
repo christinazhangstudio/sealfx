@@ -50,13 +50,14 @@ export async function trackedFetch(input: RequestInfo | URL, init?: RequestInit)
 
     // Categorize the endpoint
     let category = "other";
-    if (url.includes(process.env.NEXT_PUBLIC_USERS_URI || "users")) category = "Users";
-    else if (url.includes(process.env.NEXT_PUBLIC_LISTINGS_URI || "listings")) category = "Listings";
-    else if (url.includes(process.env.NEXT_PUBLIC_PAYOUTS_URI || "payouts")) category = "Payouts";
-    else if (url.includes(process.env.NEXT_PUBLIC_NOTES_URI || "notes")) category = "Notes";
-    else if (url.includes(process.env.NEXT_PUBLIC_ACCOUNT_URI || "accounts")) category = "Accounts";
-    else if (url.includes("transaction")) category = "Transactions";
-    else if (url.includes("analytics") || url.includes("charts")) category = "Analytics";
+    if (url.includes(String(process.env.NEXT_PUBLIC_USERS_URI))) category = "Users";
+    else if (url.includes(String(process.env.NEXT_PUBLIC_LISTINGS_URI))) category = "Listings";
+    else if (url.includes(String(process.env.NEXT_PUBLIC_PAYOUTS_URI))) category = "Payouts";
+    else if (url.includes(String(process.env.NEXT_PUBLIC_NOTES_URI))) category = "Notes";
+    else if (url.includes(String(process.env.NEXT_PUBLIC_ACCOUNT_URI))) category = "Account";
+    else if (url.includes(String(process.env.NEXT_PUBLIC_NOTIFICATION_URI))) category = "Notification";
+    else if (url.includes(String(process.env.NEXT_PUBLIC_TRANSACTION_SUMMARIES_URI))) category = "Transaction Summaries";
+    else if (url.includes(String(process.env.NEXT_PUBLIC_INBOX_URI))) category = "Inbox";
 
     usage.total += 1;
     usage.endpoints[category] = (usage.endpoints[category] || 0) + 1;

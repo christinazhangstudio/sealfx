@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
-// Font imports removed as they are handled globally
-
 
 interface UsersResponse {
   users: string[];
@@ -20,7 +18,7 @@ export default function RegisterSellerPage() {
   const [showDeletePopup, setShowDeletePopup] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchUsers = () => {
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
     const usersUri = process.env.NEXT_PUBLIC_USERS_URI;
 
@@ -37,6 +35,7 @@ export default function RegisterSellerPage() {
     }
 
     const apiUrl = `${apiBaseUrl}/${usersUri}`;
+    setLoading(true);
 
     fetch(apiUrl)
       .then((res) => {
@@ -53,6 +52,10 @@ export default function RegisterSellerPage() {
         setAPIError(err.message);
         setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    fetchUsers();
   }, []);
 
   const deleteUser = async (user: string) => {
@@ -101,6 +104,22 @@ export default function RegisterSellerPage() {
     }
   };
 
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // Clear notification after 3 seconds
+  useEffect(() => {
+    if (notification) {
+      // Reload users list (TODO: idk because dev is wonky, maybe eventually keep the condition)
+      //if (notification.type === 'success') {
+      fetchUsers();
+      //}
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
   const startOAuthFlow = () => {
     if (isLoading) {
       console.log("startOAuthFlow: Already loading, ignoring click");
@@ -108,6 +127,7 @@ export default function RegisterSellerPage() {
     }
     setIsLoading(true);
     setError(null);
+    setNotification(null);
 
     console.log("startOAuthFlow: Attempting to open window");
 
@@ -134,7 +154,7 @@ export default function RegisterSellerPage() {
 
     if (!oauthWindow) {
       console.log("startOAuthFlow: oauthWindow is null, but checking for messages");
-      setError("Window may have opened, but we couldn't track it. Please complete authorization.");
+      setNotification({ message: "Window may have opened, but we couldn't track it.", type: 'error' });
     }
 
     const handleMessage = (event: MessageEvent) => {
@@ -143,16 +163,19 @@ export default function RegisterSellerPage() {
         data: event.data,
       });
 
-      if (event.data === "seller_authorized") {
+      // Allow messages from the API URL or same origin
+      // In development with ngrok, the origin might be different
+      if (event.data === "seller_authorized" || (typeof event.data === 'object' && event.data.type === "seller_authorized")) {
         console.log("handleMessage: Authorization successful");
         setIsAuthorized(true);
+        setNotification({ message: "Authorization successful!", type: 'success' });
         setIsLoading(false);
         if (oauthWindow && !oauthWindow.closed) {
           oauthWindow.close();
         }
       } else if (event.data?.error) {
         console.log("handleMessage: Authorization error", event.data.error);
-        setError(event.data.error);
+        setNotification({ message: event.data.error, type: 'error' });
         setIsLoading(false);
         if (oauthWindow && !oauthWindow.closed) {
           oauthWindow.close();
@@ -172,11 +195,12 @@ export default function RegisterSellerPage() {
           clearInterval(checkWindowClosed);
           window.removeEventListener("message", handleMessage);
           setIsLoading(false);
-          if (!isAuthorized && !error) {
-            setError("Authorization window closed unexpectedly.");
+
+          if (!isAuthorized) {
+            setNotification({ message: "Authorization window closed unexpectedly.", type: 'error' });
           }
         }
-      }, 500);
+      }, 2000);
     } else console.log("checkWindowClosed: No oauthWindow, relying on postMessage");
 
     return () => {
@@ -200,107 +224,74 @@ export default function RegisterSellerPage() {
       className={`min-h-screen flex justify-center bg-[var(--background)] pt-8 px-4 sm:px-6 lg:px-8 relative`}
     >
       <div className={`max-w-md w-full space-y-6 ${showDeletePopup ? 'blur-sm' : ''}`}>
-        <div className="max-w-md w-full bg-surface rounded-xl shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl mt-8">
-          <h1 className="text-4xl text-text-primary mb-6 text-center animate-fade-in">
+        <div className="max-w-md w-full bg-surface rounded-xl shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl mt-8 relative">
+          <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center drop-shadow-sm font-heading break-words">
             add sellers
           </h1>
 
-          {isAuthorized ? (
-            <div className="bg-success-bg border-l-4 border-success-border p-4 rounded-lg flex items-center space-x-3">
-              <svg
-                className="w-6 h-6 text-success-border"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              <p className="text-success-text text-lg">Authorization successful!</p>
-            </div>
-          ) : error ? (
-            <div className="bg-error-bg border-l-4 border-error-border p-4 rounded-lg">
-              <div className="flex items-center space-x-3">
+          <button
+            onClick={startOAuthFlow}
+            disabled={isLoading}
+            className={`w-full flex justify-center items-center px-6 py-3 rounded-lg text-white text-lg font-medium transition-all duration-200 transform ${isLoading
+              ? "bg-gray-300 cursor-not-allowed"
+              : "bg-primary duration-300 hover:bg-primary-hover hover:scale-101 shadow-md hover:shadow-lg focus:ring-4 focus:ring-secondary focus:outline-none"
+              }`}
+          >
+            {isLoading ? (
+              <>
                 <svg
-                  className="w-6 h-6 text-error-border"
-                  fill="none"
-                  stroke="currentColor"
+                  className="animate-spin h-5 w-5 mr-3 text-white"
                   viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
                 >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
                   <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M6 18L18 6M6 6l12 12"
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   />
                 </svg>
-                <p className="text-error-text text-lg">{error}</p>
-              </div>
-              {error.includes("track it") && (
-                <div className="mt-4 text-sm text-gray-600 bg-gray-100 p-4 rounded-lg">
-                  <p className="font-medium">To allow pop-ups:</p>
-                  <ul className="list-disc pl-5 mt-2 space-y-1">
-                    <li>Chrome: Click lock icon → Site settings → Allow Pop-ups.</li>
-                    <li>Firefox: Click shield icon → Disable blocking.</li>
-                    <li>Safari: Preferences → Websites → Allow Pop-up Windows.</li>
-                  </ul>
-                </div>
-              )}
-            </div>
-          ) : (
-            <button
-              onClick={startOAuthFlow}
-              disabled={isLoading}
-              className={`w-full flex justify-center items-center px-6 py-3 rounded-lg text-white text-lg font-medium transition-all duration-200 transform ${isLoading
-                ? "bg-gray-300 cursor-not-allowed"
-                : "bg-primary duration-200 hover:bg-primary-hover hover:scale-105 shadow-md hover:shadow-lg focus:ring-4 focus:ring-secondary focus:outline-none"
-                }`}
-            >
-              {isLoading ? (
-                <>
-                  <svg
-                    className="animate-spin h-5 w-5 mr-3 text-white"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                  Authorizing...
-                </>
-              ) : (
-                "authorize through eBay login"
-              )}
-            </button>
-          )}
+                Authorizing...
+              </>
+            ) : (
+              "authorize through eBay login"
+            )}
+          </button>
         </div>
+
+        {/* Notification Popup */}
+        {notification && (
+          <div className={`fixed top-24 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-xl border-l-4 transition-all duration-500 ${notification.type === 'success'
+            ? 'bg-success-bg border-success-border text-success-text'
+            : 'bg-error-bg border-error-border text-error-text'
+            }`}>
+            <div className="flex items-center space-x-3">
+              {notification.type === 'success' ? (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+              ) : (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              )}
+              <span className="font-medium">{notification.message}</span>
+            </div>
+          </div>
+        )}
 
         {/* Second card */}
         <div className="bg-surface rounded-xl shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl">
-          <h2 className="text-2xl text-text-primary mb-4 text-center animate-fade-in">
-            registered sellers for sealift
+          <h2 className="text-2xl text-primary mb-6 text-center drop-shadow-sm font-heading">
+            registered sellers
           </h2>
           {apiError && <p className="text-error-text text-lg">{apiError}</p>}
           {loading ? (
             <p className="text-secondary text-lg">Loading users... </p>
           ) : users && users.length > 0 ? (
-            <div className="text-gray-600 text-lg text-center">
+            <div className="--color-text-primary text-lg text-center">
               {users.map((user) => (
                 <div
                   key={user}
@@ -345,7 +336,7 @@ export default function RegisterSellerPage() {
             <h3 className="text-xl text-text-primary mb-4 text-center">
               Confirm Deletion
             </h3>
-            <p className="text-gray-600 text-center mb-6">
+            <p className="text-text-primary text-center mb-6">
               Are you sure you want to delete user "{userToDelete}"?
             </p>
             <div className="flex justify-center space-x-4">

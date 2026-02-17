@@ -78,8 +78,8 @@ export default function StickyNotesPage() {
   // Get random color for note backgrounds
   const getRandomColor = () => {
     const colors = [
-      "bg-surface",
-      "bg-primary",
+      "bg-orange-200",
+      "bg-yellow-200",
       "bg-green-200",
       "bg-blue-200",
       "bg-purple-200",

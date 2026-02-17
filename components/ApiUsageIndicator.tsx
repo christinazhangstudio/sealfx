@@ -21,7 +21,14 @@ export default function ApiUsageIndicator() {
         return () => window.removeEventListener("api-usage-update", handleUpdate);
     }, []);
 
-    if (!usage) return null;
+    if (!usage) {
+        return (
+            <div className="flex items-center space-x-2 px-3 py-1 rounded-full bg-surface border border-border text-xs font-medium text-text-secondary opacity-50 min-w-0">
+                <div className="w-2 h-2 rounded-full bg-border"></div>
+                <span>API Calls: <span className="inline-block min-w-[1.2rem] text-right font-mono"> ... </span></span>
+            </div>
+        );
+    }
 
     return (
         <div className="relative">
@@ -31,7 +38,7 @@ export default function ApiUsageIndicator() {
                 title="View API Usage"
             >
                 <div className={`w-2 h-2 rounded-full ${usage.total > 1000 ? 'bg-error-border' : 'bg-success-border'}`}></div>
-                <span>API Calls: {usage.total}</span>
+                <span>API Calls: <span className="inline-block min-w-[1.2rem] text-right font-mono">{usage.total}</span></span>
             </button>
 
             {isOpen && (

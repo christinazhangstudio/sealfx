@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Iansui&family=Inconsolata:wght@200..900&family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Red+Hat+Mono:ital,wght@0,300..700;1,300..700&family=Rubik:ital,wght@0,300..900;1,300..900&display=swap');
 @import "tailwindcss";
 @import "./themes/default.css";
 @import "./themes/ebay.css";
@@ -6,6 +7,9 @@
 :root {
   --background: var(--color-background-start);
   --foreground: var(--color-text-primary);
+  --font-heading: 'Nunito', sans-serif;
+  --font-body: 'Nunito', sans-serif;
+  --font-nav: 'Nunito', sans-serif;
 }
 
 @theme inline {
@@ -23,6 +27,8 @@
   --color-text-secondary: var(--color-text-secondary);
   --color-note-text: var(--color-note-text);
   --color-border: var(--color-border);
+  --color-hover: var(--color-hover-bg);
+  --color-hover-content: var(--color-hover-text);
 
   /* Status */
   --color-success-bg: var(--color-success-bg);
@@ -39,6 +45,11 @@
   /* Charts */
   --color-chart-1: var(--color-chart-1);
   --color-chart-2: var(--color-chart-2);
+  --color-chart-axis-text: var(--color-chart-axis-text);
+  --color-chart-axis-grid: var(--color-chart-axis-grid);
+
+  /* Notifications */
+  --color-message-pill: var(--color-message-pill);
 
   /* Theme Switcher */
   --color-switcher-bg: var(--color-switcher-bg);
@@ -53,7 +64,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
 }
 
 @keyframes fadeOut {

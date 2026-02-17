@@ -39,7 +39,7 @@ export default function UserTableOfContents({ users }: UserTableOfContentsProps)
     return (
         <>
             {/* Desktop Sidebar */}
-            <aside className="hidden lg:block w-64 shrink-0 sticky top-28 self-start">
+            <aside className="hidden xl:block w-64 shrink-0 sticky top-28 self-start">
                 <div className="space-y-2 p-4 bg-surface rounded-xl border border-border shadow-sm max-h-[calc(100vh-theme(spacing.36))] overflow-y-auto">
                     <h3 className="text-sm font-bold text-primary uppercase tracking-wider font-heading">
                         Users
@@ -60,7 +60,7 @@ export default function UserTableOfContents({ users }: UserTableOfContentsProps)
             </aside>
 
             {/* Mobile Floating Button & Drawer */}
-            <div className="lg:hidden">
+            <div className="xl:hidden">
                 {/* Floating Action Button (FAB) */}
                 <button
                     onClick={() => setIsOpen(true)}
