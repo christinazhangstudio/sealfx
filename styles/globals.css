@@ -39,6 +39,8 @@
   /* Charts */
   --color-chart-1: var(--color-chart-1);
   --color-chart-2: var(--color-chart-2);
+  --color-chart-axis-text: var(--color-chart-axis-text);
+  --color-chart-axis-grid: var(--color-chart-axis-grid);
 
   /* Theme Switcher */
   --color-switcher-bg: var(--color-switcher-bg);

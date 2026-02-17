@@ -9,11 +9,13 @@
     --color-text-primary: #be185d;
     --color-text-secondary: #4b5563;
     --color-note-text: var(--color-text-primary);
-    --color-border: #fce7f3;
+    --color-border: #e5afce;
 
     /* Chart Colors */
     --color-chart-1: #e93e86;
     --color-chart-2: #5c69f4;
+    --color-chart-axis-text: #be185d;
+    --color-chart-axis-grid: #e5afce40;
 
     /* Status Colors */
     --color-success-bg: #f0fdf4;

@@ -2,10 +2,12 @@ export default function Changelog() {
   const changes = [
     {
       version: "beta",
-      date: "February 7 2026",
+      date: "February 2026",
       updates: [
         "Theme support.",
-        "API usage tracking."
+        "API usage tracking.",
+        "Basic auth.",
+        "Notifications management."
       ],
     },
     {
@@ -50,9 +52,9 @@ export default function Changelog() {
   ];
 
   return (
-    <div className={`min-h-screen bg-background p-8`}>
+    <div className={`min-h-screen bg-background p-4 sm:p-6 md:p-8`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-4xl text-primary mb-8 text-center drop-shadow-sm font-heading">
+        <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center drop-shadow-sm font-heading break-words">
           changelog
         </h1>
         <div className="relative border-l-4 border-primary-hover">

@@ -55,8 +55,9 @@ export async function trackedFetch(input: RequestInfo | URL, init?: RequestInit)
     else if (url.includes(process.env.NEXT_PUBLIC_PAYOUTS_URI || "payouts")) category = "Payouts";
     else if (url.includes(process.env.NEXT_PUBLIC_NOTES_URI || "notes")) category = "Notes";
     else if (url.includes(process.env.NEXT_PUBLIC_ACCOUNT_URI || "accounts")) category = "Accounts";
+    else if (url.includes(process.env.NEXT_PUBLIC_NOTIFICATION_URI || "notification")) category = "Notifications";
     else if (url.includes("transaction")) category = "Transactions";
-    else if (url.includes("analytics") || url.includes("charts")) category = "Analytics";
+    else if (url.includes("charts")) category = "Charts";
 
     usage.total += 1;
     usage.endpoints[category] = (usage.endpoints[category] || 0) + 1;

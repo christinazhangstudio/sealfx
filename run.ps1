@@ -5,9 +5,12 @@ if (docker container inspect $containerName 2>$null) {
     docker image prune -f
 }
 
+# some env vars are only available server-side (e.g. AUTH_SECRET)
+# so we need to pass them in via --env-file
 docker run -d `
     --name $containerName `
     -p "9997:9997" `
+    --env-file .env.local `
     "sealfx:latest"
 
 if ($LASTEXITCODE -eq 0) {

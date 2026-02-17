@@ -1,21 +1,23 @@
 [data-theme="dark"] {
     /* Colors - Dark Theme */
-    --color-primary: #be185d;
-    --color-primary-hover: #9d174d;
-    --color-secondary: #db2777;
+    --color-primary: #e72787;
+    --color-primary-hover: #e90088;
+    --color-secondary: #b118a7;
 
     --color-background-start: #0f172a;
     --color-background-end: #1e293b;
     --color-surface: #1e293b;
 
     --color-text-primary: #f8fafc;
-    --color-text-secondary: #cbd5e1;
+    --color-text-secondary: #ddcfe4;
     --color-note-text: #334155;
-    --color-border: #334155;
+    --color-border: #8a1e66;
 
     /* Chart Colors */
-    --color-chart-1: #be185d;
+    --color-chart-1: #be1884;
     --color-chart-2: #38bdf8;
+    --color-chart-axis-text: #ddcfe4;
+    --color-chart-axis-grid: #3b096c;
 
     /* Status Colors */
     --color-success-bg: #064e3b;
@@ -37,7 +39,7 @@
 
     /* Theme Switcher */
     --color-switcher-bg: #1e293b;
-    --color-switcher-border: #6e7987;
+    --color-switcher-border: #2f4f7a;
     --color-switcher-text: #cbd5e1;
     --color-switcher-button-text: #94a3b8;
     --color-switcher-button-hover: #ffffff;

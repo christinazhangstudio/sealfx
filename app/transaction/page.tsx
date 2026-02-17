@@ -34,46 +34,64 @@ export default function TransactionPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-    const transactionSummaryUri =
-      process.env.NEXT_PUBLIC_TRANSACTION_SUMMARIES_URI;
-    if (!apiBaseUrl) {
-      setError("API base URL env not defined");
-      setLoading(false);
-      return;
-    }
+    const fetchSummaries = async () => {
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
+      const transactionSummaryUri = process.env.NEXT_PUBLIC_TRANSACTION_SUMMARIES_URI;
 
-    if (!transactionSummaryUri) {
-      setError("transaction summary URI env not defined");
-      setLoading(false);
-      return;
-    }
+      if (!apiBaseUrl || !transactionSummaryUri) {
+        const missing = !apiBaseUrl ? "API base URL" : "Transaction summary URI";
+        setError(`${missing} env not defined`);
+        setLoading(false);
+        return;
+      }
 
-    const apiUrl = `${apiBaseUrl}/${transactionSummaryUri}`;
+      const apiUrl = `${apiBaseUrl}/${transactionSummaryUri}`;
+      console.log(`Fetching transaction summaries from: ${apiUrl}`);
 
-    fetch(apiUrl)
-      .then((res) => {
+      try {
+        setLoading(true);
+        const res = await fetch(apiUrl, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          // Ensure credentials are sent if cross-origin
+          credentials: "include",
+        });
+
         if (!res.ok) {
-          throw new Error(`Failed to fetch transactions: ${res.status}`);
+          throw new Error(`Failed to fetch transactions: ${res.status} ${res.statusText}`);
         }
-        return res.json();
-      })
-      .then((data: UserSummary[]) => {
-        setSummaries(data);
+
+        const data = await res.json();
+        console.log("Transaction data received:", data);
+
+        // Handle case where API might wrap data in an object
+        const finalData = Array.isArray(data) ? data : (data.summaries || data.data || []);
+
+        if (!Array.isArray(finalData)) {
+          console.warn("API response is not an array:", data);
+          setSummaries([]);
+        } else {
+          setSummaries(finalData);
+        }
+
+        setError(null);
+      } catch (err: any) {
+        console.error("Transaction fetch error:", err);
+        setError(err.message || "An unexpected error occurred");
+      } finally {
         setLoading(false);
-      })
-      .catch((err: Error) => {
-        // explicitly type err as Error
-        setError(err.message);
-        // console.log(err.message)
-        setLoading(false);
-      });
+      }
+    };
+
+    fetchSummaries();
   }, []);
 
   return (
     <div>
-      <div className="min-h-screen bg-background p-8">
-        <h1 className="text-4xl text-primary mb-8 drop-shadow-sm font-heading">
+      <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
+        <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center lg:text-left drop-shadow-sm font-heading break-words">
           Transaction Summaries
         </h1>
         {loading ? (

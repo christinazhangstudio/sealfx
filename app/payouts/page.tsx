@@ -344,8 +344,11 @@ export default function Payouts() {
 
   return (
     <div>
-      <div className="min-h-screen bg-background p-8">
-        <h1 className="text-4xl text-primary mb-8 drop-shadow-sm font-heading">Payouts</h1>
+      <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
+        <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-2 lg:mb-4 text-center lg:text-left drop-shadow-sm font-heading break-words">Payouts</h1>
+        <p className="text-sm text-text-secondary mb-6 lg:mb-10 text-center lg:text-left italic">
+          Note: Only payouts less than 5 years in the past can be retrieved.
+        </p>
         {Object.keys(userPayouts).length > 0 && (
           <p className="text-2xl text-primary mb-8">
             Total: ${formatCurrency(calculateTotalPayoutAmount())} 💰

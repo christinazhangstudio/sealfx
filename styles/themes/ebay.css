@@ -9,11 +9,13 @@
     --color-text-primary: #333333;
     --color-text-secondary: #555555;
     --color-note-text: var(--color-text-primary);
-    --color-border: #e0e0e0;
+    --color-border: #62c27a;
 
     /* Chart Colors */
     --color-chart-1: #0064D2;
     --color-chart-2: #e54432;
+    --color-chart-axis-text: #333333;
+    --color-chart-axis-grid: #62c27a40;
 
     /* Status Colors */
     --color-success-bg: #dff0d8;
@@ -25,9 +27,9 @@
     --color-error-text: #a94442;
 
     /* Fonts */
-    --font-heading: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    --font-body: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    --font-nav: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    --font-heading: 'Inconsolata', monospace;
+    --font-body: 'Inconsolata', monospace;
+    --font-nav: 'Comfortaa', cursive;
 
     /* Nav */
     --nav-bg: #ffffff;

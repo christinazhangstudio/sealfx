@@ -25,8 +25,8 @@ export default function StickyNotesPage() {
 
   // Color options
   const colorOptions = [
-    { value: "bg-surface", name: "Default" },
-    { value: "bg-primary", name: "Primary" },
+    { value: "bg-orange-200", name: "Orange" },
+    { value: "bg-yellow-200", name: "Yellow" },
     { value: "bg-green-200", name: "Green" },
     { value: "bg-blue-200", name: "Blue" },
     { value: "bg-purple-200", name: "Purple" },
@@ -137,8 +137,8 @@ export default function StickyNotesPage() {
   // Get random color for new notes
   const getRandomColor = () => {
     const colors = [
-      "bg-surface",
-      "bg-primary",
+      "bg-orange-200",
+      "bg-yellow-200",
       "bg-green-200",
       "bg-blue-200",
       "bg-purple-200",
@@ -147,8 +147,8 @@ export default function StickyNotesPage() {
   };
 
   return (
-    <div className={`min-h-screen bg-background p-8`}>
-      <h1 className="text-3xl font-bold mb-6 text-center text-primary font-heading">
+    <div className={`min-h-screen bg-background p-4 sm:p-6 md:p-8`}>
+      <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center drop-shadow-sm font-heading break-words">
         Notes
       </h1>
 

@@ -549,82 +549,91 @@ export default function ListingsPage() {
 
   return (
     <div>
-      <div className="min-h-screen bg-background p-8">
-        <div className="flex justify-between items-center mb-8 flex-col sm:flex-row gap-4">
-          <h1 className="text-4xl text-primary drop-shadow-sm font-heading">
-            Listings Gallery
+      <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 lg:mb-10 gap-4">
+          <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary text-center sm:text-left drop-shadow-sm font-heading break-words">
+            Listing Gallery
           </h1>
         </div>
-        <div className="mb-8 flex flex-col sm:flex-row gap-4 items-center flex-wrap">
-          <div>
-            <label className="text-primary text-lg mr-2">From:</label>
-            <input
-              type="date"
-              value={formatDate(startFrom)}
-              onChange={(e) => {
-                const newDate = new Date(e.target.value);
-                if (!isNaN(newDate.getTime())) {
-                  setStartFrom(newDate);
-                }
-              }}
-              className="p-2 rounded-lg border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-primary bg-surface"
-              max={formatDate(new Date())}
-            />
-          </div>
-          <div>
-            <label className="text-primary text-lg mr-2">To:</label>
-            <input
-              type="date"
-              value={formatDate(startTo)}
-              onChange={(e) => {
-                const newDate = new Date(e.target.value);
-                if (!isNaN(newDate.getTime())) {
-                  setStartTo(newDate);
-                }
-              }}
-              className="p-2 rounded-lg border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-primary bg-surface"
-              max={formatDate(new Date())}
-            />
-          </div>
-          <button
-            onClick={handleApply}
-            className="px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
-          >
-            Apply 🌸
-          </button>
-          <button
-            onClick={resetDateRange}
-            className="px-3 py-2 bg-secondary text-white rounded-lg hover:bg-opacity-90 transition-colors"
-          >
-            Reset ✿
-          </button>
-          <div className="flex flex-col gap-2 bg-surface rounded-lg shadow-md p-1">
-            <div>
-              <label className="text-primary text-md mr-2">Status:</label>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="p-2 rounded-lg border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-primary w-full sm:w-auto bg-surface"
-              >
-                <option value="ALL">ALL</option>
-                <option value="Active">Active</option>
-                <option value="Completed">Completed</option>
-                <option value="Ended">Ended</option>
-              </select>
+        <div className="mb-8 flex flex-col lg:flex-row gap-6 items-center lg:items-center lg:flex-wrap">
+          <div className="flex flex-wrap justify-center lg:justify-start gap-4">
+            <div className="flex items-center gap-2">
+              <label className="text-primary font-bold text-sm uppercase tracking-wider">From:</label>
+              <input
+                type="date"
+                value={formatDate(startFrom)}
+                onChange={(e) => {
+                  const newDate = new Date(e.target.value);
+                  if (!isNaN(newDate.getTime())) {
+                    setStartFrom(newDate);
+                  }
+                }}
+                className="p-2 rounded-lg border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-primary bg-surface shadow-sm font-heading"
+                max={formatDate(new Date())}
+              />
             </div>
-            <div>
-              <label className="text-primary text-md mr-2">View:</label>
-              <select
-                value={displaySize}
-                onChange={(e) =>
-                  setDisplaySize(e.target.value as "small" | "medium" | "big")
-                }
-                className="p-2 rounded-lg border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-primary w-full sm:w-auto bg-surface"
+            <div className="flex items-center gap-2">
+              <label className="text-primary font-bold text-sm uppercase tracking-wider">To:</label>
+              <input
+                type="date"
+                value={formatDate(startTo)}
+                onChange={(e) => {
+                  const newDate = new Date(e.target.value);
+                  if (!isNaN(newDate.getTime())) {
+                    setStartTo(newDate);
+                  }
+                }}
+                className="p-2 rounded-lg border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-primary bg-surface shadow-sm font-heading"
+                max={formatDate(new Date())}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap justify-center lg:justify-start gap-4 items-center">
+            <div className="flex gap-2">
+              <button
+                onClick={handleApply}
+                className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-all shadow-sm font-bold active:scale-95"
               >
-                <option value="small">Small</option>
-                <option value="medium">Medium</option>
-                <option value="big">Big</option>
-              </select>
+                Apply 🌸
+              </button>
+              <button
+                onClick={resetDateRange}
+                className="px-6 py-2 bg-secondary text-white rounded-lg hover:bg-opacity-90 transition-all shadow-sm font-bold active:scale-95"
+              >
+                Reset ✿
+              </button>
+            </div>
+
+            <div className="flex flex-wrap gap-4">
+              <div className="flex items-center gap-2 bg-surface rounded-lg shadow-sm border border-border p-1">
+                <label className="text-primary font-bold text-sm uppercase tracking-wider px-2 border-r border-border">Status:</label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="p-2 rounded-lg border-none text-text-primary focus:outline-none focus:ring-0 bg-transparent cursor-pointer font-heading"
+                >
+                  <option value="ALL" className="bg-surface text-text-primary">ALL</option>
+                  <option value="Active" className="bg-surface text-text-primary">Active</option>
+                  <option value="Completed" className="bg-surface text-text-primary">Completed</option>
+                  <option value="Ended" className="bg-surface text-text-primary">Ended</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2 bg-surface rounded-lg shadow-sm border border-border p-1">
+                <label className="text-primary font-bold text-sm uppercase tracking-wider px-2 border-r border-border">View:</label>
+                <select
+                  value={displaySize}
+                  onChange={(e) =>
+                    setDisplaySize(e.target.value as "small" | "medium" | "big")
+                  }
+                  className="p-2 rounded-lg border-none text-text-primary focus:outline-none focus:ring-0 bg-transparent cursor-pointer font-heading"
+                >
+                  <option value="small" className="bg-surface text-text-primary">Small</option>
+                  <option value="medium" className="bg-surface text-text-primary">Medium</option>
+                  <option value="big" className="bg-surface text-text-primary">Big</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
