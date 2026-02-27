@@ -38,6 +38,7 @@ export default function NavMenu() {
   if (pathname === "/login") return null;
 
   const navLinks = [
+    { name: "Inbox", href: "/inbox" },
     { name: "Notes", href: "/notes" },
     { name: "Payouts", href: "/payouts" },
     { name: "Listings (Detail)", href: "/listings" },
