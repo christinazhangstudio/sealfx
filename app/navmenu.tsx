@@ -53,6 +53,7 @@ export default function NavMenu() {
     { name: "Accounts", href: "/accounts" },
     { name: "Transactions", href: "/transaction" },
     { name: "Notifications", href: "/notifications" },
+    { name: "Admin", href: "/admin" },
   ];
 
   const isActive = (path: string) => pathname === path;

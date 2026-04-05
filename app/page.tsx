@@ -225,7 +225,7 @@ export default function RegisterSellerPage() {
       className={`min-h-screen flex justify-center bg-[var(--background)] pt-8 px-4 sm:px-6 lg:px-8 relative`}
     >
       <div className={`max-w-md w-full space-y-6 ${showDeletePopup ? 'blur-sm' : ''}`}>
-        <div className="max-w-md w-full bg-surface rounded-xl shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl mt-8 relative">
+        <div className="max-w-md w-full bg-surface rounded-xl shadow-md border border-border mb-8 p-8 transform transition-all duration-300 hover:shadow-xl mt-8 relative">
           <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center drop-shadow-sm font-heading break-words">
             add sellers
           </h1>
@@ -233,7 +233,7 @@ export default function RegisterSellerPage() {
           <button
             onClick={startOAuthFlow}
             disabled={isLoading}
-            className={`w-full flex justify-center items-center px-6 py-3 rounded-lg text-white text-lg font-medium transition-all duration-200 transform ${isLoading
+            className={`w-full flex justify-center items-center px-6 py-3 rounded-md text-white text-lg font-medium transition-all duration-200 transform ${isLoading
               ? "bg-gray-300 cursor-not-allowed"
               : "bg-btn-apply duration-300 hover:bg-btn-apply-hover hover:scale-101 shadow-md hover:shadow-lg focus:ring-4 focus:ring-secondary focus:outline-none"
               }`}
@@ -268,7 +268,7 @@ export default function RegisterSellerPage() {
 
         {/* Notification Popup */}
         {notification && (
-          <div className={`fixed top-24 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-xl border-l-4 transition-all duration-500 ${notification.type === 'success'
+          <div className={`fixed top-24 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-md shadow-xl border-l-4 transition-all duration-500 ${notification.type === 'success'
             ? 'bg-success-bg border-success-border text-success-text'
             : 'bg-error-bg border-error-border text-error-text'
             }`}>
@@ -284,7 +284,7 @@ export default function RegisterSellerPage() {
         )}
 
         {/* Second card */}
-        <div className="bg-surface rounded-xl shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl">
+        <div className="bg-surface rounded-lg border border-border mb-8 shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl">
           <h2 className="text-2xl text-primary mb-6 text-center drop-shadow-sm font-heading">
             registered sellers
           </h2>

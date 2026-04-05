@@ -9,6 +9,7 @@ export async function registerUser(formData: FormData) {
     const devId = formData.get("devId") as string;
     const certId = formData.get("certId") as string;
     const redirectUri = formData.get("redirectUri") as string;
+    const isSandbox = formData.get("isSandbox") === "on";
 
     if (!email || !password || !appId || !devId || !certId || !redirectUri) {
         return { error: "All fields are required." };
@@ -28,7 +29,8 @@ export async function registerUser(formData: FormData) {
                 appId,
                 devId,
                 certId,
-                redirectUri
+                redirectUri,
+                isSandbox
             }
         };
 
