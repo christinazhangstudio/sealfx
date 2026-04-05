@@ -8,7 +8,6 @@ export default function Changelog() {
         "JWT authentication.",
         "AI chatbot (self-hosted and Cloud option).",
         "Support sandbox mode.",
-        "Add remotely configurable tutorial.",
       ],
     },
     {

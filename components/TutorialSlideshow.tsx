@@ -29,46 +29,16 @@ const DEFAULT_SLIDES: Slide[] = [
 ];
 
 export default function TutorialSlideshow({ fabOnly = false, isVisible = true }: { fabOnly?: boolean, isVisible?: boolean }) {
-    const [slides, setSlides] = useState<Slide[]>(DEFAULT_SLIDES);
     const [currentSlide, setCurrentSlide] = useState(0);
-    const [loading, setLoading] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-    useEffect(() => {
-        const remoteUrl = process.env.NEXT_PUBLIC_TUTORIAL_JSON_URL;
-        if (!remoteUrl) {
-            console.log("TutorialSlideshow: No remote URL defined, using local defaults.");
-            return;
-        }
-
-        const fetchRemoteDocs = async () => {
-            setLoading(true);
-            try {
-                const response = await fetch(remoteUrl);
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                const data = await response.json();
-                if (data && data.slides) {
-                    setSlides(data.slides);
-                    console.log("TutorialSlideshow: Successfully loaded remote content.");
-                }
-            } catch (err) {
-                console.error("TutorialSlideshow: Failed to fetch remote docs, using local fallback:", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchRemoteDocs();
-    }, []);
-
-    const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % slides.length);
-    const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+    const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % DEFAULT_SLIDES.length);
+    const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + DEFAULT_SLIDES.length) % DEFAULT_SLIDES.length);
 
     useEffect(() => {
         const timer = setInterval(nextSlide, 10000);
         return () => clearInterval(timer);
-    }, [currentSlide, slides.length]);
-
-    if (loading) return <div className="h-full flex items-center justify-center text-primary">Loading documentation...</div>;
+    }, [currentSlide]);
 
     // If it's a FAB-only instance (for the main page to show the button), we skip the content rendering
     if (fabOnly) {
@@ -102,7 +72,7 @@ export default function TutorialSlideshow({ fabOnly = false, isVisible = true }:
                             </button>
                         </div>
                         <nav className="flex-1 overflow-y-auto space-y-3">
-                            {slides.map((slide, index) => (
+                            {DEFAULT_SLIDES.map((slide, index) => (
                                 <button
                                     key={slide.id}
                                     onClick={() => { setCurrentSlide(index); setIsMenuOpen(false); }}
@@ -129,11 +99,11 @@ export default function TutorialSlideshow({ fabOnly = false, isVisible = true }:
                 <div className="flex items-center justify-between px-2">
                     <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-secondary/50">Tutorial Navigation</h3>
                     <div className="text-[10px] font-mono text-primary/60 uppercase tracking-widest">
-                        {currentSlide + 1} / {slides.length}
+                        {currentSlide + 1} / {DEFAULT_SLIDES.length}
                     </div>
                 </div>
                 <div className="flex flex-col space-y-1">
-                    {slides.map((slide, index) => (
+                    {DEFAULT_SLIDES.map((slide, index) => (
                         <button
                             key={slide.id}
                             onClick={() => setCurrentSlide(index)}
@@ -161,16 +131,16 @@ export default function TutorialSlideshow({ fabOnly = false, isVisible = true }:
             {/* Main Content (Vertically Stacked Like Mobile) */}
             <div className="flex-1 flex flex-col justify-start w-full mx-auto pt-4">
                 <div
-                    key={slides[currentSlide].id}
+                    key={DEFAULT_SLIDES[currentSlide].id}
                     className="animate-fade-in animate-slide-in-up space-y-6 text-center"
                 >
                     {/* Giant Image Section */}
                     <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-surface/20 border border-border flex items-center justify-center shadow-2xl group">
                         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent pointer-events-none z-10" />
-                        {slides[currentSlide].imagePath ? (
+                        {DEFAULT_SLIDES[currentSlide].imagePath ? (
                             <Image
-                                src={slides[currentSlide].imagePath}
-                                alt={slides[currentSlide].title}
+                                src={DEFAULT_SLIDES[currentSlide].imagePath}
+                                alt={DEFAULT_SLIDES[currentSlide].title}
                                 fill
                                 priority
                                 unoptimized={true}
@@ -178,7 +148,7 @@ export default function TutorialSlideshow({ fabOnly = false, isVisible = true }:
                             />
                         ) : (
                             <div className="text-text-secondary/20 text-[10px] font-bold uppercase tracking-[0.3em]">
-                                No Image Resource: {slides[currentSlide].imagePath}
+                                No Image Resource: {DEFAULT_SLIDES[currentSlide].imagePath}
                             </div>
                         )}
                     </div>
@@ -186,19 +156,19 @@ export default function TutorialSlideshow({ fabOnly = false, isVisible = true }:
                     {/* Text Section - Stabilized Height to prevent layout shifts */}
                     <div className="space-y-4 px-2 min-h-[160px] flex flex-col justify-center">
                         <h2 className="text-3xl lg:text-3xl font-bold text-primary tracking-tight leading-tight">
-                            {slides[currentSlide].title}
+                            {DEFAULT_SLIDES[currentSlide].title}
                         </h2>
                         <div className="min-h-[60px]">
                             <p className="text-text-secondary text-base lg:text-lg leading-relaxed opacity-80 max-w-2xl mx-auto">
-                                {slides[currentSlide].description}
+                                {DEFAULT_SLIDES[currentSlide].description}
                             </p>
                         </div>
 
                         {/* Caption Area - Reserved Space to prevent shifts */}
                         <div className="h-[46px] flex items-center justify-center">
-                            {slides[currentSlide].caption ? (
+                            {DEFAULT_SLIDES[currentSlide].caption ? (
                                 <div className="px-4 py-2 rounded-lg bg-primary/10 border border-primary/20 text-primary italic text-md tracking-wider">
-                                    {slides[currentSlide].caption}
+                                    {DEFAULT_SLIDES[currentSlide].caption}
                                 </div>
                             ) : (
                                 <div className="h-full w-full" />
@@ -209,7 +179,7 @@ export default function TutorialSlideshow({ fabOnly = false, isVisible = true }:
                     {/* Controls Section - Stabilized with fixed margin */}
                     <div className="flex items-center justify-center gap-4 pt-2 px-2 h-14">
                         <div className="flex gap-2.5 mr-6 items-center">
-                            {slides.map((_, i) => (
+                            {DEFAULT_SLIDES.map((_, i) => (
                                 <button
                                     key={i}
                                     onClick={() => setCurrentSlide(i)}
