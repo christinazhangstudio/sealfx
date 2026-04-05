@@ -259,7 +259,7 @@ export default function Payouts() {
                       <span className="text-secondary mr-2">✦</span>
                       Date
                     </th>
-                    <th className="py-2 text-left w-1/5 min-w-[120px]">
+                    <th className="py-2 text-left w-1/5 min-w-[200px]">
                       <span className="text-secondary mr-2">✦</span>
                       Status
                     </th>

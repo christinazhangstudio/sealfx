@@ -36,11 +36,11 @@ export default function RegisterPage() {
     };
 
     return (
-        <div className="flex items-center justify-center py-20 px-4 min-h-screen relative overflow-x-hidden">
-            {/* Mobile Help Button */}
+        <div className="flex items-start justify-center pt-8 pb-32 px-4 min-h-screen relative overflow-x-hidden">
+            {/* Mobile Help Button - Slot 2 (Middle) of the right-side stack */}
             <button
                 onClick={() => setShowHelp(true)}
-                className="lg:hidden fixed bottom-6 right-6 z-[100] w-12 h-12 bg-[var(--color-primary)] text-white rounded-full shadow-2xl flex items-center justify-center border border-white/20 active:scale-95 transition-transform"
+                className="lg:hidden fixed bottom-20 right-4 z-[100] w-14 h-14 bg-[var(--color-primary)] text-white rounded-full shadow-2xl flex items-center justify-center border border-white/20 active:scale-95 transition-all"
                 aria-label="How to use the app"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -71,7 +71,7 @@ export default function RegisterPage() {
                 </div>
             </div>
 
-            <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="w-full max-w-6xl grid grid-cols-1 @[950px]:grid-cols-2 gap-12 items-center">
                 {/* Left Side: Registration Form */}
                 <div className="bg-[var(--color-surface)]/30 backdrop-blur-xl rounded-[1.5rem] p-8 shadow-sm border border-[var(--color-border)] relative z-10 hover:border-[var(--color-primary)]/30 transition-all duration-500 group group/form">
                     <div className="text-center mb-8">
@@ -189,13 +189,12 @@ export default function RegisterPage() {
                     </form>
                 </div>
 
-                {/* Right Side: Tutorial Slideshow (Hidden on mobile) */}
-                <div className="hidden lg:block h-full min-h-[500px] border-l border-[var(--color-border)]/50 pl-12">
+                {/* Right Side: Tutorial Slideshow (Responsive to AI panel) */}
+                <div className="hidden @[950px]/main:block h-full min-h-[500px] border-l border-[var(--color-border)]/50 pl-12">
                     <TutorialSlideshow />
                 </div>
             </div>
         </div>
     );
-
 
 }

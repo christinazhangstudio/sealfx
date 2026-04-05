@@ -1,6 +1,17 @@
 export default function Changelog() {
   const changes = [
     {
+      version: "v1",
+      date: "April 2026",
+      updates: [
+        "Multi-tenant support.",
+        "JWT authentication.",
+        "AI chatbot (self-hosted and Cloud option).",
+        "Support sandbox mode.",
+        "Add remotely configurable tutorial.",
+      ],
+    },
+    {
       version: "beta",
       date: "February 2026",
       updates: [

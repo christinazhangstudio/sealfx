@@ -19,17 +19,17 @@ function useIsMobile(breakpoint = 768) {
     return isMobile;
 }
 
-export default function AiHelpButton({ 
-    isOpen, 
-    setIsOpen, 
-    panelWidth, 
+export default function AiHelpButton({
+    isOpen,
+    setIsOpen,
+    panelWidth,
     setPanelWidth,
     panelHeight,
     setPanelHeight,
     isResizingState,
     setIsResizing
-}: { 
-    isOpen: boolean; 
+}: {
+    isOpen: boolean;
     setIsOpen: (open: boolean) => void;
     panelWidth: number;
     setPanelWidth: (width: number) => void;
@@ -162,8 +162,8 @@ export default function AiHelpButton({
         };
 
     const panelClassName = isMobile
-        ? `fixed bottom-0 left-0 right-0 bg-[var(--color-surface)]/95 backdrop-blur-3xl border-t border-[var(--color-border)] shadow-2xl flex flex-col z-[500] rounded-t-2xl ${isResizingState ? '' : 'transition-[transform,opacity] duration-300 ease-in-out'} ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`
-        : `fixed top-0 right-0 h-screen bg-[var(--color-surface)]/95 backdrop-blur-3xl border-l border-[var(--color-border)] shadow-2xl flex flex-col z-[500] ${isResizingState ? '' : 'transition-[transform,opacity] duration-300 ease-in-out'} ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`;
+        ? `fixed bottom-0 left-0 right-0 bg-[var(--color-surface)]/95 backdrop-blur-3xl border-t border-[var(--color-border)] shadow-[0_-20px_50px_-15px_rgba(0,0,0,0.5)] flex flex-col z-[500] rounded-t-2xl ${isResizingState ? '' : 'transition-[transform,opacity] duration-300 ease-in-out'} ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`
+        : `fixed top-0 right-0 h-screen bg-[var(--color-surface)]/90 backdrop-blur-3xl border-l border-[var(--color-border)] shadow-[-40px_0_60px_-15px_rgba(0,0,0,0.2)] flex flex-col z-[500] ${isResizingState ? '' : 'transition-[transform,opacity] duration-300 ease-in-out'} ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`;
 
     const startResize = () => {
         isResizing.current = true;

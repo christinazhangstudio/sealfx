@@ -83,7 +83,7 @@ export default function ClientLayoutWrapper({
                 {!isLoginPage && <NavMenu />}
 
                 {/* Main content */}
-                <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 border-0 w-full overflow-hidden">
+                <main className={`@container/main max-w-7xl px-4 sm:px-6 lg:px-8 py-8 border-0 w-full ${!isAiOpen ? 'mx-auto' : 'ml-0 lg:ml-8'}`}>
                     {children}
                 </main>
 

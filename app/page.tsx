@@ -157,57 +157,83 @@ export default function RegisterSellerPage() {
       setNotification({ message: "Window may have opened, but we couldn't track it.", type: 'error' });
     }
 
+    let processed = false;
     let checkWindowClosed: NodeJS.Timeout | undefined;
+    let successPoller: NodeJS.Timeout | undefined;
+
+    // Snapshot current users to detect a newcomer
+    const previousUsers = [...users];
 
     const cleanup = () => {
       console.log("startOAuthFlow: Cleaning up listeners & intervals");
       window.removeEventListener("message", handleMessage);
       if (checkWindowClosed) clearInterval(checkWindowClosed);
+      if (successPoller) clearInterval(successPoller);
     };
 
     const handleMessage = (event: MessageEvent) => {
-      console.log("handleMessage: Received event", {
-        origin: event.origin,
-        data: event.data,
-      });
-
-      // Allow messages from the API URL or same origin
+      if (processed) return;
+      // Note: This remains as a fallback in case postMessage DOES work (e.g. on same domain)
       if (event.data === "seller_authorized" || (typeof event.data === 'object' && event.data.type === "seller_authorized")) {
-        console.log("handleMessage: Authorization successful");
-        setIsAuthorized(true);
-        setNotification({ message: "Authorization successful!", type: 'success' });
-        setIsLoading(false);
-        cleanup();
-
-        if (oauthWindow && !oauthWindow.closed) {
-          oauthWindow.close();
-        }
-      } else if (event.data?.error) {
-        console.log("handleMessage: Authorization error", event.data.error);
-        setNotification({ message: event.data.error, type: 'error' });
-        setIsLoading(false);
-        cleanup();
-
-        if (oauthWindow && !oauthWindow.closed) {
-          oauthWindow.close();
-        }
+        console.log("handleMessage: Authorization successful (via postMessage)");
+        triggerSuccess();
       }
     };
 
+    const triggerSuccess = () => {
+      if (processed) return;
+      processed = true;
+      setIsAuthorized(true);
+      setNotification({ message: "Authorization successful!", type: 'success' });
+      setIsLoading(false);
+      cleanup();
+      if (oauthWindow && !oauthWindow.closed) {
+        oauthWindow.close();
+      }
+      fetchUsers(); // Refresh final list
+    };
+
     window.addEventListener("message", handleMessage);
+
+    // Poller to detect success WITHOUT needing postMessage (fixes domain mismatch issue)
+    successPoller = setInterval(async () => {
+      if (processed) return;
+
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
+      const usersUri = process.env.NEXT_PUBLIC_USERS_URI;
+      if (!apiBaseUrl || !usersUri) return;
+
+      try {
+        const response = await fetch(`${apiBaseUrl}/${usersUri}`);
+        if (response.ok) {
+          const data: UsersResponse = await response.json();
+          const currentUsers = data.users || [];
+          // If we found a new user that wasn't in our snapshot, we've succeeded!
+          if (currentUsers.length > previousUsers.length) {
+            console.log("successPoller: New user detected in database!");
+            triggerSuccess();
+          }
+        }
+      } catch (err) {
+        // Silently ignore polling errors
+      }
+    }, 1500);
 
     if (oauthWindow) {
       checkWindowClosed = setInterval(() => {
         if (oauthWindow.closed) {
           console.log("checkWindowClosed: OAuth window closed");
-          cleanup();
-          setIsLoading(false);
-          // If the window closes before cleanup is triggered by a success/error message
-          setNotification({ message: "Authorization window closed.", type: 'error' });
+          // Wait a second before showing error to give the success poller one last chance
+          setTimeout(() => {
+            if (!processed) {
+              setNotification({ message: "Authorization window closed.", type: 'error' });
+              cleanup();
+              setIsLoading(false);
+              fetchUsers();
+            }
+          }, 1000);
         }
-      }, 2000);
-    } else {
-      console.log("checkWindowClosed: No oauthWindow, relying on postMessage");
+      }, 1000);
     }
 
     return cleanup;
