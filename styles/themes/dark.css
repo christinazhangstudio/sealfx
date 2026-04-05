@@ -15,6 +15,11 @@
     --color-hover-bg: #334155;
     --color-hover-text: #e72787;
 
+    --color-btn-apply: #ab1675;
+    --color-btn-apply-hover: #990e66;
+    --color-btn-reset: #412467c1;
+    --color-btn-reset-hover: #301850c1;
+
     --color-message-pill: #762e81;
 
     /* Chart Colors */

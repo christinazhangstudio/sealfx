@@ -157,6 +157,14 @@ export default function RegisterSellerPage() {
       setNotification({ message: "Window may have opened, but we couldn't track it.", type: 'error' });
     }
 
+    let checkWindowClosed: NodeJS.Timeout | undefined;
+
+    const cleanup = () => {
+      console.log("startOAuthFlow: Cleaning up listeners & intervals");
+      window.removeEventListener("message", handleMessage);
+      if (checkWindowClosed) clearInterval(checkWindowClosed);
+    };
+
     const handleMessage = (event: MessageEvent) => {
       console.log("handleMessage: Received event", {
         origin: event.origin,
@@ -164,12 +172,13 @@ export default function RegisterSellerPage() {
       });
 
       // Allow messages from the API URL or same origin
-      // In development with ngrok, the origin might be different
       if (event.data === "seller_authorized" || (typeof event.data === 'object' && event.data.type === "seller_authorized")) {
         console.log("handleMessage: Authorization successful");
         setIsAuthorized(true);
         setNotification({ message: "Authorization successful!", type: 'success' });
         setIsLoading(false);
+        cleanup();
+
         if (oauthWindow && !oauthWindow.closed) {
           oauthWindow.close();
         }
@@ -177,39 +186,31 @@ export default function RegisterSellerPage() {
         console.log("handleMessage: Authorization error", event.data.error);
         setNotification({ message: event.data.error, type: 'error' });
         setIsLoading(false);
+        cleanup();
+
         if (oauthWindow && !oauthWindow.closed) {
           oauthWindow.close();
         }
       }
     };
 
-    console.log("auth", isAuthorized);
-
     window.addEventListener("message", handleMessage);
 
-    let checkWindowClosed: NodeJS.Timeout | undefined;
     if (oauthWindow) {
       checkWindowClosed = setInterval(() => {
         if (oauthWindow.closed) {
           console.log("checkWindowClosed: OAuth window closed");
-          clearInterval(checkWindowClosed);
-          window.removeEventListener("message", handleMessage);
+          cleanup();
           setIsLoading(false);
-
-          if (!isAuthorized) {
-            setNotification({ message: "Authorization window closed unexpectedly.", type: 'error' });
-          }
+          // If the window closes before cleanup is triggered by a success/error message
+          setNotification({ message: "Authorization window closed.", type: 'error' });
         }
       }, 2000);
-    } else console.log("checkWindowClosed: No oauthWindow, relying on postMessage");
+    } else {
+      console.log("checkWindowClosed: No oauthWindow, relying on postMessage");
+    }
 
-    return () => {
-      console.log("startOAuthFlow: Cleaning up");
-      window.removeEventListener("message", handleMessage);
-      if (checkWindowClosed) {
-        clearInterval(checkWindowClosed);
-      }
-    };
+    return cleanup;
   };
 
   useEffect(() => {
@@ -234,7 +235,7 @@ export default function RegisterSellerPage() {
             disabled={isLoading}
             className={`w-full flex justify-center items-center px-6 py-3 rounded-lg text-white text-lg font-medium transition-all duration-200 transform ${isLoading
               ? "bg-gray-300 cursor-not-allowed"
-              : "bg-primary duration-300 hover:bg-primary-hover hover:scale-101 shadow-md hover:shadow-lg focus:ring-4 focus:ring-secondary focus:outline-none"
+              : "bg-btn-apply duration-300 hover:bg-btn-apply-hover hover:scale-101 shadow-md hover:shadow-lg focus:ring-4 focus:ring-secondary focus:outline-none"
               }`}
           >
             {isLoading ? (

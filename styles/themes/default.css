@@ -1,23 +1,28 @@
 :root {
     /* Colors */
-    --color-primary: #d94382;
-    --color-primary-hover: #d63274;
-    --color-secondary: #0766ebc1;
-    --color-background-start: #fdfaf8;
+    --color-primary: #494848;
+    --color-primary-hover: #3f3e3f;
+    --color-secondary: #f94da0c1;
+    --color-background-start: #faf5f1;
     --color-background-end: #f3f4f6;
     --color-surface: #ffffff;
-    --color-text-primary: #ce0e58;
-    --color-text-secondary: #4e617c;
+    --color-text-primary: #4d4c4c;
+    --color-text-secondary: #5d5d5d;
     --color-note-text: #2d270aeb;
-    --color-border: #dbd4ce;
-    --color-hover-bg: #f6ecf2;
-    --color-hover-text: #d94382;
+    --color-border: #362930;
+    --color-hover-bg: #faf5f1;
+    --color-hover-text: #e92476;
+
+    --color-btn-apply: #686868;
+    --color-btn-apply-hover: #5d5d5d;
+    --color-btn-reset: #e77ca0c1;
+    --color-btn-reset-hover: #e36f95c1;
 
     --color-message-pill: #c9bb71;
 
     /* Chart Colors */
-    --color-chart-1: #e93e86;
-    --color-chart-2: #0766ebc1;
+    --color-chart-1: #e94f8f;
+    --color-chart-2: #2673efc1;
     --color-chart-axis-text: #be185d;
     --color-chart-axis-grid: #e5afce40;
 
@@ -36,7 +41,7 @@
     --font-nav: 'Nunito', sans-serif;
 
     /* Nav */
-    --nav-bg: linear-gradient(to bottom, #f9f7f5, #f7f1f4);
+    --nav-bg: linear-gradient(to bottom, #faf5f1, #f7eeee);
 
     /* Theme Switcher */
     --color-switcher-bg: #fdfeff;

@@ -64,7 +64,13 @@ export async function trackedFetch(input: RequestInfo | URL, init?: RequestInit)
 
     saveUsage(usage);
 
-    return fetch(input, init);
+    const fetchInit: RequestInit = {
+        ...init,
+        // Wrap fetch calls with NextAuth tokens
+        credentials: init?.credentials || "include",
+    };
+
+    return fetch(input, fetchInit);
 }
 
 /**

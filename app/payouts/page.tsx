@@ -356,13 +356,13 @@ export default function Payouts() {
         )}
         {error && <p className="text-error-text text-lg mb-4 hidden">{error}</p>}
         {userLoading.global ? (
-          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
             <p className="text-primary text-lg">Loading Users... </p>
           </div>
         ) : users.length > 0 ? (
           <div className="flex flex-col lg:flex-row gap-8 items-start">
             <UserTableOfContents users={users} />
-            <div className="flex-1 w-full space-y-6">
+            <div className="flex-1 w-full min-w-0 space-y-6">
               {users.map((user) =>
                 userLoading[user] ? (
                   <div
@@ -379,7 +379,7 @@ export default function Payouts() {
             </div>
           </div>
         ) : (
-          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
             <p className="text-text-secondary text-lg">No users available. </p>
           </div>
         )}

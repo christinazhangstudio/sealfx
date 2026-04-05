@@ -64,7 +64,7 @@ export default function UserTableOfContents({ users }: UserTableOfContentsProps)
                 {/* Floating Action Button (FAB) */}
                 <button
                     onClick={() => setIsOpen(true)}
-                    className="fixed bottom-6 right-6 z-40 bg-primary text-white p-4 rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all duration-200 flex items-center justify-center group"
+                    className="fixed bottom-24 right-4 z-40 bg-primary text-white p-4 rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all duration-200 flex items-center justify-center group"
                     aria-label="Toggle users menu"
                 >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -457,8 +457,8 @@ export default function ListingsPage() {
         <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center lg:text-left drop-shadow-sm font-heading break-words">Listings</h1>
         <div className="mb-8 flex flex-col lg:flex-row gap-6 items-center lg:items-center lg:flex-wrap">
           <div className="flex flex-wrap justify-center lg:justify-start gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-primary font-bold text-sm uppercase tracking-wider">From:</label>
+            <div className="flex items-center rounded-lg shadow-sm border border-border overflow-hidden focus-within:ring-2 focus-within:ring-primary transition-all">
+              <label className="bg-surface text-primary font-bold text-sm uppercase tracking-wider px-3 py-2 border-r border-border flex items-center h-full">From</label>
               <input
                 type="date"
                 value={formatDate(startFrom)}
@@ -468,12 +468,12 @@ export default function ListingsPage() {
                     setStartFrom(newDate);
                   }
                 }}
-                className="p-2 rounded-lg border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-primary bg-surface shadow-sm font-heading"
+                className="px-4 py-2 h-full border-none text-text-primary focus:outline-none focus:ring-0 bg-surface hover:bg-hover hover:text-hover-content cursor-pointer font-heading transition-colors"
                 max={formatDate(new Date())}
               />
             </div>
-            <div className="flex items-center gap-2">
-              <label className="text-primary font-bold text-sm uppercase tracking-wider">To:</label>
+            <div className="flex items-center rounded-lg shadow-sm border border-border overflow-hidden focus-within:ring-2 focus-within:ring-primary transition-all">
+              <label className="bg-surface text-primary font-bold text-sm uppercase tracking-wider px-3 py-2 border-r border-border flex items-center h-full">To</label>
               <input
                 type="date"
                 value={formatDate(startTo)}
@@ -483,7 +483,7 @@ export default function ListingsPage() {
                     setStartTo(newDate);
                   }
                 }}
-                className="p-2 rounded-lg border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-primary bg-surface shadow-sm font-heading"
+                className="px-4 py-2 h-full border-none text-text-primary focus:outline-none focus:ring-0 bg-surface hover:bg-hover hover:text-hover-content cursor-pointer font-heading transition-colors"
                 max={formatDate(new Date())}
               />
             </div>
@@ -493,24 +493,24 @@ export default function ListingsPage() {
             <div className="flex gap-2">
               <button
                 onClick={handleApply}
-                className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-all shadow-sm font-bold active:scale-95"
+                className="px-6 py-2 bg-btn-apply text-white rounded-lg hover:bg-btn-apply-hover transition-all shadow-sm font-bold active:scale-95"
               >
-                Apply 🌸
+                Apply ✿
               </button>
               <button
                 onClick={resetDateRange}
-                className="px-6 py-2 bg-secondary text-white rounded-lg hover:bg-opacity-90 transition-all shadow-sm font-bold active:scale-95"
+                className="px-6 py-2 bg-btn-reset text-white rounded-lg hover:bg-btn-reset-hover transition-all shadow-sm font-bold active:scale-95"
               >
                 Reset ✿
               </button>
             </div>
 
-            <div className="flex items-center gap-2 bg-surface rounded-lg shadow-sm border border-border p-1">
-              <label className="text-primary font-bold text-sm uppercase tracking-wider px-2">Status:</label>
+            <div className="flex items-center rounded-lg shadow-sm border border-border overflow-hidden focus-within:ring-2 focus-within:ring-primary transition-all">
+              <label className="bg-surface text-primary font-bold text-sm uppercase tracking-wider px-3 py-2 border-r border-border flex items-center h-full">Status</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="p-2 rounded-lg border-none text-text-primary focus:outline-none focus:ring-0 bg-transparent cursor-pointer font-heading"
+                className="px-4 py-2 h-full border-none text-text-primary focus:outline-none focus:ring-0 bg-surface hover:bg-hover hover:text-hover-content cursor-pointer font-heading transition-colors"
               >
                 <option value="ALL" className="bg-surface text-text-primary">ALL</option>
                 <option value="Active" className="bg-surface text-text-primary">Active</option>
@@ -523,17 +523,17 @@ export default function ListingsPage() {
         {dateError && <p className="text-error-text text-lg mb-4">{dateError}</p>}
         {error && <p className="text-error-text text-lg mb-4 hidden">{error}</p>}
         {userLoading.global ? (
-          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
             <p className="text-primary text-lg">Loading Users... </p>
           </div>
         ) : users.length > 0 ? (
           <div className="flex flex-col lg:flex-row gap-8 items-start">
             <UserTableOfContents users={users} />
-            <div className="flex-1 w-full">
+            <div className="flex-1 w-full min-w-0">
               {users.map((user) => (
                 <div key={user}>
                   {userLoading[user] ? (
-                    <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+                    <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
                       <h2 className="text-2xl text-primary mb-4">{user} 🌸</h2>
                       <p className="text-primary text-lg">
                         Loading Listings...
@@ -548,7 +548,7 @@ export default function ListingsPage() {
                       clientPageSize
                     )
                   ) : (
-                    <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+                    <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
                       <h2 className="text-2xl text-primary mb-4">{user} 🌸</h2>
                       <p className="text-text-secondary text-lg">
                         No listings for {user}.
@@ -591,7 +591,7 @@ export default function ListingsPage() {
             </div>
           </div>
         ) : (
-          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
             <p className="text-text-secondary text-lg">No users available. </p>
           </div>
         )}

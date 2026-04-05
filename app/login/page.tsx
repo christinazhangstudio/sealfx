@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function LoginPage() {
-    const [username, setUsername] = useState("sealift");
+    const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
@@ -46,7 +47,7 @@ export default function LoginPage() {
                         sign in
                     </h1>
                     <p className="text-[var(--color-text-secondary)] text-[10px] font-bold uppercase tracking-[0.2em]">
-                        Sealift Admin
+                        to your sealift account
                     </p>
                 </div>
 
@@ -63,7 +64,7 @@ export default function LoginPage() {
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             className="w-full bg-[var(--color-surface)]/50 border border-[var(--color-border)] rounded-xl px-4 py-3 text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-secondary)]/30 focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)] transition-all duration-300 text-sm"
-                            placeholder="Username"
+                            placeholder="Email Address"
                             required
                         />
                     </div>
@@ -117,6 +118,12 @@ export default function LoginPage() {
                             <span>authorize</span>
                         )}
                     </button>
+
+                    <div className="text-center mt-6">
+                        <Link href="/register" className="text-[11px] text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] transition-colors font-bold uppercase tracking-wider">
+                            don't have an account? create one
+                        </Link>
+                    </div>
                 </form>
             </div>
         </div>

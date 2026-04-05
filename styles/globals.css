@@ -30,6 +30,12 @@
   --color-hover: var(--color-hover-bg);
   --color-hover-content: var(--color-hover-text);
 
+  /* Button Actions */
+  --color-btn-apply: var(--color-btn-apply);
+  --color-btn-apply-hover: var(--color-btn-apply-hover);
+  --color-btn-reset: var(--color-btn-reset);
+  --color-btn-reset-hover: var(--color-btn-reset-hover);
+
   /* Status */
   --color-success-bg: var(--color-success-bg);
   --color-success-border: var(--color-success-border);
@@ -79,4 +85,34 @@ body {
 
 .fade-out {
   animation: fadeOut 3s ease-out forwards;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
 }

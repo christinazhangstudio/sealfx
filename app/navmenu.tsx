@@ -43,8 +43,8 @@ export default function NavMenu() {
     { name: "Inbox", href: "/inbox" },
     { name: "Notes", href: "/notes" },
     { name: "Payouts", href: "/payouts" },
-    { name: "Listings (Detail)", href: "/listings" },
-    { name: "Listings (Gallery)", href: "/gallery" },
+    { name: "Listings", href: "/listings" },
+    { name: "Listing Gallery", href: "/gallery" },
     { name: "Charts", href: "/charts" },
   ];
 
@@ -59,20 +59,20 @@ export default function NavMenu() {
 
   return (
     <nav
-      className="shadow-md sticky top-0 z-40 transition-all duration-200"
+      className="shadow-sm sticky top-0 z-40 transition-colors duration-200"
       style={{ background: "var(--nav-bg)" }}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 @container">
         <div className="flex justify-between h-16 relative">
           {/* Left Side: Home + Desktop Links */}
           <div className="flex items-center">
-            <div className="flex-shrink-0 flex items-center absolute left-1/2 -translate-x-1/2 lg:static lg:translate-x-0">
+            <div className="flex-shrink-0 flex items-center absolute left-1/2 -translate-x-1/2 @5xl:static @5xl:translate-x-0">
               <Link href="/" className="text-xl font-bold text-primary hover:text-hover-content transition-colors">
                 Home
               </Link>
             </div>
             {/* Desktop Navigation */}
-            <div className="hidden lg:ml-6 lg:flex lg:space-x-2 xl:space-x-4 lg:items-center">
+            <div className="hidden @5xl:ml-6 @5xl:flex @5xl:items-center @5xl:space-x-2 @5xl:space-x-4 flex-wrap">
               {navLinks.map((link) => (
                 <Link
                   key={link.name}
@@ -119,7 +119,7 @@ export default function NavMenu() {
           </div>
 
           {/* Right Side: Desktop Actions */}
-          <div className="hidden lg:flex lg:items-center lg:space-x-4">
+          <div className="hidden @5xl:flex @5xl:items-center @5xl:space-x-4 flex-shrink-0 ml-4">
             <ApiUsageIndicator />
             <ThemeSwitcher />
             <button
@@ -153,7 +153,7 @@ export default function NavMenu() {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="-mr-2 flex items-center lg:hidden">
+          <div className="-mr-2 flex items-center @5xl:hidden">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="inline-flex items-center justify-center p-2 rounded-md text-primary hover:text-hover-content hover:bg-hover focus:outline-none transition-colors"
@@ -176,7 +176,7 @@ export default function NavMenu() {
 
       {/* Mobile Menu Panel */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden border-t border-border/100 bg-surface shadow-lg animate-in slide-in-from-top-1 duration-200">
+        <div className="@5xl:hidden border-t border-border/100 bg-surface shadow-lg animate-in slide-in-from-top-1 duration-200">
           <div className="px-2 pt-1 pb-2">
             {navLinks.map((link) => (
               <Link

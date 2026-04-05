@@ -91,7 +91,7 @@ const renderUserChart = (user: string, chartData: any) => {
   const gridColor = style?.getPropertyValue("--color-chart-axis-grid").trim() || "#e0e0e040";
 
   return (
-    <div className="chart-container bg-surface p-4 sm:p-6 md:p-8 rounded-lg shadow-md container-inline-size mb-8">
+    <div className="chart-container bg-surface p-4 sm:p-6 md:p-8 rounded-lg shadow-md border border-border container-inline-size mb-8">
       <h2 className="text-2xl text-primary mb-4">{user} 🌸</h2>
       <div className="relative h-[350px] sm:h-[450px] md:h-[500px]">
         <Line
@@ -648,16 +648,16 @@ export default function ChartsPage() {
             </div>
             <button
               onClick={handleApply}
-              className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-all shadow-sm font-bold active:scale-95"
+              className="px-6 py-2 bg-btn-apply text-white rounded-lg hover:bg-btn-apply-hover transition-all shadow-sm font-bold active:scale-95"
             >
-              Apply 🌸
+              Apply ✿
             </button>
           </div>
         </div>
         {dateError && <p className="text-error-text text-lg mb-4">{dateError}</p>}
         {error && <p className="text-error-text text-lg mb-4">{error}</p>}
         {usersLoading ? (
-          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
             <p className="text-primary text-lg">Loading Users... </p>
           </div>
         ) : users.length > 0 ? (
@@ -665,7 +665,7 @@ export default function ChartsPage() {
             <UserTableOfContents users={users} />
             <div className="flex-1 w-full min-w-0">
               {Object.keys(dataLoading).length > 0 && Object.values(dataLoading).some(v => v) ? (
-                <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+                <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
                   <p className="text-primary text-lg">Loading Charts...</p>
                 </div>
               ) : (
@@ -673,7 +673,7 @@ export default function ChartsPage() {
                   {users.map((user) => (
                     <div key={user} id={`user-section-${user}`}>
                       {dataLoading[user] ? (
-                        <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+                        <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
                           <h2 className="text-2xl text-primary mb-4">{user} 🌸</h2>
                           <p className="text-primary text-lg">Loading Data... </p>
                         </div>
@@ -685,7 +685,7 @@ export default function ChartsPage() {
                         ) ? (
                         renderUserChart(user, userCharts[user])
                       ) : (
-                        <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+                        <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
                           <h2 className="text-2xl text-primary mb-4">{user} 🌸</h2>
                           <p className="text-text-secondary text-lg">
                             No data for {user}.
@@ -699,7 +699,7 @@ export default function ChartsPage() {
             </div>
           </div>
         ) : (
-          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
             <p className="text-text-secondary text-lg">No users available. </p>
           </div>
         )}

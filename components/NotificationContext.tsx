@@ -74,7 +74,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         users.forEach((user) => {
             if (existing.has(user)) return; // already connected
 
-            const es = new EventSource(`${webhookUrl}/${user}`);
+            const es = new EventSource(`${apiBaseUrl}/notifications/${user}/stream`);
 
             const addNotifs = (raw: any[]) => {
                 const newEnvs: NotifEnvelope[] = raw.map((notif) => ({

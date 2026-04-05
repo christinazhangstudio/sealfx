@@ -37,12 +37,26 @@ FROM alpine:latest
 # much more minimal in size than using node: base image.
 RUN apk add --no-cache nodejs npm
 
+# Create a dedicated system user and group to run the app
+# (non-root user)
+RUN addgroup -g 1001 -S sealift-nodejs && \
+    adduser -S sealift-nextjs -u 1001 -G sealift-nodejs
+
 WORKDIR /app
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/next.config.* ./
-RUN npm install --production
+
+# Copy built assets and change ownership to our new user
+COPY --from=builder --chown=sealift-nextjs:sealift-nodejs /app/package*.json ./
+COPY --from=builder --chown=sealift-nextjs:sealift-nodejs /app/.next ./.next
+COPY --from=builder --chown=sealift-nextjs:sealift-nodejs /app/public ./public
+COPY --from=builder --chown=sealift-nextjs:sealift-nodejs /app/next.config.* ./
+
+# Install production dependencies and ensure permissions are correct
+RUN npm install --production && \
+    chown -R sealift-nextjs:sealift-nodejs /app
+
+# Switch to the non-root user
+USER sealift-nextjs
+
 EXPOSE 9997
 
 # choosing exec over shell format:
