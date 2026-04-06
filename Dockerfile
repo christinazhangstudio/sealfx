@@ -48,6 +48,7 @@ WORKDIR /app
 COPY --from=builder --chown=sealift-nextjs:sealift-nodejs /app/package*.json ./
 COPY --from=builder --chown=sealift-nextjs:sealift-nodejs /app/.next ./.next
 COPY --from=builder --chown=sealift-nextjs:sealift-nodejs /app/public ./public
+COPY --from=builder --chown=sealift-nextjs:sealift-nodejs /app/lib ./lib
 COPY --from=builder --chown=sealift-nextjs:sealift-nodejs /app/next.config.* ./
 
 # Install production dependencies and ensure permissions are correct
