@@ -28,6 +28,7 @@ RUN npm install --legacy-peer-deps --include=optional \
 # left the above for reference (safety?)
 
 COPY . .
+COPY .env.production .env.production
 
 RUN npm run build
 

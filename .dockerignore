@@ -4,7 +4,7 @@ npm-debug.log
 .gitignore
 README.md
 .env*
-lib/auth-keys.ts
+!.env.production
 .next/cache
 .vercel
 dist
