@@ -2,6 +2,8 @@
 import "../../styles/globals.css";
 
 import React, { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import LoginCtaBanner from "@/components/LoginCtaBanner";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 
 interface StickyNote {
@@ -13,6 +15,7 @@ interface StickyNote {
 const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_NOTES_URI}`;
 
 export default function StickyNotesPage() {
+  const { data: session } = useSession();
   const [notes, setNotes] = useState<StickyNote[]>([]);
   const [newNoteContent, setNewNoteContent] = useState("");
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
@@ -34,8 +37,9 @@ export default function StickyNotesPage() {
 
   // Fetch notes from API on mount
   useEffect(() => {
+    if ((session?.user as any)?.isGuest) return;
     fetchNotes();
-  }, []);
+  }, [session]);
 
   const fetchNotes = async () => {
     try {
@@ -148,6 +152,24 @@ export default function StickyNotesPage() {
 
   return (
     <div className={`min-h-screen bg-background p-4 sm:p-6 md:p-8`}>
+      {(session?.user as any)?.isGuest ? (
+        <div className="max-w-2xl mx-auto">
+          <LoginCtaBanner
+            title="Access Your Notes"
+            description="Sign in to view and create personal notes"
+            cta="Sign In"
+          />
+          <div className="bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-8 text-center mt-8">
+            <h2 className="text-2xl font-semibold text-primary mb-4">
+              Notes & Reminders
+            </h2>
+            <p className="text-text-secondary">
+              Organize your thoughts and keep track of important reminders
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div>
       <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center drop-shadow-sm font-heading break-words">
         Notes
       </h1>
@@ -292,6 +314,8 @@ export default function StickyNotesPage() {
       {showCopyPopup && (
         <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 text-success-text bg-success-bg border border-success-border px-4 py-2 rounded-lg shadow-md fade-out">
           Copied!
+        </div>
+      )}
         </div>
       )}
     </div>

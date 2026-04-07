@@ -123,34 +123,40 @@ export default function NavMenu() {
           <div className="hidden @5xl:flex @5xl:items-center @5xl:space-x-4 flex-shrink-0 ml-4">
             <ApiUsageIndicator />
             <ThemeSwitcher />
-            <button
-              onClick={() => {
-                if (session && window.confirm('Are you sure you want to logout?')) {
-                  signOut({ callbackUrl: "/login" });
-                }
-              }}
-              disabled={!session}
-              title="Logout"
-              className={`p-2 rounded-xl transition-all duration-200 ${session
-                ? 'bg-destructive/10 text-destructive hover:bg-destructive hover:text-white'
-                : 'opacity-0 cursor-default pointer-events-none'
-                }`}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="w-5 h-5"
+            {session && !(session.user as any)?.isGuest && (
+              <button
+                onClick={() => {
+                  if (window.confirm('Are you sure you want to logout?')) {
+                    signOut({ callbackUrl: "/login" });
+                  }
+                }}
+                title="Logout"
+                className="p-2 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all duration-200"
               >
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
-            </button>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-5 h-5"
+                >
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+              </button>
+            )}
+            {(session?.user as any)?.isGuest && (
+              <Link
+                href="/login"
+                className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-hover font-semibold transition-colors duration-200 text-sm"
+              >
+                Sign In
+              </Link>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -236,7 +242,7 @@ export default function NavMenu() {
                 <ApiUsageIndicator />
               </div>
               <ThemeSwitcher />
-              {session && (
+              {session && !(session.user as any)?.isGuest && (
                 <button
                   onClick={() => {
                     setIsMobileMenuOpen(false);
@@ -260,6 +266,15 @@ export default function NavMenu() {
                     <line x1="21" y1="12" x2="9" y2="12" />
                   </svg>
                 </button>
+              )}
+              {(session?.user as any)?.isGuest && (
+                <Link
+                  href="/login"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="px-3 py-2 rounded-lg bg-primary text-white hover:bg-primary-hover font-semibold transition-colors duration-200 text-sm"
+                >
+                  Sign In
+                </Link>
               )}
             </div>
           </div>

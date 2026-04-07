@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import LoginCtaBanner from "@/components/LoginCtaBanner";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 
 interface SupportedPayload {
@@ -44,6 +46,7 @@ interface UsersResponse {
 }
 
 export default function NotificationsPage() {
+    const { data: session } = useSession();
     const [topics, setTopics] = useState<Topic[]>([]);
     const [users, setUsers] = useState<string[]>([]);
     const [selectedUser, setSelectedUser] = useState<string>("");
@@ -188,7 +191,24 @@ export default function NotificationsPage() {
 
     return (
         <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8 relative">
-            <div className="max-w-7xl mx-auto space-y-8">
+            {(session?.user as any)?.isGuest ? (
+                <div className="max-w-2xl mx-auto">
+                    <LoginCtaBanner
+                        title="Notifications"
+                        description="Sign in to receive alert settings and notifications"
+                        cta="Sign In"
+                    />
+                    <div className="bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-8 text-center mt-8">
+                        <h2 className="text-2xl font-semibold text-primary mb-4">
+                            Smart Notifications
+                        </h2>
+                        <p className="text-text-secondary">
+                            Customize alerts and never miss important updates
+                        </p>
+                    </div>
+                </div>
+            ) : (
+                <div className="max-w-7xl mx-auto space-y-8">
 
                 {/* Header & User Selection */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-border">
@@ -403,6 +423,7 @@ export default function NotificationsPage() {
                     </>
                 )}
             </div>
+            )}
         </div>
     );
 }

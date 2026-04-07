@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import LoginCtaBanner from "@/components/LoginCtaBanner";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import UserTableOfContents from "@/components/UserTableOfContents";
 import { formatCurrency } from "@/lib/format-utils";
@@ -72,6 +74,7 @@ interface ErrorType {
 }
 
 export default function Accounts() {
+  const { data: session } = useSession();
   const [users, setUsers] = useState<string[]>([]);
   const [userAccounts, setUserAccounts] = useState<{ [user: string]: Account }>({});
   const [userLoading, setUserLoading] = useState<{ [user: string]: boolean }>({});
@@ -332,7 +335,27 @@ export default function Accounts() {
 
   return (
     <div>
-      <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
+      {(session?.user as any)?.isGuest ? (
+        <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
+          <div className="max-w-2xl mx-auto">
+            <LoginCtaBanner
+              title="Manage Accounts"
+              description="Sign in to configure your seller accounts"
+              cta="Sign In"
+            />
+            <div className="bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-8 text-center mt-8">
+              <h2 className="text-2xl font-semibold text-primary mb-4">
+                Account Management
+              </h2>
+              <p className="text-text-secondary">
+                Connect and manage multiple eBay seller accounts
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
         <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center lg:text-left drop-shadow-sm font-heading break-words">Account Summaries</h1>
         {!error && Object.keys(userAccounts).length > 0 && (
           <p className="text-2xl text-primary mb-8">
@@ -362,6 +385,8 @@ export default function Accounts() {
           </div>
         )}
       </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -48,6 +48,7 @@ export const authConfig = {
     callbacks: {
         authorized({ auth, request: { nextUrl } }) {
             const isLoggedIn = !!auth?.user;
+            const isGuest = (auth?.user as any)?.isGuest === true;
             const isOnLoginPage = nextUrl.pathname.startsWith("/login");
             const isOnRegisterPage = nextUrl.pathname.startsWith("/register");
 
@@ -56,7 +57,7 @@ export const authConfig = {
                 return true;
             }
 
-            return isLoggedIn;
+            return isLoggedIn || isGuest;
         },
     },
     events: {

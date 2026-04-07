@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 
 // Define the notification envelope structure
@@ -26,6 +27,7 @@ interface NotificationContextProps {
 const NotificationContext = createContext<NotificationContextProps | undefined>(undefined);
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
+    const { data: session } = useSession();
     const [users, setUsers] = useState<string[]>([]);
     const [envelopes, setEnvelopes] = useState<NotifEnvelope[]>([]);
     const [loadingUsers, setLoadingUsers] = useState(true);
@@ -43,8 +45,14 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     const unreadCount = envelopes.filter((e) => !e.read && !e.trashed).length;
 
-    // Fetch users once
+    // Fetch users once - skip if guest user
     useEffect(() => {
+        // Guest users should not fetch data
+        if ((session?.user as any)?.isGuest) {
+            setLoadingUsers(false);
+            return;
+        }
+
         if (!apiBaseUrl) {
             setError("API base URL not defined");
             setLoadingUsers(false);
@@ -63,7 +71,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             }
         };
         run();
-    }, [apiBaseUrl, usersUri]);
+    }, [apiBaseUrl, usersUri, session]);
 
     // Open one SSE connection per user
     useEffect(() => {
@@ -145,7 +153,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             })
         );
 
-        if (!wasUnread || !apiBaseUrl) return;
+        // Guest users should not make API calls
+        if ((session?.user as any)?.isGuest || !wasUnread || !apiBaseUrl) return;
 
         try {
             await fetch(`${apiBaseUrl}/${inboxUri}/${user}/${id}/${markReadUri}`, { method: "PUT" });
@@ -155,6 +164,14 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     };
 
     const trashMessage = async (id: string, user: string) => {
+        // Guest users should not perform write operations
+        if ((session?.user as any)?.isGuest) {
+            setEnvelopes((prev) =>
+                prev.map((e) => (e.id === id ? { ...e, trashed: true } : e))
+            );
+            return;
+        }
+
         setEnvelopes((prev) =>
             prev.map((e) => (e.id === id ? { ...e, trashed: true } : e))
         );
@@ -172,6 +189,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     };
 
     const deleteMessage = async (id: string, user: string) => {
+        // Guest users should not perform write operations
+        if ((session?.user as any)?.isGuest) {
+            setEnvelopes((prev) => prev.filter((e) => e.id !== id));
+            return;
+        }
+
         // Optimistically remove
         setEnvelopes((prev) => prev.filter((e) => e.id !== id));
         if (!apiBaseUrl) return;

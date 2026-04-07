@@ -1,13 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
+import LoginCtaBanner from "@/components/LoginCtaBanner";
 
 interface UsersResponse {
   users: string[];
 }
 
 export default function RegisterSellerPage() {
+  const { data: session } = useSession();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -19,6 +22,12 @@ export default function RegisterSellerPage() {
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
   const fetchUsers = () => {
+    // Guest users should not fetch data
+    if ((session?.user as any)?.isGuest) {
+      setLoading(false);
+      return;
+    }
+
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
     const usersUri = process.env.NEXT_PUBLIC_USERS_URI;
 
@@ -56,9 +65,15 @@ export default function RegisterSellerPage() {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [session]);
 
   const deleteUser = async (user: string) => {
+    // Guest users should not perform delete operations
+    if ((session?.user as any)?.isGuest) {
+      setAPIError("Sign in to manage sellers");
+      return;
+    }
+
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
     const usersUri = process.env.NEXT_PUBLIC_USERS_URI;
 
@@ -121,6 +136,12 @@ export default function RegisterSellerPage() {
   }, [notification]);
 
   const startOAuthFlow = () => {
+    // Guest users should not perform OAuth operations
+    if ((session?.user as any)?.isGuest) {
+      setError("Sign in to add sellers");
+      return;
+    }
+
     if (isLoading) {
       console.log("startOAuthFlow: Already loading, ignoring click");
       return;
@@ -250,111 +271,131 @@ export default function RegisterSellerPage() {
     <div
       className={`min-h-screen flex justify-center bg-[var(--background)] pt-8 px-4 sm:px-6 lg:px-8 relative`}
     >
-      <div className={`max-w-md w-full space-y-6 ${showDeletePopup ? 'blur-sm' : ''}`}>
-        <div className="max-w-md w-full bg-surface rounded-xl shadow-md border border-border mb-8 p-8 transform transition-all duration-300 hover:shadow-xl mt-8 relative">
-          <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center drop-shadow-sm font-heading break-words">
-            add sellers
-          </h1>
-
-          <button
-            onClick={startOAuthFlow}
-            disabled={isLoading}
-            className={`w-full flex justify-center items-center px-6 py-3 rounded-md text-white text-lg font-medium transition-all duration-200 transform ${isLoading
-              ? "bg-gray-300 cursor-not-allowed"
-              : "bg-btn-apply duration-300 hover:bg-btn-apply-hover hover:scale-101 shadow-md hover:shadow-lg focus:ring-4 focus:ring-secondary focus:outline-none"
-              }`}
-          >
-            {isLoading ? (
-              <>
-                <svg
-                  className="animate-spin h-5 w-5 mr-3 text-white"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
-                </svg>
-                Authorizing...
-              </>
-            ) : (
-              "authorize through eBay login"
-            )}
-          </button>
-        </div>
-
-        {/* Notification Popup */}
-        {notification && (
-          <div className={`fixed top-24 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-md shadow-xl border-l-4 transition-all duration-500 ${notification.type === 'success'
-            ? 'bg-success-bg border-success-border text-success-text'
-            : 'bg-error-bg border-error-border text-error-text'
-            }`}>
-            <div className="flex items-center space-x-3">
-              {notification.type === 'success' ? (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
-              ) : (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-              )}
-              <span className="font-medium">{notification.message}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Second card */}
-        <div className="bg-surface rounded-lg border border-border mb-8 shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl">
-          <h2 className="text-2xl text-primary mb-6 text-center drop-shadow-sm font-heading">
-            registered sellers
-          </h2>
-          {apiError && <p className="text-error-text text-lg">{apiError}</p>}
-          {loading ? (
-            <p className="text-secondary text-lg">Loading users... </p>
-          ) : users && users.length > 0 ? (
-            <div className="--color-text-primary text-lg text-center">
-              {users.map((user) => (
-                <div
-                  key={user}
-                  className="border-b border-border flex justify-between items-center py-2"
-                >
-                  <p>{user}</p>
-                  <button
-                    onClick={() => handleDeleteClick(user)}
-                    className="text-error-text hover:text-error-border transition-colors duration-200"
-                    title="Delete user"
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4M3 7h18"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="flex justify-center items-center text-gray-600 text-lg">
-              No users available.
+      {/* Guest View */}
+      {(session?.user as any)?.isGuest ? (
+        <div className="max-w-2xl w-full space-y-6">
+          <LoginCtaBanner
+            title="Manage Your Sellers"
+            description="Sign in to add and manage your eBay seller accounts. Connect multiple seller profiles and centralize your marketplace operations."
+            cta="Sign In to Add Sellers"
+          />
+          <div className="bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-8 text-center">
+            <h2 className="text-2xl font-semibold text-primary mb-4">
+              Seller Management Hub
+            </h2>
+            <p className="text-text-secondary mb-6">
+              Manage all your seller accounts in one place with Sealift's integrated dashboard.
             </p>
-          )}
+          </div>
         </div>
-      </div>
+      ) : (
+        /* Authenticated View */
+        <div className={`max-w-md w-full space-y-6 ${showDeletePopup ? 'blur-sm' : ''}`}>
+          <div className="max-w-md w-full bg-surface rounded-xl shadow-md border border-border mb-8 p-8 transform transition-all duration-300 hover:shadow-xl mt-8 relative">
+            <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center drop-shadow-sm font-heading break-words">
+              add sellers
+            </h1>
+
+            <button
+              onClick={startOAuthFlow}
+              disabled={isLoading}
+              className={`w-full flex justify-center items-center px-6 py-3 rounded-md text-white text-lg font-medium transition-all duration-200 transform ${isLoading
+                ? "bg-gray-300 cursor-not-allowed"
+                : "bg-btn-apply duration-300 hover:bg-btn-apply-hover hover:scale-101 shadow-md hover:shadow-lg focus:ring-4 focus:ring-secondary focus:outline-none"
+                }`}
+            >
+              {isLoading ? (
+                <>
+                  <svg
+                    className="animate-spin h-5 w-5 mr-3 text-white"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                  Authorizing...
+                </>
+              ) : (
+                "authorize through eBay login"
+              )}
+            </button>
+          </div>
+
+          {/* Notification Popup */}
+          {notification && (
+            <div className={`fixed top-24 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-md shadow-xl border-l-4 transition-all duration-500 ${notification.type === 'success'
+              ? 'bg-success-bg border-success-border text-success-text'
+              : 'bg-error-bg border-error-border text-error-text'
+              }`}>
+              <div className="flex items-center space-x-3">
+                {notification.type === 'success' ? (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+                ) : (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                )}
+                <span className="font-medium">{notification.message}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Second card */}
+          <div className="bg-surface rounded-lg border border-border mb-8 shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl">
+            <h2 className="text-2xl text-primary mb-6 text-center drop-shadow-sm font-heading">
+              registered sellers
+            </h2>
+            {apiError && <p className="text-error-text text-lg">{apiError}</p>}
+            {loading ? (
+              <p className="text-secondary text-lg">Loading users... </p>
+            ) : users && users.length > 0 ? (
+              <div className="--color-text-primary text-lg text-center">
+                {users.map((user) => (
+                  <div
+                    key={user}
+                    className="border-b border-border flex justify-between items-center py-2"
+                  >
+                    <p>{user}</p>
+                    <button
+                      onClick={() => handleDeleteClick(user)}
+                      className="text-error-text hover:text-error-border transition-colors duration-200"
+                      title="Delete user"
+                    >
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4M3 7h18"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="flex justify-center items-center text-gray-600 text-lg">
+                No users available.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Popup */}
       {showDeletePopup && (

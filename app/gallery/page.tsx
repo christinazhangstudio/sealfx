@@ -1,6 +1,8 @@
 "use client"; // Next.js 13+ App Router client component
 
 import { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import LoginCtaBanner from "@/components/LoginCtaBanner";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import UserTableOfContents from "@/components/UserTableOfContents";
 
@@ -79,6 +81,7 @@ interface ListingsResponse {
 
 // Component
 export default function ListingsPage() {
+  const { data: session } = useSession();
   const [users, setUsers] = useState<string[]>([]);
   const [userListings, setUserListings] = useState<{
     [user: string]: Listings;
@@ -548,8 +551,28 @@ export default function ListingsPage() {
   };
 
   return (
-    <div>
-      <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
+    <>
+      {(session?.user as any)?.isGuest ? (
+        <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
+          <div className="max-w-2xl mx-auto">
+            <LoginCtaBanner
+              title="Manage Your Gallery"
+              description="Sign in to organize and upload product images"
+              cta="Sign In"
+            />
+            <div className="bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-8 text-center mt-8">
+              <h2 className="text-2xl font-semibold text-primary mb-4">
+                Image Management
+              </h2>
+              <p className="text-text-secondary">
+                Upload, organize, and manage product photos across your inventory
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 lg:mb-10 gap-4">
           <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary text-center sm:text-left drop-shadow-sm font-heading break-words">
             Listing Gallery
@@ -713,6 +736,8 @@ export default function ListingsPage() {
           </div>
         )}
       </div>
-    </div>
+        </div>
+      )}
+    </>
   );
 }

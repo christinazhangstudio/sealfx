@@ -4,6 +4,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { createGuestSession } from "@/app/actions/guest";
 
 export default function LoginPage() {
     const [username, setUsername] = useState("");
@@ -31,6 +32,25 @@ export default function LoginPage() {
             } else {
                 router.push("/");
                 router.refresh();
+            }
+        } catch (err) {
+            setError("An unexpected error occurred.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGuestLogin = async () => {
+        setLoading(true);
+        setError("");
+
+        try {
+            const result = await createGuestSession();
+            if (result.success) {
+                router.push("/");
+                router.refresh();
+            } else {
+                setError(result.error || "Failed to create guest session.");
             }
         } catch (err) {
             setError("An unexpected error occurred.");
@@ -116,6 +136,19 @@ export default function LoginPage() {
                             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                         ) : (
                             <span>authorize</span>
+                        )}
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={handleGuestLogin}
+                        disabled={loading}
+                        className="w-full border border-[var(--color-border)]/40 bg-[var(--color-surface)]/40 hover:bg-[var(--color-surface)]/60 active:scale-[0.98] text-[var(--color-surface-foreground)] rounded-xl py-4 shadow-sm transition-all duration-300 flex items-center justify-center space-x-2 disabled:opacity-50 mt-3 text-sm uppercase tracking-widest"
+                    >
+                        {loading ? (
+                            <div className="w-4 h-4 border-2 rounded-full" />
+                        ) : (
+                            <span>Continue as Guest</span>
                         )}
                     </button>
 

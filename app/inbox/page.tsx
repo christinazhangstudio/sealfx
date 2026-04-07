@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { useNotifications } from "@/components/NotificationContext";
+import LoginCtaBanner from "@/components/LoginCtaBanner";
 
 function BellIcon({ count }: { count: number }) {
     return (
@@ -33,6 +35,7 @@ function BellIcon({ count }: { count: number }) {
 }
 
 export default function InboxPage() {
+    const { data: session } = useSession();
     const { users, envelopes, unreadCount, selectMessage: contextSelectMessage, trashMessage, deleteMessage, loadingUsers, error } = useNotifications();
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<"inbox" | "trash">("inbox");
@@ -60,6 +63,31 @@ export default function InboxPage() {
     };
 
     return (
+        <>
+            {(session?.user as any)?.isGuest ? (
+                <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
+                    <div className="max-w-2xl mx-auto">
+                        <LoginCtaBanner
+                            title="Unlock Your Inbox"
+                            description="Sign in to read, reply, and manage important messages from your buyers and eBay contacts."
+                            cta="Sign In to Message"
+                        />
+                        <div className="bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-8 text-center mt-8">
+                            <h2 className="text-2xl font-semibold text-primary mb-4">
+                                Live Message Stream
+                            </h2>
+                            <p className="text-text-secondary mb-4">
+                                Stay connected with real-time notifications across all your seller accounts.
+                            </p>
+                            <ul className="text-left text-text-secondary space-y-2 inline-block">
+                                <li>✓ Instant buyer notifications</li>
+                                <li>✓ Multi-account management</li>
+                                <li>✓ Read & reply to messages</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            ) : (
         <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8 relative">
             <div className="max-w-7xl mx-auto space-y-8 h-full flex flex-col">
 
@@ -341,5 +369,7 @@ export default function InboxPage() {
                 </div>
             </div>
         </div>
+            )}
+        </>
     );
 }

@@ -1,6 +1,8 @@
 "use client"; // Next.JS 13+ defaults to server components in the app router.
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import LoginCtaBanner from "@/components/LoginCtaBanner";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import UserTableOfContents from "@/components/UserTableOfContents";
 import { formatCurrency } from "@/lib/format-utils";
@@ -29,6 +31,7 @@ interface Amount {
 }
 
 export default function TransactionPage() {
+  const { data: session } = useSession();
   const [summaries, setSummaries] = useState<UserSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -90,7 +93,27 @@ export default function TransactionPage() {
 
   return (
     <div>
-      <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
+      {(session?.user as any)?.isGuest ? (
+        <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
+          <div className="max-w-2xl mx-auto">
+            <LoginCtaBanner
+              title="View Transactions"
+              description="Sign in to see transaction history and details"
+              cta="Sign In"
+            />
+            <div className="bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-8 text-center mt-8">
+              <h2 className="text-2xl font-semibold text-primary mb-4">
+                Transaction Records
+              </h2>
+              <p className="text-text-secondary">
+                Review complete transaction history and order details
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
         <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center lg:text-left drop-shadow-sm font-heading break-words">
           Transaction Summaries
         </h1>
@@ -167,7 +190,9 @@ export default function TransactionPage() {
             <p className="text-text-secondary text-lg">No summaries available. </p>
           </div>
         )}
-      </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

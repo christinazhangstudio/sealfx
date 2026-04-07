@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
+import LoginCtaBanner from "@/components/LoginCtaBanner";
 import { signOut } from "next-auth/react";
 
 export default function AdminPage() {
+  const { data: session } = useSession();
   const [isDeleting, setIsDeleting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmText, setConfirmText] = useState("");
@@ -45,7 +48,27 @@ export default function AdminPage() {
 
   return (
     <div>
-      <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
+      {(session?.user as any)?.isGuest ? (
+        <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
+          <div className="max-w-2xl mx-auto">
+            <LoginCtaBanner
+              title="Admin Dashboard"
+              description="Sign in to access admin controls"
+              cta="Sign In"
+            />
+            <div className="bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-8 text-center mt-8">
+              <h2 className="text-2xl font-semibold text-primary mb-4">
+                System Administration
+              </h2>
+              <p className="text-text-secondary">
+                Manage system settings and administrative functions
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
         <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center lg:text-left drop-shadow-sm font-heading break-words">
           Admin
         </h1>
@@ -103,76 +126,78 @@ export default function AdminPage() {
             </div>
           )}
         </div>
-      </div>
 
-      {/* Confirmation Modal */}
-      {showConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => { setShowConfirm(false); setConfirmText(""); }}
-          />
-          <div className="relative bg-surface border border-border rounded-xl shadow-2xl max-w-md w-full p-6 space-y-5">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-error-bg flex items-center justify-center flex-shrink-0">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-error-text" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                  <line x1="12" y1="9" x2="12" y2="13" />
-                  <line x1="12" y1="17" x2="12.01" y2="17" />
-                </svg>
+        {/* Confirmation Modal */}
+        {showConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => { setShowConfirm(false); setConfirmText(""); }}
+            />
+            <div className="relative bg-surface border border-border rounded-xl shadow-2xl max-w-md w-full p-6 space-y-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-error-bg flex items-center justify-center flex-shrink-0">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-error-text" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-text-primary font-bold text-lg">Are you absolutely sure?</h3>
+                  <p className="text-text-secondary text-sm">This action cannot be undone.</p>
+                </div>
               </div>
+
+              <div className="bg-error-bg/20 border border-error-border/50 rounded-lg p-4 text-sm text-text-primary space-y-1">
+                <p>This will permanently:</p>
+                <ul className="list-disc pl-5 space-y-0.5 text-text-secondary">
+                  <li>Delete all eBay notification subscriptions</li>
+                  <li>Remove your webhook notification destination</li>
+                  <li>Delete all registered eBay seller accounts</li>
+                  <li>Purge all inbox messages</li>
+                  <li>Delete your Sealift tenant account</li>
+                </ul>
+              </div>
+
               <div>
-                <h3 className="text-text-primary font-bold text-lg">Are you absolutely sure?</h3>
-                <p className="text-text-secondary text-sm">This action cannot be undone.</p>
+                <label className="block text-sm text-text-secondary mb-2">
+                  Type <span className="font-mono font-bold text-error-text">DELETE</span> to confirm:
+                </label>
+                <input
+                  type="text"
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  placeholder="DELETE"
+                  className="w-full px-4 py-2 bg-surface border border-border rounded-md text-text-primary focus:outline-none focus:ring-2 focus:ring-error-border font-mono"
+                  autoFocus
+                />
               </div>
-            </div>
 
-            <div className="bg-error-bg/20 border border-error-border/50 rounded-lg p-4 text-sm text-text-primary space-y-1">
-              <p>This will permanently:</p>
-              <ul className="list-disc pl-5 space-y-0.5 text-text-secondary">
-                <li>Delete all eBay notification subscriptions</li>
-                <li>Remove your webhook notification destination</li>
-                <li>Delete all registered eBay seller accounts</li>
-                <li>Purge all inbox messages</li>
-                <li>Delete your Sealift tenant account</li>
-              </ul>
-            </div>
-
-            <div>
-              <label className="block text-sm text-text-secondary mb-2">
-                Type <span className="font-mono font-bold text-error-text">DELETE</span> to confirm:
-              </label>
-              <input
-                type="text"
-                value={confirmText}
-                onChange={(e) => setConfirmText(e.target.value)}
-                placeholder="DELETE"
-                className="w-full px-4 py-2 bg-surface border border-border rounded-md text-text-primary focus:outline-none focus:ring-2 focus:ring-error-border font-mono"
-                autoFocus
-              />
-            </div>
-
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => { setShowConfirm(false); setConfirmText(""); }}
-                className="px-5 py-2 rounded-md border border-border text-text-secondary hover:bg-hover hover:text-hover-content transition-colors font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setShowConfirm(false);
-                  handleDeleteAccount();
-                }}
-                disabled={confirmText !== "DELETE" || isDeleting}
-                className="px-5 py-2 rounded-md bg-red-600 text-white font-bold hover:bg-red-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
-              >
-                {isDeleting ? "Deleting..." : "Delete My Account"}
-              </button>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => { setShowConfirm(false); setConfirmText(""); }}
+                  className="px-5 py-2 rounded-md border border-border text-text-secondary hover:bg-hover hover:text-hover-content transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setShowConfirm(false);
+                    handleDeleteAccount();
+                  }}
+                  disabled={confirmText !== "DELETE" || isDeleting}
+                  className="px-5 py-2 rounded-md bg-red-600 text-white font-bold hover:bg-red-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+                >
+                  {isDeleting ? "Deleting..." : "Delete My Account"}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
+        )}
+      </div>
+      </div>
+    )}
+  </div>
+);
 }

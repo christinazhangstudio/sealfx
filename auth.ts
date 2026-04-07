@@ -50,18 +50,34 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 return null;
             },
         }),
+        Credentials({
+            id: "guest",
+            async authorize(credentials) {
+                // Guest provider - creates a guest session without credentials
+                if (credentials?.type !== "guest") return null;
+
+                return {
+                    id: `guest_${crypto.randomUUID()}`,
+                    name: "Guest",
+                    email: "guest@localhost",
+                    isGuest: true,
+                };
+            },
+        }),
     ],
     callbacks: {
         ...authConfig.callbacks,
         async jwt({ token, user, trigger }) {
             if (user) {
                 token.rememberDevice = (user as any).rememberDevice;
+                token.isGuest = (user as any).isGuest || false;
             }
             return token;
         },
         async session({ session, token }) {
             if (token && session.user) {
                 (session as any).rememberDevice = token.rememberDevice;
+                (session.user as any).isGuest = token.isGuest || false;
 
                 // If not remembering device, set a shorter expiration in the cookie
                 // Note: NextAuth manages the cookie expiration based on session.maxAge

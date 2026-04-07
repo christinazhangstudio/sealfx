@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import LoginCtaBanner from "@/components/LoginCtaBanner";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import UserTableOfContents from "@/components/UserTableOfContents";
 import { Inconsolata } from "next/font/google";
@@ -218,6 +220,7 @@ const renderUserChart = (user: string, chartData: any) => {
 // Logic moved to lib/chart-utils.ts
 
 export default function ChartsPage() {
+  const { data: session } = useSession();
   const [users, setUsers] = useState<string[]>([]);
   const [userCharts, setUserCharts] = useState<{
     [user: string]: ChartData | null;
@@ -628,7 +631,27 @@ export default function ChartsPage() {
           }
         }
       `}</style>
-      <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
+      {(session?.user as any)?.isGuest ? (
+            <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
+          <div className="max-w-2xl mx-auto">
+            <LoginCtaBanner
+              title="View Analytics"
+              description="Sign in to see charts and performance metrics"
+              cta="Sign In"
+            />
+            <div className="bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-8 text-center mt-8">
+              <h2 className="text-2xl font-semibold text-primary mb-4">
+                Sales Analytics Dashboard
+              </h2>
+              <p className="text-text-secondary">
+                Track sales trends, performance metrics, and market insights
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
         <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center lg:text-left drop-shadow-sm font-heading break-words">
           Charts
         </h1>
@@ -704,6 +727,8 @@ export default function ChartsPage() {
           </div>
         )}
       </div>
+      </div>
+    )}
     </div >
   );
 }

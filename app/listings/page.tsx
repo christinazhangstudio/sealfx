@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import LoginCtaBanner from "@/components/LoginCtaBanner";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import UserTableOfContents from "@/components/UserTableOfContents";
 
@@ -147,6 +149,7 @@ const renderUserTable = (
 };
 
 export default function ListingsPage() {
+  const { data: session } = useSession();
   const [users, setUsers] = useState<string[]>([]);
   const [userListings, setUserListings] = useState<{
     [user: string]: Listings;
@@ -452,8 +455,28 @@ export default function ListingsPage() {
   }, [users, isInitialLoad, resetTriggered, handleApply]);
 
   return (
-    <div>
-      <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
+    <>
+      {(session?.user as any)?.isGuest ? (
+        <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
+          <div className="max-w-2xl mx-auto">
+            <LoginCtaBanner
+              title="Manage Your Inventory"
+              description="Sign in to view and manage all your active eBay listings"
+              cta="Sign In"
+            />
+            <div className="bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-8 text-center mt-8">
+              <h2 className="text-2xl font-semibold text-primary mb-4">
+                Complete Inventory Control
+              </h2>
+              <p className="text-text-secondary">
+                Track inventory, edit prices, and manage listings across all your accounts
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
         <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center lg:text-left drop-shadow-sm font-heading break-words">Listings</h1>
         <div className="mb-8 flex flex-col lg:flex-row gap-6 items-center lg:items-center lg:flex-wrap">
           <div className="flex flex-wrap justify-center lg:justify-start gap-4">
@@ -596,6 +619,8 @@ export default function ListingsPage() {
           </div>
         )}
       </div>
-    </div>
+        </div>
+      )}
+    </>
   );
 }
