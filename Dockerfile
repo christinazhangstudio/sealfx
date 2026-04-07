@@ -48,7 +48,9 @@ WORKDIR /app
 COPY --from=builder --chown=sealift-nextjs:sealift-nodejs /app/package*.json ./
 COPY --from=builder --chown=sealift-nextjs:sealift-nodejs /app/.next ./.next
 COPY --from=builder --chown=sealift-nextjs:sealift-nodejs /app/public ./public
+# Copy lib files except auth-keys.ts (secrets should come from env vars)
 COPY --from=builder --chown=sealift-nextjs:sealift-nodejs /app/lib ./lib
+RUN rm -f /app/lib/auth-keys.ts
 COPY --from=builder --chown=sealift-nextjs:sealift-nodejs /app/next.config.* ./
 
 # Install production dependencies and ensure permissions are correct

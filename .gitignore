@@ -33,9 +33,6 @@ yarn-error.log*
 # env files
 .env*
 
-# auto-generated secrets
-lib/auth-keys.ts
-
 # vercel
 .vercel
 
