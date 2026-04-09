@@ -1,29 +1,29 @@
 "use server";
 
 import { signIn } from "@/auth";
+import { AuthError } from "next-auth";
 
 export async function createGuestSession() {
     try {
-        const result = await signIn("guest", {
+        await signIn("guest", {
             type: "guest",
             redirect: false,
         });
-
-        if (result?.error) {
-            return {
-                success: false,
-                error: "Failed to create guest session",
-            };
-        }
 
         return {
             success: true,
         };
     } catch (error) {
+        if (error instanceof AuthError) {
+            return {
+                success: false,
+                error: "Failed to create guest session",
+            };
+        }
         console.error("Error creating guest session:", error);
         return {
             success: false,
-            error: "An error occurred while creating guest session",
+            error: "An unexpected error occurred",
         };
     }
 }

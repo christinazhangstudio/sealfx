@@ -4,8 +4,6 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createGuestSession } from "@/app/actions/guest";
-
 export default function LoginPage() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
@@ -45,12 +43,14 @@ export default function LoginPage() {
         setError("");
 
         try {
-            const result = await createGuestSession();
-            if (result.success) {
+            const result = await signIn("guest", {
+                type: "guest",
+                redirect: false,
+            });
+
+            if (result?.ok) {
                 router.push("/");
                 router.refresh();
-            } else {
-                setError(result.error || "Failed to create guest session.");
             }
         } catch (err) {
             setError("An unexpected error occurred.");
