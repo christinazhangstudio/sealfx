@@ -8,7 +8,7 @@ interface Slide {
     title: string;
     description: string;
     imagePath?: string;
-    caption?: string;
+    splashPool: string[]; // Context-specific Minecraft-style splashes
 }
 
 const DEFAULT_SLIDES: Slide[] = [
@@ -17,20 +17,36 @@ const DEFAULT_SLIDES: Slide[] = [
         title: "Unified Dashboard for Seller Management",
         description: "Your unified dashboard for managing multi-store eBay integrations. Seamlessly sync inventory and monitor performance.",
         imagePath: "/tutorial/slide1.png",
-        caption: "Streamline your multi-channel sales operations."
+        splashPool: [
+            "99% Bug Free!",
+            "Margins for days",
+            "Business, at scale",
+        ]
     },
     {
         id: 2,
         title: "AI Workflows and Integrations",
-        description: "Modern AI tools to help automate sales and analytics.",
+        description: "Modern AI tools to help automate sales and analytics. Optimize language-dependent labor and context-switching toil.",
         imagePath: "/tutorial/slide2.png",
-        caption: "Your business shouldn't be just a platform. Use AI across all your stores!"
+        splashPool: [
+            "Now with 200% more AI!",
+            "Automating the automated",
+            "Powered by vector math"
+        ]
     },
 ];
 
 export default function TutorialSlideshow({ fabOnly = false, isVisible = true }: { fabOnly?: boolean, isVisible?: boolean }) {
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [currentSplash, setCurrentSplash] = useState("");
+
+    useEffect(() => {
+        // Pick a random splash from the CURRENT slide's specific pool
+        const pool = DEFAULT_SLIDES[currentSlide].splashPool;
+        const randomSplash = pool[Math.floor(Math.random() * pool.length)];
+        setCurrentSplash(randomSplash);
+    }, [currentSlide]);
 
     const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % DEFAULT_SLIDES.length);
     const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + DEFAULT_SLIDES.length) % DEFAULT_SLIDES.length);
@@ -128,14 +144,14 @@ export default function TutorialSlideshow({ fabOnly = false, isVisible = true }:
                 </div>
             </div>
 
-            {/* Main Content (Vertically Stacked Like Mobile) */}
-            <div className="flex-1 flex flex-col justify-start w-full mx-auto pt-4">
+            {/* Main Content - Tighter vertical stacking for Mobile Zero-Scroll */}
+            <div className="flex-1 flex flex-col justify-start w-full mx-auto pt-2">
                 <div
                     key={DEFAULT_SLIDES[currentSlide].id}
-                    className="animate-fade-in animate-slide-in-up space-y-6 text-center"
+                    className="animate-fade-in animate-slide-in-up space-y-3 sm:space-y-6 text-center"
                 >
-                    {/* Giant Image Section */}
-                    <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-surface/20 border border-border flex items-center justify-center shadow-2xl group">
+                    {/* Giant Image Section - Flatter on mobile to save vertical space */}
+                    <div className="relative aspect-[2/1] sm:aspect-video w-full rounded-2xl overflow-hidden bg-surface/20 border border-border flex items-center justify-center shadow-2xl group">
                         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent pointer-events-none z-10" />
                         {DEFAULT_SLIDES[currentSlide].imagePath ? (
                             <Image
@@ -153,22 +169,27 @@ export default function TutorialSlideshow({ fabOnly = false, isVisible = true }:
                         )}
                     </div>
 
-                    {/* Text Section - Stabilized Height to prevent layout shifts */}
-                    <div className="space-y-4 px-2 min-h-[160px] flex flex-col justify-center">
-                        <h2 className="text-3xl lg:text-3xl font-bold text-primary tracking-tight leading-tight">
-                            {DEFAULT_SLIDES[currentSlide].title}
-                        </h2>
-                        <div className="min-h-[60px]">
-                            <p className="text-text-secondary text-base lg:text-lg leading-relaxed opacity-80 max-w-2xl mx-auto">
+                    {/* Text Section - Fixed Heights to ensure constant window size across slides */}
+                    <div className="space-y-4 px-2 h-[220px] sm:h-[280px] flex flex-col justify-between py-2">
+                        {/* Title - Fixed height for 2 lines */}
+                        <div className="h-12 sm:h-16 flex items-center justify-center">
+                            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-primary tracking-tight leading-tight px-2 line-clamp-2">
+                                {DEFAULT_SLIDES[currentSlide].title}
+                            </h2>
+                        </div>
+
+                        {/* Description - Fixed height for 3-4 lines */}
+                        <div className="h-20 sm:h-24 flex items-center justify-center">
+                            <p className="text-text-secondary text-xs sm:text-sm lg:text-lg leading-relaxed opacity-80 max-w-2xl mx-auto px-4 line-clamp-3 sm:line-clamp-4">
                                 {DEFAULT_SLIDES[currentSlide].description}
                             </p>
                         </div>
 
-                        {/* Caption Area - Reserved Space to prevent shifts */}
-                        <div className="h-[46px] flex items-center justify-center">
-                            {DEFAULT_SLIDES[currentSlide].caption ? (
-                                <div className="px-4 py-2 rounded-lg bg-primary/10 border border-primary/20 text-primary italic text-md tracking-wider">
-                                    {DEFAULT_SLIDES[currentSlide].caption}
+                        {/* Caption Area - Fixed height to keep layout stable */}
+                        <div className="h-12 sm:h-16 flex items-center justify-center">
+                            {currentSplash ? (
+                                <div className="px-5 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary italic text-[11px] sm:text-sm lg:text-md tracking-wider max-w-[90%] mx-auto line-clamp-2">
+                                    {currentSplash}
                                 </div>
                             ) : (
                                 <div className="h-full w-full" />
@@ -176,8 +197,8 @@ export default function TutorialSlideshow({ fabOnly = false, isVisible = true }:
                         </div>
                     </div>
 
-                    {/* Controls Section - Stabilized with fixed margin */}
-                    <div className="flex items-center justify-center gap-4 pt-2 px-2 h-14">
+                    {/* Controls Section - Compact spacing */}
+                    <div className="flex items-center justify-center gap-4 pt-1 sm:pt-2 px-2 h-12 sm:h-14">
                         <div className="flex gap-2.5 mr-6 items-center">
                             {DEFAULT_SLIDES.map((_, i) => (
                                 <button

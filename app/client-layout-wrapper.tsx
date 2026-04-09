@@ -74,11 +74,11 @@ export default function ClientLayoutWrapper({
                                     {(isLoginPage || isRegisterPage) ? (
                                         <ThemeSwitcher />
                                     ) : (
-                                        <>
+                                        <div className="hidden sm:block">
                                             <p className="text-base sm:text-lg md:text-xl text-primary drop-shadow-sm font-heading whitespace-nowrap">
                                                 your marketplace manager
                                             </p>
-</>
+                                        </div>
                                     )}
                                 </div>
                             </div>
