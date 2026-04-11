@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import LoginCtaBanner from "@/components/LoginCtaBanner";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
+import { useUsers } from "@/components/UsersContext";
 
 interface SupportedPayload {
     format: string[];
@@ -50,13 +51,12 @@ export default function NotificationsPage() {
     const [mounted, setMounted] = useState(false);
     useEffect(() => setMounted(true), []);
     const [topics, setTopics] = useState<Topic[]>([]);
-    const [users, setUsers] = useState<string[]>([]);
+    const { users, loadingUsers } = useUsers();
     const [selectedUser, setSelectedUser] = useState<string>("");
     const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
 
     // Loading states
     const [loadingTopics, setLoadingTopics] = useState(true);
-    const [loadingUsers, setLoadingUsers] = useState(true);
     const [loadingSubs, setLoadingSubs] = useState(false);
     const [processingAction, setProcessingAction] = useState(false);
 
@@ -74,7 +74,6 @@ export default function NotificationsPage() {
         if (!apiBaseUrl) {
             setError("API base URL not defined");
             setLoadingTopics(false);
-            setLoadingUsers(false);
             return;
         }
 
@@ -92,22 +91,7 @@ export default function NotificationsPage() {
             }
         };
 
-        const fetchUsers = async () => {
-            try {
-                const response = await fetch(`${apiBaseUrl}/${usersUri}`);
-                if (!response.ok) throw new Error(`Error fetching users: ${response.statusText}`);
-                const data: UsersResponse = await response.json();
-                setUsers(data.users || []);
-            } catch (err) {
-                console.error(err);
-                setError(err instanceof Error ? err.message : "Failed to load users");
-            } finally {
-                setLoadingUsers(false);
-            }
-        };
-
         fetchTopics();
-        fetchUsers();
     }, [apiBaseUrl]);
 
     // Fetch subscriptions when user selected

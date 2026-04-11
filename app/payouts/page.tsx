@@ -6,6 +6,7 @@ import LoginCtaBanner from "@/components/LoginCtaBanner";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import UserTableOfContents from "@/components/UserTableOfContents";
 import { formatCurrency } from "@/lib/format-utils";
+import { useUsers } from "@/components/UsersContext";
 
 interface UserPayouts {
   user: string;
@@ -46,7 +47,7 @@ interface PayoutInstrument {
 
 export default function Payouts() {
   const { data: session } = useSession();
-  const [users, setUsers] = useState<string[]>([]);
+  const { users, loadingUsers } = useUsers();
   const [userPayouts, setUserPayouts] = useState<{ [user: string]: UserPayouts }>({});
   const [userPages, setUserPages] = useState<{ [user: string]: number }>({});
   const [userTotalPages, setUserTotalPages] = useState<{ [user: string]: number }>({});
@@ -56,51 +57,7 @@ export default function Payouts() {
   const apiPageSize = 200; // For API requests
   const clientPageSize = 4; // For client-side pagination
 
-  const fetchUsers = async () => {
-    try {
-      setUserLoading((prev) => ({ ...prev, global: true }));
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-      const usersUri = process.env.NEXT_PUBLIC_USERS_URI;
 
-      if (!apiBaseUrl || !usersUri) {
-        throw new Error("API base URL or Users URI env not defined");
-      }
-
-      const response = await fetch(`${apiBaseUrl}/${usersUri}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch users: ${response.status}`);
-      }
-      const data = await response.json();
-      const usersData: string[] = data.users || [];
-      setUsers(usersData);
-
-      const initialPages = usersData.reduce((acc, user) => {
-        acc[user] = 1;
-        return acc;
-      }, {} as { [user: string]: number });
-
-      const initialTotalPages = usersData.reduce((acc, user) => {
-        acc[user] = 1;
-        return acc;
-      }, {} as { [user: string]: number });
-
-      const initialLoading = usersData.reduce((acc, user) => {
-        acc[user] = false;
-        return acc;
-      }, {} as { [user: string]: boolean });
-
-      setUserPages(initialPages);
-      setUserTotalPages(initialTotalPages);
-      setUserLoading((prev) => ({
-        ...prev,
-        ...initialLoading,
-        global: false,
-      }));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error fetching users");
-      setUserLoading((prev) => ({ ...prev, global: false }));
-    }
-  };
 
   const fetchPayoutsForUser = async (user: string, pageIdx: number): Promise<UserPayouts> => {
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -191,11 +148,7 @@ export default function Payouts() {
   };
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  useEffect(() => {
-    if (users.length > 0) {
+    if (users.length > 0 && !loadingUsers) {
       users.forEach((user) => {
         setUserPages((prev) => ({ ...prev, [user]: 1 }));
         fetchAllPayoutsForUser(user);

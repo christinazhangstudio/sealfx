@@ -6,6 +6,7 @@ import LoginCtaBanner from "@/components/LoginCtaBanner";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import UserTableOfContents from "@/components/UserTableOfContents";
 import { Inconsolata } from "next/font/google";
+import { useUsers } from "@/components/UsersContext";
 import { formatCurrency } from "@/lib/format-utils";
 import { Line } from "react-chartjs-2";
 import {
@@ -223,11 +224,10 @@ export default function ChartsPage() {
   const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  const [users, setUsers] = useState<string[]>([]);
+  const { users, loadingUsers: usersLoading } = useUsers();
   const [userCharts, setUserCharts] = useState<{
     [user: string]: ChartData | null;
   }>({});
-  const [usersLoading, setUsersLoading] = useState(true)
   const [dataLoading, setDataLoading] = useState<{ [user: string]: boolean }>(
     {}
   );
@@ -272,54 +272,7 @@ export default function ChartsPage() {
     return chunks;
   };
 
-  const fetchUsers = async () => {
-    try {
-      setUsersLoading(true)
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-      const uri = process.env.NEXT_PUBLIC_USERS_URI;
-      const apiUrl = `${apiBaseUrl}/${uri}?`;
-      const response = await fetch(apiUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch users: ${response.status}`);
-      }
-      const data = await response.json();
-      const usersData: string[] = data.users || [];
-      setUsers(usersData);
-      setUsersLoading(false)
-      setDataLoading((prev) => {
-        const newState = {
-          ...prev,
-          ...usersData.reduce(
-            (acc: { [key: string]: boolean }, user) => {
-              acc[user] = true;
-              return acc;
-            },
-            {}
-          ),
-        };
-        return newState;
-      });
-      setUserCharts((prev) => {
-        const newState = {
-          ...prev,
-          ...usersData.reduce(
-            (acc: { [key: string]: ChartData | null }, user) => {
-              acc[user] = null;
-              return acc;
-            },
-            {}
-          ),
-        };
-        return newState;
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch user charts");
-      setUsersLoading(false)
-      setDataLoading((prev) => {
-        return { ...prev, global: false };
-      });
-    }
-  };
+
 
   const fetchListingsForChunk = async (
     user: string,
@@ -589,11 +542,7 @@ export default function ChartsPage() {
   }, [range]);
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  useEffect(() => {
-    if (users.length > 0 && isInitialLoad) {
+    if (users.length > 0 && !usersLoading && isInitialLoad) {
       handleApply();
       setIsInitialLoad(false);
     }

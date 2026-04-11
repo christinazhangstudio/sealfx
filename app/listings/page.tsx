@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import LoginCtaBanner from "@/components/LoginCtaBanner";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import UserTableOfContents from "@/components/UserTableOfContents";
+import { useUsers } from "@/components/UsersContext";
 
 interface PackageDetails {
   Weight: { Value: number; Unit: string };
@@ -153,7 +154,7 @@ export default function ListingsPage() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  const [users, setUsers] = useState<string[]>([]);
+  const { users, loadingUsers } = useUsers();
   const [userListings, setUserListings] = useState<{
     [user: string]: Listings;
   }>({});
@@ -204,53 +205,7 @@ export default function ListingsPage() {
     return chunks;
   };
 
-  const fetchUsers = async () => {
-    try {
-      setUserLoading((prev) => ({
-        ...prev,
-        global: true,
-      }));
 
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-      const uri = process.env.NEXT_PUBLIC_USERS_URI;
-      const apiUrl = `${apiBaseUrl}/${uri}?`;
-
-      const response = await fetch(apiUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch users: ${response.status}`);
-      }
-      const data = await response.json();
-
-      const usersData: string[] = data.users || [];
-      setUsers(usersData);
-
-      const initialPages = usersData.reduce((acc, user) => {
-        acc[user] = 1;
-        return acc;
-      }, {} as { [user: string]: number });
-
-      const initialTotalPages = usersData.reduce((acc, user) => {
-        acc[user] = 1;
-        return acc;
-      }, {} as { [user: string]: number });
-
-      const initialLoading = usersData.reduce((acc, user) => {
-        acc[user] = false;
-        return acc;
-      }, {} as { [user: string]: boolean });
-
-      setUserPages(initialPages);
-      setUserTotalPages(initialTotalPages);
-      setUserLoading((prev) => ({
-        ...prev,
-        ...initialLoading,
-        global: false,
-      }));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error fetching users");
-      setUserLoading((prev) => ({ ...prev, global: false }));
-    }
-  };
 
   const fetchListingsForChunk = async (
     user: string,
@@ -444,13 +399,9 @@ export default function ListingsPage() {
     setResetTriggered(true); // Signal that a reset has occurred
   };
 
-  // Effect to handle initial fetch of users
-  useEffect(() => {
-    fetchUsers();
-  }, []);
   // Effect to handle initial data fetch and reset
   useEffect(() => {
-    if (users.length > 0 && (isInitialLoad || resetTriggered)) {
+    if (users.length > 0 && !loadingUsers && (isInitialLoad || resetTriggered)) {
       handleApply();
       setIsInitialLoad(false); // Prevent re-fetching on subsequent user changes
       setResetTriggered(false); // Reset the trigger

@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
+import { useUsers } from "@/components/UsersContext";
 
 // Define the notification envelope structure
 export interface NotifEnvelope {
@@ -28,13 +29,10 @@ const NotificationContext = createContext<NotificationContextProps | undefined>(
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
     const { data: session } = useSession();
-    const [users, setUsers] = useState<string[]>([]);
+    const { users, loadingUsers, usersError: error } = useUsers();
     const [envelopes, setEnvelopes] = useState<NotifEnvelope[]>([]);
-    const [loadingUsers, setLoadingUsers] = useState(true);
-    const [error, setError] = useState<string | null>(null);
 
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-    const usersUri = process.env.NEXT_PUBLIC_USERS_URI;
     const webhookUrl = process.env.NEXT_PUBLIC_WEBHOOK_URL;
     const inboxUri = process.env.NEXT_PUBLIC_INBOX_URI;
     const trashUri = process.env.NEXT_PUBLIC_TRASH_URI;
@@ -45,34 +43,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     const unreadCount = envelopes.filter((e) => !e.read && !e.trashed).length;
 
-    // Fetch users once - skip if guest user
-    useEffect(() => {
-        // Guest users should not fetch data
-        if ((session?.user as any)?.isGuest) {
-            setLoadingUsers(false);
-            return;
-        }
-
-        if (!apiBaseUrl) {
-            setError("API base URL not defined");
-            setLoadingUsers(false);
-            return;
-        }
-        const run = async () => {
-            try {
-                const res = await fetch(`${apiBaseUrl}/${usersUri}`);
-                if (!res.ok) throw new Error(`Error fetching users: ${res.statusText}`);
-                const data = await res.json();
-                setUsers(data.users || []);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : "Failed to load users");
-            } finally {
-                setLoadingUsers(false);
-            }
-        };
-        run();
-    }, [apiBaseUrl, usersUri, session]);
-
     // Open one SSE connection per user
     useEffect(() => {
         if (!webhookUrl || users.length === 0) return;
@@ -82,7 +52,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         users.forEach((user) => {
             if (existing.has(user)) return; // already connected
 
-            const es = new EventSource(`${apiBaseUrl}/notifications/${user}/stream`);
+            const es = new EventSource(`${apiBaseUrl}/notifications/${user}/stream`, { withCredentials: true });
 
             const addNotifs = (raw: any[]) => {
                 const newEnvs: NotifEnvelope[] = raw.map((notif) => ({

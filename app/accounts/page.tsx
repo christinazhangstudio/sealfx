@@ -6,6 +6,7 @@ import LoginCtaBanner from "@/components/LoginCtaBanner";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import UserTableOfContents from "@/components/UserTableOfContents";
 import { formatCurrency } from "@/lib/format-utils";
+import { useUsers } from "@/components/UsersContext";
 
 interface AmountType {
   value: number;
@@ -77,51 +78,13 @@ export default function Accounts() {
   const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  const [users, setUsers] = useState<string[]>([]);
+  const { users, loadingUsers } = useUsers();
   const [userAccounts, setUserAccounts] = useState<{ [user: string]: Account }>({});
   const [userLoading, setUserLoading] = useState<{ [user: string]: boolean }>({});
   const [error, setError] = useState<string | null>(null);
   const [userErrors, setUserErrors] = useState<{ [user: string]: ErrorType[] }>({});
 
-  const fetchUsers = async () => {
-    try {
-      setUserLoading((prev) => ({ ...prev, global: true }));
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-      const usersUri = process.env.NEXT_PUBLIC_USERS_URI;
 
-      if (!apiBaseUrl || !usersUri) {
-        throw new Error("API base URL or Users URI env not defined");
-      }
-
-      const response = await fetch(`${apiBaseUrl}/${usersUri}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch users: ${response.status}`);
-      }
-      const data = await response.json();
-      const usersData: string[] = data.users || [];
-      setUsers(usersData);
-
-      const initialLoading = usersData.reduce((acc, user) => {
-        acc[user] = false;
-        return acc;
-      }, {} as { [user: string]: boolean });
-
-      const initialErrors = usersData.reduce((acc, user) => {
-        acc[user] = [];
-        return acc;
-      }, {} as { [user: string]: ErrorType[] });
-
-      setUserLoading((prev) => ({
-        ...prev,
-        ...initialLoading,
-        global: false,
-      }));
-      setUserErrors(initialErrors);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error fetching users");
-      setUserLoading((prev) => ({ ...prev, global: false }));
-    }
-  };
 
   const fetchAccountSummaryForUser = async (user: string): Promise<Account> => {
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -220,16 +183,12 @@ export default function Accounts() {
   };
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  useEffect(() => {
-    if (users.length > 0) {
+    if (users.length > 0 && !loadingUsers) {
       users.forEach((user) => {
         fetchAccountSummary(user);
       });
     }
-  }, [users]);
+  }, [users, loadingUsers]);
 
   const calculateTotalAccountBalance = (): number => {
     return Object.values(userAccounts).reduce(

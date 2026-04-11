@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import LoginCtaBanner from "@/components/LoginCtaBanner";
+import { useUsers } from "@/components/UsersContext";
 
 interface UsersResponse {
   users: string[];
@@ -14,55 +15,14 @@ export default function RegisterSellerPage() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  const { users, loadingUsers: loading, refetchUsers } = useUsers();
+
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  const [users, setUsers] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
   const [apiError, setAPIError] = useState<string | null>(null);
   const [showDeletePopup, setShowDeletePopup] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
-
-  const fetchUsers = () => {
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-    const usersUri = process.env.NEXT_PUBLIC_USERS_URI;
-
-    if (!apiBaseUrl) {
-      setAPIError("API base URL env not defined");
-      setLoading(false);
-      return;
-    }
-
-    if (!usersUri) {
-      setAPIError("Users URI env not defined");
-      setLoading(false);
-      return;
-    }
-
-    const apiUrl = `${apiBaseUrl}/${usersUri}`;
-    setLoading(true);
-
-    fetch(apiUrl)
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`Failed to fetch users: ${res.status}`);
-        }
-        return res.json();
-      })
-      .then((data: UsersResponse) => {
-        setUsers(data.users);
-        setLoading(false);
-      })
-      .catch((err: Error) => {
-        setAPIError(err.message);
-        setLoading(false);
-      });
-  };
-
-  useEffect(() => {
-    fetchUsers();
-  }, [session]);
 
   const deleteUser = async (user: string) => {
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -84,8 +44,8 @@ export default function RegisterSellerPage() {
         throw new Error(`Failed to delete user: ${response.status}`);
       }
 
-      // Update the users list by filtering out the deleted user
-      setUsers(users.filter((u) => u !== user));
+      // Refresh users list from the shared context
+      refetchUsers();
     } catch (err: any) {
       setAPIError(err.message);
     } finally {
@@ -115,10 +75,6 @@ export default function RegisterSellerPage() {
   // Clear notification after 3 seconds
   useEffect(() => {
     if (notification) {
-      // Reload users list (TODO: idk because dev is wonky, maybe eventually keep the condition)
-      //if (notification.type === 'success') {
-      fetchUsers();
-      //}
       const timer = setTimeout(() => {
         setNotification(null);
       }, 2000);
@@ -142,13 +98,13 @@ export default function RegisterSellerPage() {
 
     if (!apiBaseUrl) {
       setAPIError("API base URL env not defined");
-      setLoading(false);
+      setIsLoading(false);
       return;
     }
 
     if (!registerSellerUri) {
       setAPIError("Register seller URI env not defined");
-      setLoading(false);
+      setIsLoading(false);
       return;
     }
 
@@ -196,7 +152,7 @@ export default function RegisterSellerPage() {
       if (oauthWindow && !oauthWindow.closed) {
         oauthWindow.close();
       }
-      fetchUsers(); // Refresh final list
+      refetchUsers(); // Refresh final list
     };
 
     window.addEventListener("message", handleMessage);
@@ -235,7 +191,7 @@ export default function RegisterSellerPage() {
               setNotification({ message: "Authorization window closed.", type: 'error' });
               cleanup();
               setIsLoading(false);
-              fetchUsers();
+              refetchUsers();
             }
           }, 1000);
         }
