@@ -15,7 +15,11 @@ interface StickyNote {
 const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_NOTES_URI}`;
 
 export default function StickyNotesPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isGuest = status === "unauthenticated" || !!(session?.user && (session.user as any).isGuest);
+
   const [notes, setNotes] = useState<StickyNote[]>([]);
   const [newNoteContent, setNewNoteContent] = useState("");
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
@@ -37,9 +41,9 @@ export default function StickyNotesPage() {
 
   // Fetch notes from API on mount
   useEffect(() => {
-    if ((session?.user as any)?.isGuest) return;
+    if (isGuest || status === "loading") return;
     fetchNotes();
-  }, [session]);
+  }, [status, isGuest]);
 
   const fetchNotes = async () => {
     try {
@@ -150,9 +154,20 @@ export default function StickyNotesPage() {
     return colors[Math.floor(Math.random() * colors.length)];
   };
 
+  if (!mounted || status === "loading") {
+    return (
+      <div className="min-h-screen flex justify-center items-center py-20 bg-[var(--background)]">
+        <svg className="animate-spin h-10 w-10 text-[var(--color-primary)] opacity-50" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+        </svg>
+      </div>
+    );
+  }
+
   return (
     <div className={`min-h-screen bg-background p-4 sm:p-6 md:p-8`}>
-      {(session?.user as any)?.isGuest ? (
+      {isGuest ? (
         <div className="max-w-2xl mx-auto">
           <LoginCtaBanner
             title="Access Your Notes"

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import { trackedFetch as fetch } from "@/lib/api-tracker";
 
 interface Source {
     source: string;
@@ -38,6 +40,11 @@ export default function AiHelpButton({
     isResizingState: boolean;
     setIsResizing: (resizing: boolean) => void;
 }) {
+    const { data: session } = useSession();
+    const isGuest = !!(session?.user && (session.user as any).isGuest);
+    const allowGuestAi = process.env.NEXT_PUBLIC_ALLOW_GUEST_AI === "true";
+    const isBlocked = isGuest && !allowGuestAi;
+
     interface Message {
         role: "user" | "assistant";
         content: string;
@@ -123,8 +130,9 @@ export default function AiHelpButton({
                 .map(m => `${m.role === 'user' ? 'USER' : 'ASSISTANT'}: ${m.content}`)
                 .join("\n");
 
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:443/api";
-            let url = `${apiUrl}/ai/ask?q=${encodeURIComponent(currentQuery)}`;
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+            const aiUrl = process.env.NEXT_PUBLIC_AI_URI;
+            let url = `${apiUrl}/${aiUrl}?q=${encodeURIComponent(currentQuery)}`;
             if (historyText) {
                 url += `&history=${encodeURIComponent(historyText)}`;
             }
@@ -227,7 +235,19 @@ export default function AiHelpButton({
                             <div className="w-16 h-16 bg-[var(--color-primary)]/10 rounded-full flex items-center justify-center mx-auto text-[var(--color-primary)]">
                                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
                             </div>
-                            <p className="text-sm text-[var(--color-text-secondary)]">Ask me anything about Sealift, eBay stores, or troubleshooting.</p>
+                            <p className="text-sm text-[var(--color-text-secondary)]">
+                                {isBlocked
+                                    ? "AI Assistant is reserved for registered users. Please sign in to ask questions."
+                                    : "Ask me anything about Sealift, eBay stores, or troubleshooting."}
+                            </p>
+                            {isBlocked && (
+                                <button
+                                    onClick={() => window.location.href = "/register"}
+                                    className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg text-xs font-bold uppercase tracking-wider hover:opacity-90 transition-opacity"
+                                >
+                                    Sign In / Register
+                                </button>
+                            )}
                         </div>
                     )}
 
@@ -278,12 +298,13 @@ export default function AiHelpButton({
                             type="text"
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
-                            placeholder="Type your question..."
-                            className="w-full bg-[var(--color-surface)]/50 border border-[var(--color-border)] rounded-2xl px-5 py-4 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)]/30 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)] transition-all pr-12"
+                            placeholder={isBlocked ? "Sign in to use AI assistant..." : "Type your question..."}
+                            disabled={isBlocked}
+                            className={`w-full bg-[var(--color-surface)]/50 border border-[var(--color-border)] rounded-2xl px-5 py-4 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)]/30 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)] transition-all pr-12 ${isBlocked ? 'cursor-not-allowed opacity-50' : ''}`}
                         />
                         <button
                             type="submit"
-                            disabled={loading || !query.trim()}
+                            disabled={loading || !query.trim() || isBlocked}
                             className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-[var(--color-primary)] text-white rounded-xl hover:bg-[var(--color-primary-hover)] disabled:opacity-30 disabled:hover:bg-[var(--color-primary)] transition-all"
                         >
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m12 19 7-7-7-7M5 12h14" /></svg>
