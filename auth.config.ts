@@ -53,11 +53,25 @@ export const authConfig = {
             const isOnRegisterPage = nextUrl.pathname.startsWith("/register");
 
             if (isOnLoginPage || isOnRegisterPage) {
-                if (isLoggedIn) return Response.redirect(new URL("/", nextUrl));
+                if (isLoggedIn && !isGuest) return Response.redirect(new URL("/", nextUrl));
                 return true;
             }
 
             return isLoggedIn || isGuest;
+        },
+        async jwt({ token, user }) {
+            if (user) {
+                token.rememberDevice = (user as any).rememberDevice;
+                token.isGuest = (user as any).isGuest || false;
+            }
+            return token;
+        },
+        async session({ session, token }) {
+            if (token && session.user) {
+                (session as any).rememberDevice = token.rememberDevice;
+                (session.user as any).isGuest = token.isGuest || false;
+            }
+            return session;
         },
     },
     events: {

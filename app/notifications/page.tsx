@@ -46,7 +46,7 @@ interface UsersResponse {
 }
 
 export default function NotificationsPage() {
-    const { data: session, status } = useSession();
+    const { data: session } = useSession();
     const [mounted, setMounted] = useState(false);
     useEffect(() => setMounted(true), []);
     const [topics, setTopics] = useState<Topic[]>([]);
@@ -183,17 +183,8 @@ export default function NotificationsPage() {
         return subscriptions.some(sub => sub.topicId === topicId);
     };
 
-    const isGuest = status === "unauthenticated" || !!(session?.user && (session.user as any).isGuest);
-
-    if (!mounted || status === "loading") {
-        return (
-            <div className="min-h-screen flex justify-center items-center py-20 bg-[var(--background)]">
-                <svg className="animate-spin h-10 w-10 text-[var(--color-primary)] opacity-50" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-            </div>
-        );
+    if (!mounted) {
+        return null;
     }
 
     if (loadingTopics || loadingUsers) {
@@ -206,24 +197,7 @@ export default function NotificationsPage() {
 
     return (
         <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8 relative">
-            {isGuest ? (
-                <div className="max-w-2xl mx-auto">
-                    <LoginCtaBanner
-                        title="Notifications"
-                        description="Sign in to receive alert settings and notifications"
-                        cta="Sign In"
-                    />
-                    <div className="bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-8 text-center mt-8">
-                        <h2 className="text-2xl font-semibold text-primary mb-4">
-                            Smart Notifications
-                        </h2>
-                        <p className="text-text-secondary">
-                            Customize alerts and never miss important updates
-                        </p>
-                    </div>
-                </div>
-            ) : (
-                <div className="max-w-7xl mx-auto space-y-8">
+            <div className="max-w-7xl mx-auto space-y-8">
 
                 {/* Header & User Selection */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-border">
@@ -438,7 +412,6 @@ export default function NotificationsPage() {
                     </>
                 )}
             </div>
-            )}
         </div>
     );
 }

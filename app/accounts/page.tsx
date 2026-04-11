@@ -74,7 +74,7 @@ interface ErrorType {
 }
 
 export default function Accounts() {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const [users, setUsers] = useState<string[]>([]);
@@ -335,42 +335,13 @@ export default function Accounts() {
     );
   };
 
-  const isGuest = status === "unauthenticated" || !!(session?.user && (session.user as any).isGuest);
-
-  if (!mounted || status === "loading") {
-    return (
-      <div className="min-h-screen flex justify-center items-center py-20 bg-[var(--background)]">
-        <svg className="animate-spin h-10 w-10 text-[var(--color-primary)] opacity-50" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-        </svg>
-      </div>
-    );
+  if (!mounted) {
+    return null;
   }
 
   return (
     <div>
-      {isGuest ? (
-        <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
-          <div className="max-w-2xl mx-auto">
-            <LoginCtaBanner
-              title="Manage Accounts"
-              description="Sign in to configure your seller accounts"
-              cta="Sign In"
-            />
-            <div className="bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-8 text-center mt-8">
-              <h2 className="text-2xl font-semibold text-primary mb-4">
-                Account Management
-              </h2>
-              <p className="text-text-secondary">
-                Connect and manage multiple eBay seller accounts
-              </p>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div>
-          <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
+      <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
         <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center lg:text-left drop-shadow-sm font-heading break-words">Account Summaries</h1>
         {!error && Object.keys(userAccounts).length > 0 && (
           <p className="text-2xl text-primary mb-8">
@@ -400,8 +371,6 @@ export default function Accounts() {
           </div>
         )}
       </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -220,7 +220,7 @@ const renderUserChart = (user: string, chartData: any) => {
 // Logic moved to lib/chart-utils.ts
 
 export default function ChartsPage() {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const [users, setUsers] = useState<string[]>([]);
@@ -610,17 +610,8 @@ export default function ChartsPage() {
     }
   }, [theme]);
 
-  const isGuest = status === "unauthenticated" || !!(session?.user && (session.user as any).isGuest);
-
-  if (!mounted || status === "loading") {
-    return (
-      <div className="min-h-screen flex justify-center items-center py-20 bg-[var(--background)]">
-        <svg className="animate-spin h-10 w-10 text-[var(--color-primary)] opacity-50" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-        </svg>
-      </div>
-    );
+  if (!mounted) {
+    return null;
   }
 
   return (
@@ -646,27 +637,7 @@ export default function ChartsPage() {
           }
         }
       `}</style>
-      {isGuest ? (
-            <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
-          <div className="max-w-2xl mx-auto">
-            <LoginCtaBanner
-              title="View Analytics"
-              description="Sign in to see charts and performance metrics"
-              cta="Sign In"
-            />
-            <div className="bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-8 text-center mt-8">
-              <h2 className="text-2xl font-semibold text-primary mb-4">
-                Sales Analytics Dashboard
-              </h2>
-              <p className="text-text-secondary">
-                Track sales trends, performance metrics, and market insights
-              </p>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div>
-          <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
+      <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
         <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center lg:text-left drop-shadow-sm font-heading break-words">
           Charts
         </h1>
@@ -742,8 +713,6 @@ export default function ChartsPage() {
           </div>
         )}
       </div>
-      </div>
-    )}
-    </div >
+    </div>
   );
 }

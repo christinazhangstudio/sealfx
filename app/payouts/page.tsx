@@ -45,7 +45,7 @@ interface PayoutInstrument {
 }
 
 export default function Payouts() {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const [users, setUsers] = useState<string[]>([]);
   const [userPayouts, setUserPayouts] = useState<{ [user: string]: UserPayouts }>({});
   const [userPages, setUserPages] = useState<{ [user: string]: number }>({});
@@ -347,42 +347,13 @@ export default function Payouts() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  const isGuest = status === "unauthenticated" || !!(session?.user && (session.user as any).isGuest);
-
-  if (!mounted || status === "loading") {
-    return (
-      <div className="min-h-screen flex justify-center items-center py-20 bg-background">
-        <svg className="animate-spin h-10 w-10 text-[var(--color-primary)] opacity-50" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-        </svg>
-      </div>
-    );
+  if (!mounted) {
+    return null;
   }
 
   return (
     <>
-      {isGuest ? (
-        <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
-          <div className="max-w-2xl mx-auto">
-            <LoginCtaBanner
-              title="Track Your Revenue"
-              description="Sign in to monitor payouts and financial reports"
-              cta="Sign In"
-            />
-            <div className="bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-8 text-center mt-8">
-              <h2 className="text-2xl font-semibold text-primary mb-4">
-                Revenue Analytics
-              </h2>
-              <p className="text-text-secondary">
-                View detailed payout history, financial graphs, and earnings reports
-              </p>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div>
-          <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
+      <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
         <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-2 lg:mb-4 text-center lg:text-left drop-shadow-sm font-heading break-words">Payouts</h1>
         <p className="text-sm text-text-secondary mb-6 lg:mb-10 text-center lg:text-left italic">
           Note: Only payouts less than 5 years in the past can be retrieved.
@@ -422,8 +393,6 @@ export default function Payouts() {
           </div>
         )}
       </div>
-        </div>
-      )}
     </>
   );
 }

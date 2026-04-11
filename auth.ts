@@ -65,26 +65,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
         }),
     ],
-    callbacks: {
-        ...authConfig.callbacks,
-        async jwt({ token, user, trigger }) {
-            if (user) {
-                token.rememberDevice = (user as any).rememberDevice;
-                token.isGuest = (user as any).isGuest || false;
-            }
-            return token;
-        },
-        async session({ session, token }) {
-            if (token && session.user) {
-                (session as any).rememberDevice = token.rememberDevice;
-                (session.user as any).isGuest = token.isGuest || false;
 
-                // If not remembering device, set a shorter expiration in the cookie
-                // Note: NextAuth manages the cookie expiration based on session.maxAge
-                // For dynamic control, we rely on the client-side session maxAge if supported
-                // or handle it via session callbacks if using custom session management.
-            }
-            return session;
-        },
-    },
+
 });

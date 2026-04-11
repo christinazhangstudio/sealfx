@@ -14,11 +14,10 @@ interface StickyNote {
 
 const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_NOTES_URI}`;
 
-export default function StickyNotesPage() {
-  const { data: session, status } = useSession();
+export default function NotesPage() {
+  const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  const isGuest = status === "unauthenticated" || !!(session?.user && (session.user as any).isGuest);
 
   const [notes, setNotes] = useState<StickyNote[]>([]);
   const [newNoteContent, setNewNoteContent] = useState("");
@@ -41,9 +40,8 @@ export default function StickyNotesPage() {
 
   // Fetch notes from API on mount
   useEffect(() => {
-    if (isGuest || status === "loading") return;
     fetchNotes();
-  }, [status, isGuest]);
+  }, []);
 
   const fetchNotes = async () => {
     try {
@@ -154,37 +152,12 @@ export default function StickyNotesPage() {
     return colors[Math.floor(Math.random() * colors.length)];
   };
 
-  if (!mounted || status === "loading") {
-    return (
-      <div className="min-h-screen flex justify-center items-center py-20 bg-[var(--background)]">
-        <svg className="animate-spin h-10 w-10 text-[var(--color-primary)] opacity-50" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-        </svg>
-      </div>
-    );
+  if (!mounted) {
+    return null;
   }
 
   return (
     <div className={`min-h-screen bg-background p-4 sm:p-6 md:p-8`}>
-      {isGuest ? (
-        <div className="max-w-2xl mx-auto">
-          <LoginCtaBanner
-            title="Access Your Notes"
-            description="Sign in to view and create personal notes"
-            cta="Sign In"
-          />
-          <div className="bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-8 text-center mt-8">
-            <h2 className="text-2xl font-semibold text-primary mb-4">
-              Notes & Reminders
-            </h2>
-            <p className="text-text-secondary">
-              Organize your thoughts and keep track of important reminders
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div>
       <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center drop-shadow-sm font-heading break-words">
         Notes
       </h1>
@@ -329,8 +302,6 @@ export default function StickyNotesPage() {
       {showCopyPopup && (
         <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 text-success-text bg-success-bg border border-success-border px-4 py-2 rounded-lg shadow-md fade-out">
           Copied!
-        </div>
-      )}
         </div>
       )}
     </div>

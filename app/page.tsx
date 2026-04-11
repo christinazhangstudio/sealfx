@@ -25,12 +25,6 @@ export default function RegisterSellerPage() {
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
   const fetchUsers = () => {
-    // Guest users should not fetch data
-    if ((session?.user as any)?.isGuest) {
-      setLoading(false);
-      return;
-    }
-
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
     const usersUri = process.env.NEXT_PUBLIC_USERS_URI;
 
@@ -71,12 +65,6 @@ export default function RegisterSellerPage() {
   }, [session]);
 
   const deleteUser = async (user: string) => {
-    // Guest users should not perform delete operations
-    if ((session?.user as any)?.isGuest) {
-      setAPIError("Sign in to manage sellers");
-      return;
-    }
-
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
     const usersUri = process.env.NEXT_PUBLIC_USERS_URI;
 
@@ -139,12 +127,6 @@ export default function RegisterSellerPage() {
   }, [notification]);
 
   const startOAuthFlow = () => {
-    // Guest users should not perform OAuth operations
-    if ((session?.user as any)?.isGuest) {
-      setError("Sign in to add sellers");
-      return;
-    }
-
     if (isLoading) {
       console.log("startOAuthFlow: Already loading, ignoring click");
       return;
@@ -270,43 +252,15 @@ export default function RegisterSellerPage() {
     };
   }, []);
 
-  const isGuest = status === "unauthenticated" || !!(session?.user && (session.user as any).isGuest);
-
-  if (!mounted || status === "loading") {
-    return (
-      <div className="min-h-screen flex justify-center items-center py-20 bg-[var(--background)]">
-        <svg className="animate-spin h-10 w-10 text-[var(--color-primary)] opacity-50" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-        </svg>
-      </div>
-    );
+  if (!mounted) {
+    return null;
   }
 
   return (
     <div
       className={`min-h-screen flex justify-center bg-[var(--background)] pt-8 px-4 sm:px-6 lg:px-8 relative`}
     >
-      {/* Guest View */}
-      {isGuest ? (
-        <div className="max-w-2xl w-full space-y-6">
-          <LoginCtaBanner
-            title="Manage Your Sellers"
-            description="Sign in to add and manage your eBay seller accounts. Connect multiple seller profiles and centralize your marketplace operations."
-            cta="Sign In to Add Sellers"
-          />
-          <div className="bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-8 text-center">
-            <h2 className="text-2xl font-semibold text-primary mb-4">
-              Seller Management Hub
-            </h2>
-            <p className="text-text-secondary mb-6">
-              Manage all your seller accounts in one place with Sealift's integrated dashboard.
-            </p>
-          </div>
-        </div>
-      ) : (
-        /* Authenticated View */
-        <div className={`max-w-md w-full space-y-6 ${showDeletePopup ? 'blur-sm' : ''}`}>
+      <div className={`max-w-md w-full space-y-6 ${showDeletePopup ? 'blur-sm' : ''}`}>
           <div className="max-w-md w-full bg-surface rounded-xl shadow-md border border-border mb-8 p-8 transform transition-all duration-300 hover:shadow-xl mt-8 relative">
             <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center drop-shadow-sm font-heading break-words">
               add sellers
@@ -411,7 +365,6 @@ export default function RegisterSellerPage() {
             )}
           </div>
         </div>
-      )}
 
       {/* Delete Confirmation Popup */}
       {showDeletePopup && (
