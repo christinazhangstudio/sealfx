@@ -43,7 +43,7 @@ export default function ApiUsageIndicator() {
 
             {isOpen && (
                 <div className="absolute top-full right-0 mt-2 w-48 bg-surface border border-border rounded-lg shadow-xl z-[100] p-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <h3 className="text-xs font-bold text-primary mb-2 uppercase tracking-wider font-heading">Daily Usage</h3>
+                    <h3 className="text-xs font-bold text-primary mb-2 uppercase tracking-wider font-heading">Session Usage</h3>
                     <div className="space-y-2">
                         {Object.entries(usage.endpoints).map(([category, count]) => (
                             <div key={category} className="flex justify-between items-center text-[10px]">
@@ -56,7 +56,7 @@ export default function ApiUsageIndicator() {
                         )}
                     </div>
                     <div className="mt-3 pt-2 border-t border-border flex justify-between items-center text-[9px] text-text-secondary">
-                        <span>Resets daily</span>
+                        <span>Resets every session</span>
                         {/* <button
                             onClick={() => {
                                 localStorage.removeItem("sealfx_api_usage");
