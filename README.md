@@ -4,13 +4,13 @@
 npm run dev --turbo
 ```
 
-Didn't find a good way of decoupling env configuration (the client-side ones!)
+didn't find a good way of decoupling env configuration (the client-side ones!)
 from the actual build step of this application, which makes K8s envs not great.
 https://stackoverflow.com/questions/59877588/nextjs-and-environment-variables-getting-values-to-client-side
 
-This leads us to maintain .env.local for now...
+this leads us to maintain .env.local for now...
 
-Replace `NEXT_PUBLIC_API_URL` with `http://localhost:443` for dev.
+replace `NEXT_PUBLIC_API_URL` with `http://localhost:443` for dev.
 
 ![csr and ssr](csr-vs-ssr.png)
 
@@ -73,36 +73,17 @@ apparently, `suppressHydrationWarning` is a common solution to Flash of Unstyled
 
 ## auth
 
-`ADMIN_PASSWORD_HASH` (used to log in as admin):
-```
-node scripts/hash-password.js <your_new_password>
-```
+`auth.config.ts` contains the core configuration and the JWT `encode`/`decode` logic. this file avoids Node-specific modules (like `argon2`) so it can run in the *Edge Runtime* (Middleware).
+`auth.ts` adds the `Credentials` provider and the `argon2` password hashing logic, which runs in the standard Node.js runtime.
 
-`AUTH_SECRET` (signs the session cookie to the browser):
-```
-node scripts/generate-secrets.js
-```
-## auth.config.ts
-- auth.config.ts is a configuration file for NextAuth.js.
-- It is used to configure the authentication settings for the application.
-- It is imported by auth.ts and used to configure the authentication settings for the application.
-
-Next.js middleware runs in the Edge Runtime, a light-weight browser-like environment.
-It does not support native Node.js modules like argon. `auth.config.ts` handles the auth config without using argon, while `auth.ts` imports the base config and adds the Credentials provider. `middleware.ts` imports `authConfig` so that security rules can run without loading argon.
-
-## auth
-
-The NextAuth session strategy uses JWT and sets session maxAge based on the token's custom claim. Default to 30 days when "Remember Device" is checked, 1 day when unchecked
-
-- rememberMe passed to signIn:
-- available in the authorize callback via credentials
-- store remember preference in user 
-- jwt callback: store rememberDevice in the token
-- session callback: configure session expiration based on the preference
+### session strategy
+the session duration adjusts based on the "Remember Device" checkbox:
+- **Checked**: 30 days.
+- **Unchecked**: 24 hours.
 
 ## notifications
 
-To test notifications, you can use the following curl command:
+to test notifications, you can use the following curl command:
 ```
 curl -X POST http://localhost:443/api/notification/users/<user>/subscriptions/<subscription_id>/test
 ```

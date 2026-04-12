@@ -53,6 +53,7 @@ COPY --from=builder --chown=sealift-nextjs:sealift-nodejs /app/public ./public
 COPY --from=builder --chown=sealift-nextjs:sealift-nodejs /app/lib ./lib
 RUN rm -f /app/lib/auth-keys.ts
 COPY --from=builder --chown=sealift-nextjs:sealift-nodejs /app/next.config.* ./
+COPY --from=builder --chown=sealift-nextjs:sealift-nodejs /app/.env.production ./
 
 # Install production dependencies and ensure permissions are correct
 RUN npm install --production && \

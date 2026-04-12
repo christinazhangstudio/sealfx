@@ -34,7 +34,7 @@ export async function registerUser(formData: FormData) {
             }
         };
 
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:443/api";
+        const apiUrl = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:443/api";
         const res = await fetch(`${apiUrl}/register-user`, {
             method: "POST",
             headers: {

@@ -79,7 +79,7 @@ export const authConfig = {
             // Check if the sign-out event contains a decoded JWT token with our custom ID
             if ("token" in message && message.token?.jti) {
                 try {
-                    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:443/api";
+                    const apiUrl = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:443/api";
                     await fetch(`${apiUrl}/revoke`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
