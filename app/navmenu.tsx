@@ -8,7 +8,7 @@ import { useSession, signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import { useNotifications } from "@/components/NotificationContext";
 
-export default function NavMenu() {
+export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
   const { data: session } = useSession();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -30,6 +30,14 @@ export default function NavMenu() {
     };
   }, []);
 
+  // Reset both when switching out of mobile view
+  useEffect(() => {
+    if (!isMobile) {
+      setIsMobileMenuOpen(false);
+      setIsMobileMoreOpen(false);
+    }
+  }, [isMobile]);
+
   // Reset mobile "More" when main mobile menu closes
   useEffect(() => {
     if (!isMobileMenuOpen) {
@@ -44,7 +52,7 @@ export default function NavMenu() {
     { name: "Notes", href: "/notes" },
     { name: "Payouts", href: "/payouts" },
     { name: "Listings", href: "/listings" },
-    { name: "Listing Gallery", href: "/gallery" },
+    { name: "Gallery", href: "/gallery" },
     { name: "Charts", href: "/charts" },
   ];
 
@@ -60,10 +68,10 @@ export default function NavMenu() {
 
   return (
     <nav
-      className="shadow-sm sticky top-0 z-40 transition-colors duration-200"
+      className="shadow-sm sticky top-0 z-40 transition-colors duration-200 @container"
       style={{ background: "var(--nav-bg)" }}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 @container">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 relative">
           {/* Left Side: Home + Desktop Links */}
           <div className="flex items-center">

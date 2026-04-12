@@ -8,7 +8,7 @@ import NavMenu from "./navmenu";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
 import AiHelpButton from "@/components/AiHelpButton";
 
-function useIsMobile(breakpoint = 768) {
+function useIsMobile(breakpoint = 1024) {
     const [isMobile, setIsMobile] = useState(false);
     useEffect(() => {
         const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);
@@ -86,7 +86,7 @@ export default function ClientLayoutWrapper({
                     </div>
                 </div>
 
-                {!isLoginPage && !isRegisterPage && <NavMenu />}
+                {!isLoginPage && !isRegisterPage && <NavMenu isMobile={isMobile} />}
 
                 {/* Main content */}
                 <main className={`@container/main max-w-7xl px-4 sm:px-6 lg:px-8 py-8 border-0 w-full ${!isAiOpen ? 'mx-auto' : 'ml-0 lg:ml-8'}`}>
