@@ -5,17 +5,21 @@ import { NextResponse } from "next/server";
 const { auth } = NextAuth(authConfig);
 
 export default auth((req) => {
-    // req.auth contains the JWT. Check if the user is explicitly flagged as a guest
+    const isLoggedIn = !!req.auth;
     const isGuest = (req.auth?.user as any)?.isGuest === true;
-
     const isLoginPage = req.nextUrl.pathname.startsWith("/login") || req.nextUrl.pathname.startsWith("/register");
 
+    // 1. If not logged in and not a guest, redirect to login (if not already there)
+    if (!isLoggedIn && !isGuest && !isLoginPage) {
+        return Response.redirect(new URL("/login", req.nextUrl));
+    }
+
+    // 2. If guest, rewrite to /guest view (unless already on login/guest)
     if (isGuest && req.nextUrl.pathname !== "/guest" && !isLoginPage) {
         const url = req.nextUrl.clone();
         url.pathname = "/guest";
-        url.searchParams.set("p", req.nextUrl.pathname); // Unique param to bust segment cache
+        url.searchParams.set("p", req.nextUrl.pathname);
 
-        // Create new headers to pass to the React server component
         const requestHeaders = new Headers(req.headers);
         requestHeaders.set("x-pathname", req.nextUrl.pathname);
 
