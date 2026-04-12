@@ -13,6 +13,7 @@ export default auth((req) => {
     if (isGuest && req.nextUrl.pathname !== "/guest" && !isLoginPage) {
         const url = req.nextUrl.clone();
         url.pathname = "/guest";
+        url.searchParams.set("p", req.nextUrl.pathname); // Unique param to bust segment cache
 
         // Create new headers to pass to the React server component
         const requestHeaders = new Headers(req.headers);

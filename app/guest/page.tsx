@@ -1,9 +1,10 @@
 import { headers } from "next/headers";
 import LoginCtaBanner from "@/components/LoginCtaBanner";
 
-export default async function GuestPage() {
+export default async function GuestPage(props: { searchParams: Promise<{ p?: string }> }) {
+    const searchParams = await props.searchParams;
     const headersList = await headers();
-    const pathname = headersList.get("x-pathname") || "/";
+    const pathname = searchParams.p || headersList.get("x-pathname") || "/";
 
     let title = "Access Restricted";
     let description = "Sign in to access this feature.";
