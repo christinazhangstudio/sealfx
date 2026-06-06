@@ -464,6 +464,21 @@ export default function ListingsPage() {
               >
                 Reset ✿
               </button>
+              <button
+                onClick={() => {
+                  window.postMessage({
+                    type: "SEALIFT_CROSSLIST_REQUEST",
+                    payload: {
+                      title: "Test Awesome Phone",
+                      price: "499",
+                      description: "Just testing the extension!"
+                    }
+                  }, "*");
+                }}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-sm font-bold active:scale-95"
+              >
+                FB Test
+              </button>
             </div>
 
             <div className="flex items-center rounded-lg shadow-sm border border-border overflow-hidden focus-within:ring-2 focus-within:ring-primary transition-all">

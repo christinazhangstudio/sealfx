@@ -52,6 +52,7 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
     { name: "Notes", href: "/notes" },
     { name: "Payouts", href: "/payouts" },
     { name: "Listings", href: "/listings" },
+    { name: "Create FB Listing", href: "/create-fb-listing" },
     { name: "Gallery", href: "/gallery" },
     { name: "Charts", href: "/charts" },
   ];

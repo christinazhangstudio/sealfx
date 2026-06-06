@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "Sealift",
+  "version": "1.0",
+  "description": "Automates Facebook Marketplace listing.",
+  "permissions": [
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://www.facebook.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost:9997/*",
+        "https://sealift.lystic.dev/*"
+      ],
+      "js": [
+        "bridge.js"
+      ],
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://www.facebook.com/marketplace/create/item*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Sealift"
+  }
+}
