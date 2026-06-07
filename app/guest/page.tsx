@@ -92,7 +92,7 @@ export default async function GuestPage(props: { searchParams: Promise<{ p?: str
         description = "Sign in to generate unlimited AI-powered descriptions from your images for Facebook Marketplace.";
         cta = "Sign In to Use AI";
         blockTitle = "AI-Powered Listing Creator";
-        blockDesc = "Upload a photo and let Vision AI write a compelling description. Free guests get 2 generations.";
+        blockDesc = "Upload a photo and let Vision AI write a compelling description. Free guests get 2 tries.";
     }
 
     return (

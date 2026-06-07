@@ -9,14 +9,20 @@ export async function generateListingDescription(base64Image: string, mimeType: 
     return "This is a great item in excellent condition. Perfect for anyone looking for good quality at a reasonable price! (Note: Set GEMINI_API_KEY in .env to use actual AI vision).";
   }
 
+  // Model name is required from .env — no hardcoded default is present in the code.
+  const model = process.env.GEMINI_MODEL;
+  if (!model) {
+    return "No GEMINI_MODEL set in .env. This is required (no hardcoded default). Example: GEMINI_MODEL=gemini-3.0-flash-preview";
+  }
+
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`, {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{
           parts: [
-            { text: "Write a eBay style listing as simply as possible. No markdown or extra conversational formatting. Keep it under 50 words." },
+            { text: "Write a eBay style listing as simply as possible. No markdown or extra conversational formatting. Keep it under 50 words. Don't add shipping or price information." },
             { inlineData: { mimeType, data: base64Image } }
           ]
         }]

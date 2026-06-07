@@ -48,6 +48,7 @@ export default function AiHelpButton({
     interface Message {
         role: "user" | "assistant";
         content: string;
+        thinking?: string;   // for reasoning/thinking tokens from extended OpenAI-compatible endpoints
         sources?: Source[];
     }
     const [query, setQuery] = useState("");
@@ -56,6 +57,7 @@ export default function AiHelpButton({
     const [error, setError] = useState("");
     const panelRef = useRef<HTMLDivElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const assistantMessageIndexRef = useRef<number | null>(null);
     const isMobile = useIsMobile();
 
     // Resizing State
@@ -122,39 +124,145 @@ export default function AiHelpButton({
         setQuery("");
         setLoading(true);
         setError("");
+        assistantMessageIndexRef.current = null;
+
+        // Rolling history (for backend context only)
+        const historyText = messages
+            .slice(-4)
+            .map(m => `${m.role === 'user' ? 'USER' : 'ASSISTANT'}: ${m.content}`)
+            .join("\n");
+
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+        const aiUrl = process.env.NEXT_PUBLIC_AI_URI;
+        let url = `${apiUrl}/${aiUrl}?q=${encodeURIComponent(currentQuery)}`;
+        if (historyText) {
+            url += `&history=${encodeURIComponent(historyText)}`;
+        }
+
+        // Request streaming when the backend supports it
+        const streamUrl = url + (url.includes("?") ? "&" : "?") + "stream=1";
 
         try {
-            // Compile rolling history for LLM context only (NOT for vector search embedding)
-            const historyText = messages
-                .slice(-4) // Keep context tight (last 2 full QA rounds)
-                .map(m => `${m.role === 'user' ? 'USER' : 'ASSISTANT'}: ${m.content}`)
-                .join("\n");
-
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-            const aiUrl = process.env.NEXT_PUBLIC_AI_URI;
-            let url = `${apiUrl}/${aiUrl}?q=${encodeURIComponent(currentQuery)}`;
-            if (historyText) {
-                url += `&history=${encodeURIComponent(historyText)}`;
-            }
-            const res = await fetch(url);
+            const res = await fetch(streamUrl);
 
             if (!res.ok) {
                 const text = await res.text();
                 throw new Error(text || "AI service failed");
             }
 
-            const data = await res.json();
-            setMessages(prev => [...prev, {
-                role: "assistant",
-                content: data.answer,
-                sources: data.sources || []
-            }]);
+            const contentType = res.headers.get("content-type") || "";
+            console.log("[AI Chat] Response content-type:", contentType, "body?", !!res.body);
+
+            if (contentType.includes("text/event-stream") && res.body) {
+                console.log("[AI Chat] Using streaming path");
+                // Pre-create exactly one assistant bubble as soon as we know this is streaming.
+                // This makes the chat bubble visible early (before first token arrives), then we update it in place.
+                // The pre-create + index ref ensures only ONE bubble for the entire response.
+                setMessages(prev => {
+                    const newMsg: Message = {
+                        role: 'assistant',
+                        content: '',
+                        thinking: '',
+                        sources: []
+                    };
+                    const newList = [...prev, newMsg];
+                    assistantMessageIndexRef.current = newList.length - 1;
+                    return newList;
+                });
+                setLoading(false);
+                const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    if (!value) continue;
+
+                    // SSE can deliver multiple events in one chunk
+                    const events = value.split(/\n\n+/);
+                    for (const evt of events) {
+                        const line = evt.trim();
+                        if (!line.startsWith("data:")) continue;
+                        const jsonStr = line.slice(5).trim();
+                        if (!jsonStr) continue;
+
+                        try {
+                            const payload = JSON.parse(jsonStr);
+
+                            if (payload.thinking || payload.token) {
+                                setLoading(false);
+
+                                setMessages(prev => {
+                                    let idx = assistantMessageIndexRef.current;
+                                    if (idx === null || !prev[idx] || prev[idx].role !== 'assistant') {
+                                        // Create exactly one new assistant bubble for this response
+                                        console.log("[AI Chat] creating new assistant message bubble (once per response)");
+                                        const newMsg: Message = {
+                                            role: 'assistant',
+                                            content: payload.token || '',
+                                            thinking: payload.thinking || '',
+                                            sources: []
+                                        };
+                                        const newList = [...prev, newMsg];
+                                        assistantMessageIndexRef.current = newList.length - 1;
+                                        return newList;
+                                    } else {
+                                        // Update the existing one (append to thinking/content)
+                                        console.log("[AI Chat] updating existing assistant message");
+                                        const updated = { ...prev[idx] };
+                                        if (payload.thinking) {
+                                            updated.thinking = (updated.thinking || '') + payload.thinking;
+                                        }
+                                        if (payload.token) {
+                                            updated.content = updated.content + payload.token;
+                                        }
+                                        const newList = [...prev];
+                                        newList[idx] = updated;
+                                        return newList;
+                                    }
+                                });
+                            }
+
+                            if (payload.done) {
+                                console.log("[AI Chat] stream done, sources:", payload.sources?.length || 0);
+                                setMessages(prev => {
+                                    const idx = assistantMessageIndexRef.current;
+                                    if (idx !== null && prev[idx] && prev[idx].role === 'assistant') {
+                                        const updated = { ...prev[idx] };
+                                        if (payload.sources && payload.sources.length > 0) {
+                                            updated.sources = payload.sources;
+                                        }
+                                        const newList = [...prev];
+                                        newList[idx] = updated;
+                                        return newList;
+                                    }
+                                    return prev;
+                                });
+                            }
+
+                            if (payload.error) {
+                                setError(payload.error);
+                            }
+                        } catch {
+                            // ignore partial / non-JSON lines
+                        }
+                    }
+                }
+            } else {
+                // --- Fallback: old non-streaming JSON response ---
+                console.log("[AI Chat] Falling back to non-streaming JSON (no text/event-stream)");
+                const data = await res.json();
+                setMessages(prev => [...prev, {
+                    role: "assistant",
+                    content: data.answer || data.content || "",
+                    sources: data.sources || []
+                }]);
+            }
         } catch (err: any) {
             setError(err.message || "Failed to reach the AI assistant.");
         } finally {
             setLoading(false);
-            // Auto scroll down after load
-            setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+            // Auto scroll after we have content
+            setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
         }
     };
 
@@ -213,7 +321,7 @@ export default function AiHelpButton({
                     <div className="flex items-center gap-2">
                         {messages.length > 0 && (
                             <button
-                                onClick={() => { setMessages([]); setError(""); }}
+                                onClick={() => { setMessages([]); setError(""); assistantMessageIndexRef.current = null; }}
                                 title="New Conversation"
                                 className="p-1.5 rounded-lg text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-text-primary)]/10 transition-all"
                             >
@@ -257,7 +365,17 @@ export default function AiHelpButton({
                                 ? 'bg-[var(--color-primary)] text-white rounded-br-none shadow-sm'
                                 : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-primary)] rounded-tl-none shadow-sm'
                                 }`}>
-                                <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                                {msg.thinking && (
+                                    <div className="mb-2 text-[10px] opacity-70 border-l-2 border-[var(--color-primary)]/40 pl-2 whitespace-pre-wrap leading-snug">
+                                        <span className="font-medium tracking-wider uppercase">Thinking</span>
+                                        <span className="ml-1">→</span> {msg.thinking}
+                                    </div>
+                                )}
+                                {msg.content ? (
+                                    <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                                ) : !msg.thinking ? (
+                                    <p className="whitespace-pre-wrap leading-relaxed opacity-60">...</p>
+                                ) : null}
                             </div>
 
                             {msg.sources && msg.sources.length > 0 && (

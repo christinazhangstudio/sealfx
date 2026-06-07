@@ -22,7 +22,7 @@ export default function CreateListing() {
 
   const { data: session } = useSession();
   const isGuest = !!(session?.user && (session.user as any).isGuest);
-  const MAX_GUEST_AI_USES = 5;
+  const MAX_GUEST_AI_USES = 2;
   const [aiUses, setAiUses] = useState(0);
   const [limitReached, setLimitReached] = useState(false);
 
@@ -230,7 +230,7 @@ export default function CreateListing() {
                   <label htmlFor="description" className="block text-sm font-semibold text-primary transition-colors">AI Description</label>
                   {isGuest && (
                     <div className="flex items-center gap-2 text-xs">
-                      <div className="flex gap-1" title={`${aiUses} of ${MAX_GUEST_AI_USES} free AI generations used`}>
+                      <div className="flex gap-1" title={`${aiUses} of ${MAX_GUEST_AI_USES} free AI tries used`}>
                         {Array.from({ length: MAX_GUEST_AI_USES }).map((_, i) => (
                           <div 
                             key={i} 
@@ -244,10 +244,10 @@ export default function CreateListing() {
                       </div>
                       <span className={`font-medium tracking-tight ${limitReached ? 'text-red-500' : 'text-blue-500/90'}`}>
                         {limitReached 
-                          ? 'Login required for more'
+                          ? '0 tries left'
                           : aiUses === 0 
-                            ? `${MAX_GUEST_AI_USES} free AI tries`
-                            : `${MAX_GUEST_AI_USES - aiUses} free ${MAX_GUEST_AI_USES - aiUses === 1 ? 'try' : 'tries'} left`
+                            ? `${MAX_GUEST_AI_USES} AI tries`
+                            : `${MAX_GUEST_AI_USES - aiUses} ${MAX_GUEST_AI_USES - aiUses === 1 ? 'try' : 'tries'} left`
                         }
                       </span>
                     </div>
@@ -268,30 +268,19 @@ export default function CreateListing() {
 
             {/* Guest AI limit prompt */}
             {isGuest && limitReached && (
-              <div className="mt-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400">
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex-shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                  </div>
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400">
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm">You've used your {MAX_GUEST_AI_USES} free AI tries</p>
-                    <p className="text-xs mt-1 opacity-90 leading-relaxed">
-                      Sign in to unlock unlimited AI description generation and full crosslisting features.
-                    </p>
                     <Link 
                       href="/login" 
-                      className="mt-3 inline-flex items-center gap-2 px-4 py-1.5 text-sm font-bold rounded-xl bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white transition-all shadow-sm"
+                      className="inline-flex items-center gap-2 px-4 py-1.5 text-sm font-bold rounded-xl bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white transition-all shadow-sm"
                     >
-                      Sign in to unlock
+                      Create a free account to unlock unlimited AI generations
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                       </svg>
                     </Link>
                   </div>
                 </div>
-              </div>
             )}
 
             <div className="pt-4 mt-2 border-t border-border/50">
