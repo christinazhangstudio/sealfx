@@ -16,7 +16,7 @@ export async function generateListingDescription(base64Image: string, mimeType: 
       body: JSON.stringify({
         contents: [{
           parts: [
-            { text: "Act as an expert salesperson writing a Facebook Marketplace listing. Return only the description text without any markdown or extra conversational formatting. Keep it under 1 paragraphs." },
+            { text: "Write a eBay style listing as simply as possible. No markdown or extra conversational formatting. Keep it under 50 words." },
             { inlineData: { mimeType, data: base64Image } }
           ]
         }]

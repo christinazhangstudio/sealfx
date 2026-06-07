@@ -58,7 +58,7 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
   const navLinks = [
     { name: "Inbox", href: "/inbox" },
     { name: "Notes", href: "/notes" },
-    { name: "Create FB Listing", href: "/create-fb-listing" },
+    { name: "Create Listing", href: "/create-listing" },
     { name: "Gallery", href: "/gallery" },
   ];
 

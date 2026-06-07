@@ -87,8 +87,8 @@ export default async function GuestPage(props: { searchParams: Promise<{ p?: str
         cta = "Sign In";
         blockTitle = "Image Management";
         blockDesc = "Upload, organize, and manage product photos across your inventory";
-    } else if (pathname.startsWith("/create-fb-listing")) {
-        title = "Create FB Listing";
+    } else if (pathname.startsWith("/create-listing")) {
+        title = "Create Listing";
         description = "Sign in to generate unlimited AI-powered descriptions from your images for Facebook Marketplace.";
         cta = "Sign In to Use AI";
         blockTitle = "AI-Powered Listing Creator";

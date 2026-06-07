@@ -15,7 +15,7 @@ export default auth((req) => {
     }
 
     // 2. If guest, rewrite to /guest view (unless already on login/guest or guest-allowed pages)
-    const guestAllowedPaths = ["/create-fb-listing"];
+    const guestAllowedPaths = ["/create-listing"];
     if (isGuest && !guestAllowedPaths.includes(req.nextUrl.pathname) && req.nextUrl.pathname !== "/guest" && !isLoginPage) {
         const url = req.nextUrl.clone();
         url.pathname = "/guest";

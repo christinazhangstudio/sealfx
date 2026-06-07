@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { generateListingDescription } from "./actions";
 
-export default function CreateFBListing() {
+export default function CreateListing() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -22,7 +22,7 @@ export default function CreateFBListing() {
 
   const { data: session } = useSession();
   const isGuest = !!(session?.user && (session.user as any).isGuest);
-  const MAX_GUEST_AI_USES = 2;
+  const MAX_GUEST_AI_USES = 5;
   const [aiUses, setAiUses] = useState(0);
   const [limitReached, setLimitReached] = useState(false);
 
@@ -140,8 +140,8 @@ export default function CreateFBListing() {
     <div className="min-h-screen p-8 @container">
       <div className="max-w-5xl mx-auto space-y-8">
         <div className="flex flex-col gap-2">
-          <h1 className="text-4xl font-extrabold tracking-tight text-primary drop-shadow-sm">Create FB Listing</h1>
-          <p className="text-secondary text-lg">Upload an image to magically generate a detailed listing description using Vision AI, then post it directly to Marketplace.</p>
+          <h1 className="text-4xl font-extrabold tracking-tight text-primary drop-shadow-sm">Create Listing</h1>
+          <p className="text-secondary text-lg">Upload an image to generate a listing description, then post it directly to Marketplace.</p>
         </div>
 
         <div className="grid @4xl:grid-cols-2 gap-8 items-start">
@@ -191,7 +191,7 @@ export default function CreateFBListing() {
             {isGenerating && (
               <div className="absolute inset-0 bg-background/60 backdrop-blur-sm flex flex-col items-center justify-center z-10 transition-all">
                 <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
-                <p className="mt-6 text-lg font-medium text-primary animate-pulse w-full text-center tracking-wide">AI is analyzing image...</p>
+                <p className="mt-6 text-lg font-medium text-primary animate-pulse w-full text-center tracking-wide">Analyzing image...</p>
               </div>
             )}
           </div>
@@ -243,9 +243,12 @@ export default function CreateFBListing() {
                         ))}
                       </div>
                       <span className={`font-medium tracking-tight ${limitReached ? 'text-red-500' : 'text-blue-500/90'}`}>
-                        {aiUses === 0 && `${MAX_GUEST_AI_USES} free AI tries`}
-                        {aiUses === 1 && `1 free try left`}
-                        {aiUses >= 2 && `Login required for more`}
+                        {limitReached 
+                          ? 'Login required for more'
+                          : aiUses === 0 
+                            ? `${MAX_GUEST_AI_USES} free AI tries`
+                            : `${MAX_GUEST_AI_USES - aiUses} free ${MAX_GUEST_AI_USES - aiUses === 1 ? 'try' : 'tries'} left`
+                        }
                       </span>
                     </div>
                   )}
@@ -258,7 +261,7 @@ export default function CreateFBListing() {
                 value={formData.description}
                 onChange={handleChange}
                 rows={6}
-                placeholder="Description will be magically generated here once you upload an image..."
+                placeholder="Description will be generated here once you upload an image..."
                 className={`w-full px-4 py-3 rounded-xl bg-background border ${isGenerating ? 'border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)]' : 'border-border focus:border-blue-500'} focus:ring-2 focus:ring-blue-500/20 outline-none transition-all duration-300 text-primary placeholder:text-secondary/50 shadow-inner resize-none leading-relaxed`}
               />
             </div>
@@ -273,7 +276,7 @@ export default function CreateFBListing() {
                     </svg>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm">You've used your 2 free AI tries</p>
+                    <p className="font-semibold text-sm">You've used your {MAX_GUEST_AI_USES} free AI tries</p>
                     <p className="text-xs mt-1 opacity-90 leading-relaxed">
                       Sign in to unlock unlimited AI description generation and full crosslisting features.
                     </p>
@@ -295,14 +298,13 @@ export default function CreateFBListing() {
               <button
                 onClick={handleApprove}
                 disabled={isSending || (!formData.title && !formData.price && !formData.description)}
-                className={`group relative w-full overflow-hidden rounded-xl font-bold text-white transition-all duration-300 transform ${
+                className={`relative w-full rounded-xl font-bold text-white transition-all duration-300 ${
                   isSending || (!formData.title && !formData.price && !formData.description)
-                  ? "bg-primary/50 cursor-not-allowed scale-100"
-                  : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 hover:scale-[1.02] shadow-lg shadow-blue-500/30"
+                  ? "bg-primary/50 cursor-not-allowed"
+                  : "bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/30"
                 }`}
               >
-                <div className="absolute inset-0 w-full h-full bg-white/20 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out skew-x-12"></div>
-                <div className="px-6 py-4 flex items-center justify-center gap-3 relative z-10">
+                <div className="px-6 py-4 flex items-center justify-center gap-3">
                   {isSending ? (
                     <>
                       <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
