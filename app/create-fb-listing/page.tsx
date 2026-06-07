@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useRef, DragEvent, ChangeEvent } from "react";
+import { useState, useRef, useEffect, DragEvent, ChangeEvent } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { generateListingDescription } from "./actions";
 
 export default function CreateFBListing() {
@@ -17,6 +19,33 @@ export default function CreateFBListing() {
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: session } = useSession();
+  const isGuest = !!(session?.user && (session.user as any).isGuest);
+  const MAX_GUEST_AI_USES = 2;
+  const [aiUses, setAiUses] = useState(0);
+  const [limitReached, setLimitReached] = useState(false);
+
+  useEffect(() => {
+    if (isGuest) {
+      const saved = localStorage.getItem("fb_listing_ai_uses");
+      const count = saved ? parseInt(saved, 10) : 0;
+      setAiUses(count);
+      if (count >= MAX_GUEST_AI_USES) {
+        setLimitReached(true);
+      }
+    }
+  }, [isGuest]);
+
+  const incrementAiUses = () => {
+    if (!isGuest) return;
+    const newCount = aiUses + 1;
+    setAiUses(newCount);
+    localStorage.setItem("fb_listing_ai_uses", newCount.toString());
+    if (newCount >= MAX_GUEST_AI_USES) {
+      setLimitReached(true);
+    }
+  };
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -58,10 +87,23 @@ export default function CreateFBListing() {
       // Strip off the data:image/xxx;base64, prefix
       const base64Data = base64String.split(',')[1];
       
+      if (isGuest && aiUses >= MAX_GUEST_AI_USES) {
+        setLimitReached(true);
+        // Allow preview but block AI generation
+        setFormData(prev => ({ 
+          ...prev, 
+          description: prev.description || "Sign in to unlock AI description generation." 
+        }));
+        return;
+      }
+
       setIsGenerating(true);
       try {
         const generatedDesc = await generateListingDescription(base64Data, file.type);
         setFormData(prev => ({ ...prev, description: generatedDesc }));
+        if (isGuest) {
+          incrementAiUses();
+        }
       } catch (err) {
         console.error("Failed to generate description", err);
       } finally {
@@ -183,8 +225,31 @@ export default function CreateFBListing() {
             </div>
 
             <div className="group relative">
-              <div className="flex justify-between items-end mb-2">
-                <label htmlFor="description" className="block text-sm font-semibold text-primary transition-colors">AI Description</label>
+              <div className="flex justify-between items-center mb-2">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="description" className="block text-sm font-semibold text-primary transition-colors">AI Description</label>
+                  {isGuest && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <div className="flex gap-1" title={`${aiUses} of ${MAX_GUEST_AI_USES} free AI generations used`}>
+                        {Array.from({ length: MAX_GUEST_AI_USES }).map((_, i) => (
+                          <div 
+                            key={i} 
+                            className={`w-2.5 h-2.5 rounded-full border transition-all duration-200 ${
+                              i < aiUses 
+                                ? (limitReached ? 'bg-red-500 border-red-500' : 'bg-blue-500 border-blue-500') 
+                                : 'border-blue-500/40 bg-transparent'
+                            }`} 
+                          />
+                        ))}
+                      </div>
+                      <span className={`font-medium tracking-tight ${limitReached ? 'text-red-500' : 'text-blue-500/90'}`}>
+                        {aiUses === 0 && `${MAX_GUEST_AI_USES} free AI tries`}
+                        {aiUses === 1 && `1 free try left`}
+                        {aiUses >= 2 && `Login required for more`}
+                      </span>
+                    </div>
+                  )}
+                </div>
                 {isGenerating && <span className="text-xs text-blue-500 font-medium animate-pulse">Generating...</span>}
               </div>
               <textarea
@@ -197,6 +262,34 @@ export default function CreateFBListing() {
                 className={`w-full px-4 py-3 rounded-xl bg-background border ${isGenerating ? 'border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)]' : 'border-border focus:border-blue-500'} focus:ring-2 focus:ring-blue-500/20 outline-none transition-all duration-300 text-primary placeholder:text-secondary/50 shadow-inner resize-none leading-relaxed`}
               />
             </div>
+
+            {/* Guest AI limit prompt */}
+            {isGuest && limitReached && (
+              <div className="mt-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm">You've used your 2 free AI tries</p>
+                    <p className="text-xs mt-1 opacity-90 leading-relaxed">
+                      Sign in to unlock unlimited AI description generation and full crosslisting features.
+                    </p>
+                    <Link 
+                      href="/login" 
+                      className="mt-3 inline-flex items-center gap-2 px-4 py-1.5 text-sm font-bold rounded-xl bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white transition-all shadow-sm"
+                    >
+                      Sign in to unlock
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                      </svg>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="pt-4 mt-2 border-t border-border/50">
               <button

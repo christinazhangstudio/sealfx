@@ -13,15 +13,21 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileMoreOpen, setIsMobileMoreOpen] = useState(false);
+  const [isMobileAnalyticsOpen, setIsMobileAnalyticsOpen] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
+  const moreDropdownRef = useRef<HTMLDivElement>(null);
+  const analyticsDropdownRef = useRef<HTMLDivElement>(null);
   const { unreadCount } = useNotifications();
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (moreDropdownRef.current && !moreDropdownRef.current.contains(event.target as Node)) {
         setIsMoreOpen(false);
+      }
+      if (analyticsDropdownRef.current && !analyticsDropdownRef.current.contains(event.target as Node)) {
+        setIsAnalyticsOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -30,18 +36,20 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
     };
   }, []);
 
-  // Reset both when switching out of mobile view
+  // Reset mobile states when switching out of mobile view
   useEffect(() => {
     if (!isMobile) {
       setIsMobileMenuOpen(false);
       setIsMobileMoreOpen(false);
+      setIsMobileAnalyticsOpen(false);
     }
   }, [isMobile]);
 
-  // Reset mobile "More" when main mobile menu closes
+  // Reset mobile "More" and "Analytics" when main mobile menu closes
   useEffect(() => {
     if (!isMobileMenuOpen) {
       setIsMobileMoreOpen(false);
+      setIsMobileAnalyticsOpen(false);
     }
   }, [isMobileMenuOpen]);
 
@@ -50,10 +58,13 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
   const navLinks = [
     { name: "Inbox", href: "/inbox" },
     { name: "Notes", href: "/notes" },
-    { name: "Payouts", href: "/payouts" },
-    { name: "Listings", href: "/listings" },
     { name: "Create FB Listing", href: "/create-fb-listing" },
     { name: "Gallery", href: "/gallery" },
+  ];
+
+  const analyticsLinks = [
+    { name: "Payouts", href: "/payouts" },
+    { name: "Listings", href: "/listings" },
     { name: "Charts", href: "/charts" },
   ];
 
@@ -66,6 +77,7 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
   ];
 
   const isActive = (path: string) => pathname === path;
+  const isAnalyticsActive = analyticsLinks.some((link) => isActive(link.href));
 
   return (
     <nav
@@ -99,10 +111,44 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
                 </Link>
               ))}
 
-              {/* More Dropdown */}
-              <div className="relative" ref={dropdownRef}>
+              {/* Analytics Dropdown */}
+              <div className="relative" ref={analyticsDropdownRef}>
                 <button
-                  onClick={() => setIsMoreOpen(!isMoreOpen)}
+                  onClick={() => {
+                    setIsAnalyticsOpen(!isAnalyticsOpen);
+                    setIsMoreOpen(false);
+                  }}
+                  className={`px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors duration-200 ${isAnalyticsActive ? "text-hover-content font-bold bg-hover" : "text-primary hover:text-hover-content hover:bg-hover"
+                    }`}
+                >
+                  Analytics
+                  <svg className={`ml-1 h-4 w-4 transition-transform duration-200 ${isAnalyticsOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {isAnalyticsOpen && (
+                  <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-surface border border-border ring-1 ring-black ring-opacity-5 focus:outline-none z-50 animate-in fade-in zoom-in-95 duration-100">
+                    {analyticsLinks.map((link) => (
+                      <Link
+                        key={link.name}
+                        href={link.href}
+                        className="block px-4 py-2 text-sm text-primary hover:bg-hover hover:text-hover-content transition-colors"
+                        onClick={() => setIsAnalyticsOpen(false)}
+                      >
+                        {link.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* More Dropdown */}
+              <div className="relative" ref={moreDropdownRef}>
+                <button
+                  onClick={() => {
+                    setIsMoreOpen(!isMoreOpen);
+                    setIsAnalyticsOpen(false);
+                  }}
                   className="px-3 py-2 rounded-md text-sm font-medium text-primary hover:text-hover-content hover:bg-hover flex items-center transition-colors"
                 >
                   More
@@ -210,6 +256,39 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
                 )}
               </Link>
             ))}
+
+            {/* Collapsible Analytics Links */}
+            <div>
+              <button
+                onClick={() => setIsMobileAnalyticsOpen(!isMobileAnalyticsOpen)}
+                className="w-full px-3 py-1.5 text-base font-medium text-center relative text-primary hover:text-hover-content hover:bg-hover transition-colors border-b border-solid border-border/50"
+              >
+                <span>Analytics</span>
+                <svg
+                  className={`absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 transition-transform duration-200 ${isMobileAnalyticsOpen ? 'rotate-180' : ''}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {isMobileAnalyticsOpen && (
+                <div className="animate-in slide-in-from-top-1 duration-200">
+                  {analyticsLinks.map((link, index) => (
+                    <Link
+                      key={link.name}
+                      href={link.href}
+                      className={`block px-3 py-1.5 text-base font-medium text-center text-primary hover:text-hover-content hover:bg-hover transition-colors border-b border-solid border-border/50 ${index === analyticsLinks.length - 1 ? 'border-b-0' : ''}`}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      {link.name}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Collapsible More Links */}
             <div>

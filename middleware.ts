@@ -14,8 +14,9 @@ export default auth((req) => {
         return Response.redirect(new URL("/login", req.nextUrl));
     }
 
-    // 2. If guest, rewrite to /guest view (unless already on login/guest)
-    if (isGuest && req.nextUrl.pathname !== "/guest" && !isLoginPage) {
+    // 2. If guest, rewrite to /guest view (unless already on login/guest or guest-allowed pages)
+    const guestAllowedPaths = ["/create-fb-listing"];
+    if (isGuest && !guestAllowedPaths.includes(req.nextUrl.pathname) && req.nextUrl.pathname !== "/guest" && !isLoginPage) {
         const url = req.nextUrl.clone();
         url.pathname = "/guest";
         url.searchParams.set("p", req.nextUrl.pathname);
