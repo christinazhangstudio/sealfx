@@ -2,11 +2,95 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import ReactMarkdown, { type Components } from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 
 interface Source {
     source: string;
     text: string;
+}
+
+// Themed markdown for assistant replies. Children-only (no prop spreading) so
+// react-markdown's internal `node` prop never leaks onto DOM elements.
+const markdownComponents: Components = {
+    h1: ({ children }) => <h2 className="text-sm font-bold mt-3 mb-1.5 first:mt-0">{children}</h2>,
+    h2: ({ children }) => <h3 className="text-sm font-bold mt-3 mb-1.5 first:mt-0">{children}</h3>,
+    h3: ({ children }) => <h4 className="text-[13px] font-bold mt-2.5 mb-1 first:mt-0">{children}</h4>,
+    h4: ({ children }) => <h5 className="text-[13px] font-semibold mt-2 mb-1 first:mt-0">{children}</h5>,
+    p: ({ children }) => <p className="leading-relaxed mb-2 last:mb-0">{children}</p>,
+    ul: ({ children }) => <ul className="list-disc pl-5 mb-2 space-y-1">{children}</ul>,
+    ol: ({ children }) => <ol className="list-decimal pl-5 mb-2 space-y-1">{children}</ol>,
+    li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+    a: ({ children, href }) => (
+        <a href={href} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline underline-offset-2 hover:opacity-80">
+            {children}
+        </a>
+    ),
+    strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+    em: ({ children }) => <em className="italic">{children}</em>,
+    code: ({ children }) => <code className="px-1 py-0.5 rounded bg-[var(--color-text-primary)]/10 font-mono text-[0.85em]">{children}</code>,
+    pre: ({ children }) => (
+        <pre className="bg-[var(--color-text-primary)]/5 border border-[var(--color-border)] rounded-lg p-3 overflow-x-auto text-xs font-mono mb-2 [&_code]:bg-transparent [&_code]:p-0">
+            {children}
+        </pre>
+    ),
+    blockquote: ({ children }) => <blockquote className="border-l-2 border-[var(--color-primary)]/40 pl-3 italic opacity-80 mb-2">{children}</blockquote>,
+    hr: () => <hr className="my-3 border-[var(--color-border)]" />,
+    table: ({ children }) => (
+        <div className="overflow-x-auto mb-2">
+            <table className="w-full text-xs border-collapse">{children}</table>
+        </div>
+    ),
+    th: ({ children }) => <th className="border border-[var(--color-border)] px-2 py-1 font-bold text-left">{children}</th>,
+    td: ({ children }) => <td className="border border-[var(--color-border)] px-2 py-1">{children}</td>,
+};
+
+// Collapsible reasoning trace. Expanded (with a pulsing label) while the model is
+// still thinking, then auto-collapses once the actual answer starts streaming.
+function ThinkingBlock({ thinking, isActive }: { thinking: string; isActive: boolean }) {
+    const [expanded, setExpanded] = useState(true);
+    const traceRef = useRef<HTMLDivElement>(null);
+    const traceStickRef = useRef(true);
+    useEffect(() => {
+        if (!isActive) setExpanded(false);
+    }, [isActive]);
+    // The trace pane is height-capped, so without this the newest reasoning
+    // streams in below the fold and the trace looks frozen. Follow the bottom
+    // while streaming, unless the user scrolled up to read.
+    useEffect(() => {
+        const el = traceRef.current;
+        if (el && traceStickRef.current) el.scrollTop = el.scrollHeight;
+    }, [thinking, expanded]);
+    return (
+        <div className="mb-2">
+            <button
+                type="button"
+                onClick={() => setExpanded(e => !e)}
+                className="flex items-center gap-1 text-[10px] font-medium tracking-wider uppercase text-[var(--color-text-secondary)] opacity-70 hover:opacity-100 transition-opacity"
+            >
+                <span className={isActive ? "animate-pulse" : ""}>{isActive ? "Thinking…" : "Thought process"}</span>
+                <svg
+                    width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"
+                    className={`transition-transform ${expanded ? "rotate-180" : ""}`}
+                >
+                    <path d="m6 9 6 6 6-6" />
+                </svg>
+            </button>
+            {expanded && (
+                <div
+                    ref={traceRef}
+                    onScroll={() => {
+                        const el = traceRef.current;
+                        if (el) traceStickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+                    }}
+                    className="mt-1.5 text-[10px] text-[var(--color-text-secondary)] opacity-80 border-l-2 border-[var(--color-primary)]/40 pl-2 whitespace-pre-wrap leading-snug max-h-44 overflow-y-auto"
+                >
+                    {thinking}
+                </div>
+            )}
+        </div>
+    );
 }
 
 function useIsMobile(breakpoint = 768) {
@@ -54,11 +138,32 @@ export default function AiHelpButton({
     const [query, setQuery] = useState("");
     const [messages, setMessages] = useState<Message[]>([]);
     const [loading, setLoading] = useState(false);
+    const [isStreaming, setIsStreaming] = useState(false);
     const [error, setError] = useState("");
     const panelRef = useRef<HTMLDivElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const stickToBottomRef = useRef(true);
+    const abortRef = useRef<AbortController | null>(null);
     const assistantMessageIndexRef = useRef<number | null>(null);
     const isMobile = useIsMobile();
+
+    // Follow the stream like a modern chat: stick to the bottom while tokens
+    // arrive, but stop following as soon as the user scrolls up to read.
+    const handleMessagesScroll = () => {
+        const el = scrollContainerRef.current;
+        if (!el) return;
+        stickToBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    };
+    useEffect(() => {
+        if (stickToBottomRef.current) {
+            const el = scrollContainerRef.current;
+            el?.scrollTo({ top: el.scrollHeight });
+        }
+    }, [messages]);
+
+    // Abort any in-flight generation when the panel unmounts
+    useEffect(() => () => abortRef.current?.abort(), []);
 
     // Resizing State
     const isResizing = useRef(false);
@@ -117,14 +222,17 @@ export default function AiHelpButton({
     const handleAsk = async (e: React.FormEvent) => {
         e.preventDefault();
         const currentQuery = query.trim();
-        if (!currentQuery) return;
+        if (!currentQuery || loading || isStreaming) return;
 
         // Add user query to UI immediately
         setMessages(prev => [...prev, { role: "user", content: currentQuery }]);
         setQuery("");
         setLoading(true);
         setError("");
+        stickToBottomRef.current = true;
         assistantMessageIndexRef.current = null;
+        const controller = new AbortController();
+        abortRef.current = controller;
 
         // Rolling history (for backend context only)
         const historyText = messages
@@ -143,7 +251,7 @@ export default function AiHelpButton({
         const streamUrl = url + (url.includes("?") ? "&" : "?") + "stream=1";
 
         try {
-            const res = await fetch(streamUrl);
+            const res = await fetch(streamUrl, { signal: controller.signal });
 
             if (!res.ok) {
                 const text = await res.text();
@@ -170,15 +278,22 @@ export default function AiHelpButton({
                     return newList;
                 });
                 setLoading(false);
+                setIsStreaming(true);
                 const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+
+                // SSE events can be split across (or coalesced within) network
+                // chunks, so buffer and only parse complete "\n\n"-terminated
+                // events; the incomplete tail carries over to the next read.
+                let sseBuffer = "";
 
                 while (true) {
                     const { value, done } = await reader.read();
                     if (done) break;
                     if (!value) continue;
 
-                    // SSE can deliver multiple events in one chunk
-                    const events = value.split(/\n\n+/);
+                    sseBuffer += value;
+                    const events = sseBuffer.split(/\n\n/);
+                    sseBuffer = events.pop() ?? "";
                     for (const evt of events) {
                         const line = evt.trim();
                         if (!line.startsWith("data:")) continue;
@@ -254,15 +369,18 @@ export default function AiHelpButton({
                 setMessages(prev => [...prev, {
                     role: "assistant",
                     content: data.answer || data.content || "",
+                    thinking: data.thinking || "",
                     sources: data.sources || []
                 }]);
             }
         } catch (err: any) {
-            setError(err.message || "Failed to reach the AI assistant.");
+            if (err?.name !== "AbortError") {
+                setError(err.message || "Failed to reach the AI assistant.");
+            }
         } finally {
             setLoading(false);
-            // Auto scroll after we have content
-            setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
+            setIsStreaming(false);
+            abortRef.current = null;
         }
     };
 
@@ -337,7 +455,7 @@ export default function AiHelpButton({
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 scrollbar-hide">
+                <div ref={scrollContainerRef} onScroll={handleMessagesScroll} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 scrollbar-hide">
                     {messages.length === 0 && !loading && !error && (
                         <div className="text-center py-10 space-y-4">
                             <div className="w-16 h-16 bg-[var(--color-primary)]/10 rounded-full flex items-center justify-center mx-auto text-[var(--color-primary)]">
@@ -366,13 +484,21 @@ export default function AiHelpButton({
                                 : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-primary)] rounded-tl-none shadow-sm'
                                 }`}>
                                 {msg.thinking && (
-                                    <div className="mb-2 text-[10px] opacity-70 border-l-2 border-[var(--color-primary)]/40 pl-2 whitespace-pre-wrap leading-snug">
-                                        <span className="font-medium tracking-wider uppercase">Thinking</span>
-                                        <span className="ml-1">→</span> {msg.thinking}
-                                    </div>
+                                    <ThinkingBlock
+                                        thinking={msg.thinking}
+                                        isActive={i === messages.length - 1 && !msg.content}
+                                    />
                                 )}
                                 {msg.content ? (
-                                    <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                                    msg.role === 'assistant' ? (
+                                        <div className="leading-relaxed">
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                                                {msg.content}
+                                            </ReactMarkdown>
+                                        </div>
+                                    ) : (
+                                        <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                                    )
                                 ) : !msg.thinking ? (
                                     <p className="whitespace-pre-wrap leading-relaxed opacity-60">...</p>
                                 ) : null}
@@ -420,13 +546,24 @@ export default function AiHelpButton({
                             disabled={isBlocked}
                             className={`w-full bg-[var(--color-surface)]/50 border border-[var(--color-border)] rounded-2xl px-5 py-4 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)]/30 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)] transition-all pr-12 ${isBlocked ? 'cursor-not-allowed opacity-50' : ''}`}
                         />
-                        <button
-                            type="submit"
-                            disabled={loading || !query.trim() || isBlocked}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-[var(--color-primary)] text-white rounded-xl hover:bg-[var(--color-primary-hover)] disabled:opacity-30 disabled:hover:bg-[var(--color-primary)] transition-all"
-                        >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m12 19 7-7-7-7M5 12h14" /></svg>
-                        </button>
+                        {isStreaming ? (
+                            <button
+                                type="button"
+                                onClick={() => abortRef.current?.abort()}
+                                title="Stop generating"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-[var(--color-primary)] text-white rounded-xl hover:bg-[var(--color-primary-hover)] transition-all"
+                            >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>
+                            </button>
+                        ) : (
+                            <button
+                                type="submit"
+                                disabled={loading || !query.trim() || isBlocked}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-[var(--color-primary)] text-white rounded-xl hover:bg-[var(--color-primary-hover)] disabled:opacity-30 disabled:hover:bg-[var(--color-primary)] transition-all"
+                            >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m12 19 7-7-7-7M5 12h14" /></svg>
+                            </button>
+                        )}
                     </div>
                 </form>
             </aside>
