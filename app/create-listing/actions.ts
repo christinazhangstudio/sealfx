@@ -1,31 +1,33 @@
 "use server";
 
 export async function generateListingDescription(base64Image: string, mimeType: string) {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  // Any OpenAI-compatible chat completions endpoint with vision support works here.
+  // Same env vars as the sealift backend so one pair configures both apps.
+  const url = process.env.SELF_HOSTED_AI_CHAT_COMPLETIONS_URL;
+  const model = process.env.SELF_HOSTED_AI_CHAT_COMPLETIONS_MODEL;
 
-  if (!apiKey) {
-    // Fallback if no API key is set so the app still functions
+  if (!url || !model) {
+    // Fallback if no endpoint is configured so the app still functions
     await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate delay
-    return "This is a great item in excellent condition. Perfect for anyone looking for good quality at a reasonable price! (Note: Set GEMINI_API_KEY in .env to use actual AI vision).";
-  }
-
-  // Model name is required from .env — no hardcoded default is present in the code.
-  const model = process.env.GEMINI_MODEL;
-  if (!model) {
-    return "No GEMINI_MODEL set in .env. This is required (no hardcoded default). Example: GEMINI_MODEL=gemini-3.0-flash-preview";
+    return "This is a great item in excellent condition. Perfect for anyone looking for good quality at a reasonable price! (Note: Set SELF_HOSTED_AI_CHAT_COMPLETIONS_URL and SELF_HOSTED_AI_CHAT_COMPLETIONS_MODEL in .env to use actual AI vision).";
   }
 
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+    const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: "Write a eBay style listing as simply as possible. No markdown or extra conversational formatting. Keep it under 50 words. Don't add shipping or price information." },
-            { inlineData: { mimeType, data: base64Image } }
-          ]
-        }]
+        model,
+        stream: false,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Write a eBay style listing as simply as possible. No markdown or extra conversational formatting. Keep it under 50 words. Don't add shipping or price information." },
+              { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Image}` } }
+            ]
+          }
+        ]
       })
     });
 
@@ -34,14 +36,17 @@ export async function generateListingDescription(base64Image: string, mimeType: 
     }
 
     const data = await res.json();
-    const aiText = data.candidates[0].content.parts[0].text.trim();
+    // Reasoning models may emit <think> blocks in content; drop them.
+    const aiText = data.choices[0].message.content
+      .replace(/<think>[\s\S]*?<\/think>/g, "")
+      .trim();
 
     // Hardcode any custom text you want to append to every listing here:
     const hardcodedFooter = "\n\n📍 Pickup only in Richmond/Sugar Land, 77469";
 
     return aiText + hardcodedFooter;
   } catch (error) {
-    console.error("Error calling Gemini API:", error);
-    return "Failed to generate description. Please check the API key and try again.";
+    console.error("Error calling chat completions API:", error);
+    return "Failed to generate description. Please check the AI endpoint and try again.";
   }
 }
