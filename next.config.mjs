@@ -5,6 +5,11 @@
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    // Belt-and-suspenders with the client-side downscale in create-listing:
+    // the default 1mb server-action limit silently rejected photo uploads.
+    serverActions: { bodySizeLimit: "8mb" },
+  },
   async rewrites() {
     // If the internal URL already includes /api, don't append it again
     const internalApiUrl = process.env.INTERNAL_API_URL || 'http://sealift:9998/api';

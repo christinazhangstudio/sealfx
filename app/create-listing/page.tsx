@@ -6,11 +6,43 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { generateListingDescription } from "./actions";
 
+// Downscale client-side before sending to the server action: full-resolution
+// photos base64-encode past Next's server-action body limit (the action then
+// throws before running), and smaller images make vision inference faster.
+function downscaleImage(file: File, maxDim = 1280): Promise<{ base64: string; mimeType: string }> {
+  return new Promise((resolve, reject) => {
+    const img = document.createElement("img");
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(img.width * scale));
+      canvas.height = Math.max(1, Math.round(img.height * scale));
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("Canvas unsupported"));
+        return;
+      }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      resolve({ base64: dataUrl.split(",")[1], mimeType: "image/jpeg" });
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not load image"));
+    };
+    img.src = url;
+  });
+}
+
 export default function CreateListing() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [genError, setGenError] = useState("");
+  const [lastImage, setLastImage] = useState<{ base64: string; mimeType: string } | null>(null);
   
   const [formData, setFormData] = useState({
     title: "",
@@ -78,38 +110,47 @@ export default function CreateListing() {
     // Create a preview
     const previewUrl = URL.createObjectURL(file);
     setImagePreview(previewUrl);
-    
-    // Convert to base64 for the API
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = async () => {
-      const base64String = reader.result as string;
-      // Strip off the data:image/xxx;base64, prefix
-      const base64Data = base64String.split(',')[1];
-      
-      if (isGuest && aiUses >= MAX_GUEST_AI_USES) {
-        setLimitReached(true);
-        // Allow preview but block AI generation
-        setFormData(prev => ({ 
-          ...prev, 
-          description: prev.description || "Sign in to unlock AI description generation." 
-        }));
-        return;
-      }
+    setGenError("");
 
-      setIsGenerating(true);
-      try {
-        const generatedDesc = await generateListingDescription(base64Data, file.type);
-        setFormData(prev => ({ ...prev, description: generatedDesc }));
+    try {
+      const image = await downscaleImage(file);
+      setLastImage(image);
+      await runGeneration(image);
+    } catch (err) {
+      console.error("Failed to read image", err);
+      setGenError("Could not read that image file. Try a different one.");
+    }
+  };
+
+  const runGeneration = async (image: { base64: string; mimeType: string }) => {
+    if (isGuest && aiUses >= MAX_GUEST_AI_USES) {
+      setLimitReached(true);
+      // Allow preview but block AI generation
+      setFormData(prev => ({
+        ...prev,
+        description: prev.description || "Sign in to unlock AI description generation."
+      }));
+      return;
+    }
+
+    setIsGenerating(true);
+    setGenError("");
+    try {
+      const result = await generateListingDescription(image.base64, image.mimeType);
+      if (result.error) {
+        setGenError(result.error);
+      } else {
+        setFormData(prev => ({ ...prev, description: result.description || "" }));
         if (isGuest) {
           incrementAiUses();
         }
-      } catch (err) {
-        console.error("Failed to generate description", err);
-      } finally {
-        setIsGenerating(false);
       }
-    };
+    } catch (err) {
+      console.error("Failed to generate description", err);
+      setGenError("AI generation failed — the service may be unreachable. Try again or write a description manually.");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -253,7 +294,17 @@ export default function CreateListing() {
                     </div>
                   )}
                 </div>
-                {isGenerating && <span className="text-xs text-blue-500 font-medium animate-pulse">Generating...</span>}
+                {isGenerating ? (
+                  <span className="text-xs text-blue-500 font-medium animate-pulse">Generating...</span>
+                ) : lastImage ? (
+                  <button
+                    type="button"
+                    onClick={() => runGeneration(lastImage)}
+                    className="text-xs font-medium text-blue-500 hover:text-blue-400 transition-colors"
+                  >
+                    ↻ Regenerate
+                  </button>
+                ) : null}
               </div>
               <textarea
                 id="description"
@@ -264,6 +315,9 @@ export default function CreateListing() {
                 placeholder="Description will be generated here once you upload an image..."
                 className={`w-full px-4 py-3 rounded-xl bg-background border ${isGenerating ? 'border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)]' : 'border-border focus:border-blue-500'} focus:ring-2 focus:ring-blue-500/20 outline-none transition-all duration-300 text-primary placeholder:text-secondary/50 shadow-inner resize-none leading-relaxed`}
               />
+              {genError && (
+                <p className="mt-2 text-xs font-medium text-red-500">{genError}</p>
+              )}
             </div>
 
             {/* Guest AI limit prompt */}

@@ -1,6 +1,12 @@
 "use server";
 
-export async function generateListingDescription(base64Image: string, mimeType: string) {
+// Returned to the page so failures render as errors instead of fake descriptions.
+export interface GenerateListingResult {
+  description?: string;
+  error?: string;
+}
+
+export async function generateListingDescription(base64Image: string, mimeType: string): Promise<GenerateListingResult> {
   // Any OpenAI-compatible chat completions endpoint with vision support works here.
   // Same env vars as the sealift backend so one pair configures both apps.
   const url = process.env.SELF_HOSTED_AI_CHAT_COMPLETIONS_URL;
@@ -9,7 +15,7 @@ export async function generateListingDescription(base64Image: string, mimeType: 
   if (!url || !model) {
     // Fallback if no endpoint is configured so the app still functions
     await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate delay
-    return "This is a great item in excellent condition. Perfect for anyone looking for good quality at a reasonable price! (Note: Set SELF_HOSTED_AI_CHAT_COMPLETIONS_URL and SELF_HOSTED_AI_CHAT_COMPLETIONS_MODEL in .env to use actual AI vision).";
+    return { description: "This is a great item in excellent condition. Perfect for anyone looking for good quality at a reasonable price! (Note: Set SELF_HOSTED_AI_CHAT_COMPLETIONS_URL and SELF_HOSTED_AI_CHAT_COMPLETIONS_MODEL in .env to use actual AI vision)." };
   }
 
   try {
@@ -32,7 +38,8 @@ export async function generateListingDescription(base64Image: string, mimeType: 
     });
 
     if (!res.ok) {
-      throw new Error(`API call failed: ${res.statusText} ${await res.text()}`);
+      console.error(`AI API call failed: ${res.statusText} ${await res.text()}`);
+      return { error: "The AI service returned an error. Try again in a moment." };
     }
 
     const data = await res.json();
@@ -44,9 +51,9 @@ export async function generateListingDescription(base64Image: string, mimeType: 
     // Hardcode any custom text you want to append to every listing here:
     const hardcodedFooter = "\n\n📍 Pickup only in Richmond/Sugar Land, 77469";
 
-    return aiText + hardcodedFooter;
+    return { description: aiText + hardcodedFooter };
   } catch (error) {
     console.error("Error calling chat completions API:", error);
-    return "Failed to generate description. Please check the AI endpoint and try again.";
+    return { error: "Could not reach the AI service. Try again in a moment." };
   }
 }
