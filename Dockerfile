@@ -55,7 +55,8 @@ RUN rm -f /app/lib/auth-keys.ts
 COPY --from=builder --chown=sealift-nextjs:sealift-nodejs /app/next.config.* ./
 COPY --from=builder --chown=sealift-nextjs:sealift-nodejs /app/.env.production ./
 
-# Install production dependencies and ensure permissions are correct
+# Install production dependencies and ensure permissions are correct.
+# (next.config is .mjs so `next start` needs no TypeScript at boot — keep it that way.)
 RUN npm install --production && \
     chown -R sealift-nextjs:sealift-nodejs /app
 
