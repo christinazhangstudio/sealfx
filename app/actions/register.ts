@@ -3,7 +3,8 @@
 import argon2 from "argon2";
 
 export async function registerUser(formData: FormData) {
-    const email = formData.get("email") as string;
+    // Store emails canonically so sign-in is case-insensitive.
+    const email = ((formData.get("email") as string) ?? "").trim().toLowerCase();
     const password = formData.get("password") as string;
     const appId = formData.get("appId") as string;
     const devId = formData.get("devId") as string;

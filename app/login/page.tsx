@@ -80,7 +80,11 @@ export default function LoginPage() {
 
                     <div className="space-y-1">
                         <input
-                            type="text"
+                            type="email"
+                            autoCapitalize="none"
+                            autoCorrect="off"
+                            spellCheck={false}
+                            autoComplete="email"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             className="w-full bg-[var(--color-surface)]/50 border border-[var(--color-border)] rounded-xl px-4 py-3 text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-secondary)]/30 focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)] transition-all duration-300 text-sm"

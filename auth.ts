@@ -11,8 +11,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 if (!credentials?.username || !credentials?.password) return null;
 
                 try {
+                    // Emails are case-insensitive; normalize so "Foo@x.com" signs
+                    // in to the same account as "foo@x.com".
+                    const email = (credentials.username as string).trim().toLowerCase();
                     const apiUrl = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:443/api";
-                    const res = await fetch(`${apiUrl}/internal/get-user?email=${encodeURIComponent(credentials.username as string)}`);
+                    const res = await fetch(`${apiUrl}/internal/get-user?email=${encodeURIComponent(email)}`);
 
                     if (!res.ok) {
                         console.log("Auth failure: User not found.");
