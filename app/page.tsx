@@ -1,28 +1,32 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useState, useEffect, useRef } from "react";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
-import LoginCtaBanner from "@/components/LoginCtaBanner";
 import { useUsers } from "@/components/UsersContext";
 
 interface UsersResponse {
   users: string[];
 }
 
+// Give the seller time to sign in to eBay (including 2FA) before giving up,
+// but don't poll forever if they abandon the flow.
+const OAUTH_TIMEOUT_MS = 5 * 60 * 1000;
+
 export default function RegisterSellerPage() {
-  const { data: session, status } = useSession();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
   const { users, loadingUsers: loading, refetchUsers } = useUsers();
 
-  const [isAuthorized, setIsAuthorized] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setAPIError] = useState<string | null>(null);
   const [showDeletePopup, setShowDeletePopup] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Tear down an in-flight OAuth attempt if the page unmounts.
+  const cleanupRef = useRef<(() => void) | null>(null);
+  useEffect(() => () => cleanupRef.current?.(), []);
 
   const deleteUser = async (user: string) => {
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -35,6 +39,8 @@ export default function RegisterSellerPage() {
 
     const apiUrl = `${apiBaseUrl}/${usersUri}/${user}`;
 
+    setIsDeleting(true);
+    setAPIError(null);
     try {
       const response = await fetch(apiUrl, {
         method: "DELETE",
@@ -45,10 +51,12 @@ export default function RegisterSellerPage() {
       }
 
       // Refresh users list from the shared context
-      refetchUsers();
+      await refetchUsers();
+      setNotification({ message: `Removed ${user}.`, type: "success" });
     } catch (err: any) {
       setAPIError(err.message);
     } finally {
+      setIsDeleting(false);
       setShowDeletePopup(false);
       setUserToDelete(null);
     }
@@ -72,12 +80,13 @@ export default function RegisterSellerPage() {
 
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  // Clear notification after 3 seconds
+  // Auto-dismiss, giving errors longer since they now carry a reason to read.
   useEffect(() => {
     if (notification) {
-      const timer = setTimeout(() => {
-        setNotification(null);
-      }, 2000);
+      const timer = setTimeout(
+        () => setNotification(null),
+        notification.type === "error" ? 8000 : 3000,
+      );
       return () => clearTimeout(timer);
     }
   }, [notification]);
@@ -88,7 +97,6 @@ export default function RegisterSellerPage() {
       return;
     }
     setIsLoading(true);
-    setError(null);
     setNotification(null);
 
     console.log("startOAuthFlow: Attempting to open window");
@@ -112,101 +120,109 @@ export default function RegisterSellerPage() {
 
     const oauthWindow = window.open(apiUrl, "_blank", "width=600,height=700");
 
-    console.log("startOAuthFlow: oauthWindow =", oauthWindow);
-
     if (!oauthWindow) {
-      console.log("startOAuthFlow: oauthWindow is null, but checking for messages");
-      setNotification({ message: "Window may have opened, but we couldn't track it.", type: 'error' });
+      // Popup blocked: nothing to track, so stop here rather than leaving the
+      // button spinning on a flow that can never complete.
+      setNotification({
+        message: "Your browser blocked the eBay window. Allow popups for this site, then try again.",
+        type: "error",
+      });
+      setIsLoading(false);
+      return;
     }
 
-    let processed = false;
-    let checkWindowClosed: NodeJS.Timeout | undefined;
-    let successPoller: NodeJS.Timeout | undefined;
+    // The callback runs on the eBay redirect domain (the webhook host), so accept
+    // messages from there as well as from this app — and nowhere else.
+    const allowedOrigins = new Set<string>([window.location.origin]);
+    const webhookUrl = process.env.NEXT_PUBLIC_WEBHOOK_URL;
+    if (webhookUrl) {
+      try {
+        allowedOrigins.add(new URL(webhookUrl).origin);
+      } catch {
+        /* malformed env value: fall back to same-origin only */
+      }
+    }
 
-    // Snapshot current users to detect a newcomer
-    const previousUsers = [...users];
+    let settled = false;
+    let checkWindowClosed: ReturnType<typeof setInterval> | undefined;
+    let fallbackPoller: ReturnType<typeof setInterval> | undefined;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    // Snapshot the sellers we already know about so the fallback can spot a
+    // newcomer. Only trust it once the list has actually loaded, otherwise an
+    // empty in-flight list makes every existing seller look brand new.
+    const knownUsers = loading ? null : new Set(users);
 
     const cleanup = () => {
-      console.log("startOAuthFlow: Cleaning up listeners & intervals");
       window.removeEventListener("message", handleMessage);
       if (checkWindowClosed) clearInterval(checkWindowClosed);
-      if (successPoller) clearInterval(successPoller);
+      if (fallbackPoller) clearInterval(fallbackPoller);
+      if (timeoutId) clearTimeout(timeoutId);
+      cleanupRef.current = null;
+    };
+    cleanupRef.current = cleanup;
+
+    const settle = (message: string, type: "success" | "error") => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      setIsLoading(false);
+      setNotification({ message, type });
+      if (!oauthWindow.closed) oauthWindow.close();
+      refetchUsers();
     };
 
     const handleMessage = (event: MessageEvent) => {
-      if (processed) return;
-      // Note: This remains as a fallback in case postMessage DOES work (e.g. on same domain)
-      if (event.data === "seller_authorized" || (typeof event.data === 'object' && event.data.type === "seller_authorized")) {
-        console.log("handleMessage: Authorization successful (via postMessage)");
-        triggerSuccess();
-      }
-    };
+      if (settled || !allowedOrigins.has(event.origin)) return;
 
-    const triggerSuccess = () => {
-      if (processed) return;
-      processed = true;
-      setIsAuthorized(true);
-      setNotification({ message: "Authorization successful!", type: 'success' });
-      setIsLoading(false);
-      cleanup();
-      if (oauthWindow && !oauthWindow.closed) {
-        oauthWindow.close();
+      const data = event.data;
+      const type = typeof data === "string" ? data : data?.type;
+
+      if (type === "seller_authorized") {
+        const who = typeof data === "object" ? data?.user : "";
+        settle(who ? `${who} authorized!` : "Authorization successful!", "success");
+      } else if (type === "seller_authorization_failed") {
+        const reason = typeof data === "object" ? data?.error : "";
+        settle(reason || "eBay authorization failed. Please try again.", "error");
       }
-      refetchUsers(); // Refresh final list
     };
 
     window.addEventListener("message", handleMessage);
 
-    // Poller to detect success WITHOUT needing postMessage (fixes domain mismatch issue)
-    successPoller = setInterval(async () => {
-      if (processed) return;
-
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-      const usersUri = process.env.NEXT_PUBLIC_USERS_URI;
-      if (!apiBaseUrl || !usersUri) return;
+    // Fallback for when postMessage doesn't arrive (blocked opener, etc.).
+    // It can only detect newly added sellers — re-authorizing an existing
+    // seller is confirmed by the message above.
+    fallbackPoller = setInterval(async () => {
+      if (settled || !knownUsers) return;
+      const base = process.env.NEXT_PUBLIC_API_URL;
+      const uri = process.env.NEXT_PUBLIC_USERS_URI;
+      if (!base || !uri) return;
 
       try {
-        const response = await fetch(`${apiBaseUrl}/${usersUri}`);
-        if (response.ok) {
-          const data: UsersResponse = await response.json();
-          const currentUsers = data.users || [];
-          // If we found a new user that wasn't in our snapshot, we've succeeded!
-          if (currentUsers.length > previousUsers.length) {
-            console.log("successPoller: New user detected in database!");
-            triggerSuccess();
-          }
-        }
-      } catch (err) {
-        // Silently ignore polling errors
+        const response = await fetch(`${base}/${uri}`);
+        if (!response.ok) return;
+        const data: UsersResponse = await response.json();
+        const newcomer = (data.users || []).find((u) => !knownUsers.has(u));
+        if (newcomer) settle(`${newcomer} authorized!`, "success");
+      } catch {
+        // Ignore polling errors; the message handler is the primary path.
       }
-    }, 1500);
+    }, 2000);
 
-    if (oauthWindow) {
-      checkWindowClosed = setInterval(() => {
-        if (oauthWindow.closed) {
-          console.log("checkWindowClosed: OAuth window closed");
-          // Wait a second before showing error to give the success poller one last chance
-          setTimeout(() => {
-            if (!processed) {
-              setNotification({ message: "Authorization window closed.", type: 'error' });
-              cleanup();
-              setIsLoading(false);
-              refetchUsers();
-            }
-          }, 1000);
-        }
-      }, 1000);
-    }
+    checkWindowClosed = setInterval(() => {
+      if (!oauthWindow.closed || settled) return;
+      // The window can close moments before its message is delivered, so give
+      // the message handler a beat before concluding anything.
+      setTimeout(() => {
+        if (settled) return;
+        settle("Authorization was not completed. Please try again.", "error");
+      }, 1500);
+    }, 1000);
 
-    return cleanup;
+    timeoutId = setTimeout(() => {
+      settle("Authorization timed out. Please try again.", "error");
+    }, OAUTH_TIMEOUT_MS);
   };
-
-  useEffect(() => {
-    return () => {
-      console.log("useEffect: Cleaning up on unmount");
-      window.removeEventListener("message", () => { });
-    };
-  }, []);
 
   if (!mounted) {
     return null;
@@ -293,7 +309,8 @@ export default function RegisterSellerPage() {
                     <p>{user}</p>
                     <button
                       onClick={() => handleDeleteClick(user)}
-                      className="text-error-text hover:text-error-border transition-colors duration-200"
+                      disabled={isDeleting}
+                      className="text-error-text hover:text-error-border transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                       title="Delete user"
                     >
                       <svg
@@ -335,15 +352,23 @@ export default function RegisterSellerPage() {
             <div className="flex justify-center space-x-4">
               <button
                 onClick={handleCancelDelete}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all duration-200"
+                disabled={isDeleting}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmDelete}
-                className="px-4 py-2 bg-error-border text-white rounded-lg hover:bg-error-text transition-all duration-200 shadow-md"
+                disabled={isDeleting}
+                className="px-4 py-2 bg-error-border text-white rounded-lg hover:bg-error-text transition-all duration-200 shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Delete
+                {isDeleting && (
+                  <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                )}
+                {isDeleting ? "Deleting..." : "Delete"}
               </button>
             </div>
           </div>
