@@ -104,7 +104,7 @@ export default function LoginPage() {
                         />
                     </div>
 
-                    <div className="flex items-center px-1">
+                    <div className="flex items-center justify-between px-1">
                         <label className="flex items-center space-x-3 cursor-pointer group/check">
                             <div className="relative">
                                 <input
@@ -129,6 +129,13 @@ export default function LoginPage() {
                                 Remember Device
                             </span>
                         </label>
+
+                        <Link
+                            href="/forgot-password"
+                            className="text-[11px] text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] transition-colors font-bold uppercase tracking-wider"
+                        >
+                            Forgot password?
+                        </Link>
                     </div>
 
                     <button

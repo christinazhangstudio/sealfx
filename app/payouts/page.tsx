@@ -316,7 +316,7 @@ export default function Payouts() {
             Total: ${formatCurrency(calculateTotalPayoutAmount())} 💰
           </p>
         )}
-        {error && <p className="text-error-text text-lg mb-4 hidden">{error}</p>}
+        {error && <p className="text-error-text text-lg mb-4">{error}</p>}
         {userLoading.global ? (
           <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
             <p className="text-primary text-lg">Loading Users... </p>

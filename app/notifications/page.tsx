@@ -58,7 +58,9 @@ export default function NotificationsPage() {
     // Loading states
     const [loadingTopics, setLoadingTopics] = useState(true);
     const [loadingSubs, setLoadingSubs] = useState(false);
-    const [processingAction, setProcessingAction] = useState(false);
+    // Tracks which topic has an action in flight, so one click doesn't put
+    // every button on the page into a loading state.
+    const [pendingTopic, setPendingTopic] = useState<string | null>(null);
 
     const [error, setError] = useState<string | null>(null);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -130,9 +132,47 @@ export default function NotificationsPage() {
         }
     }, [successMsg, error]);
 
+    const refreshSubscriptions = async () => {
+        const subsResponse = await fetch(`${apiBaseUrl}/${usersBaseUri}/${selectedUser}/${subscriptionsUri}`);
+        if (!subsResponse.ok) throw new Error("Subscribed, but couldn't refresh the list");
+        const subsData: SubscriptionsResponse = await subsResponse.json();
+        setSubscriptions(subsData.subscriptions || []);
+    };
+
+    // Unsubscribing needs the subscription's id, which only the subscription
+    // list carries — the topic list doesn't know it.
+    const subscriptionFor = (topicId: string) =>
+        subscriptions.find(sub => sub.topicId === topicId);
+
+    const handleUnsubscribe = async (topicId: string) => {
+        const subscription = subscriptionFor(topicId);
+        if (!selectedUser || !apiBaseUrl || !subscription) return;
+        setPendingTopic(topicId);
+        setError(null);
+        setSuccessMsg(null);
+
+        try {
+            const response = await fetch(
+                `${apiBaseUrl}/${usersBaseUri}/${selectedUser}/${subscriptionsUri}/${subscription.subscriptionId}`,
+                { method: "DELETE" },
+            );
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(text || "Failed to unsubscribe");
+            }
+            setSuccessMsg(`Unsubscribed from ${topicId}`);
+            await refreshSubscriptions();
+        } catch (err) {
+            console.error(err);
+            setError(err instanceof Error ? err.message : "Failed to unsubscribe");
+        } finally {
+            setPendingTopic(null);
+        }
+    };
+
     const handleSubscribe = async (topicId: string) => {
         if (!selectedUser || !apiBaseUrl) return;
-        setProcessingAction(true);
+        setPendingTopic(topicId);
         setError(null);
         setSuccessMsg(null);
 
@@ -149,15 +189,12 @@ export default function NotificationsPage() {
             }
 
             setSuccessMsg(`Successfully subscribed to ${topicId}`);
-            // Refresh subscriptions
-            const subsResponse = await fetch(`${apiBaseUrl}/${usersBaseUri}/${selectedUser}/${subscriptionsUri}`);
-            const subsData: SubscriptionsResponse = await subsResponse.json();
-            setSubscriptions(subsData.subscriptions || []);
+            await refreshSubscriptions();
         } catch (err) {
             console.error(err);
             setError(err instanceof Error ? err.message : "Failed to subscribe");
         } finally {
-            setProcessingAction(false);
+            setPendingTopic(null);
         }
     };
 
@@ -313,23 +350,32 @@ export default function NotificationsPage() {
 
                                             <div className="mt-auto space-y-4">
                                                 {subscribed ? (
-                                                    <button
-                                                        disabled
-                                                        className="w-full py-2.5 rounded-lg font-medium text-sm bg-success-bg text-success-text border border-success-border cursor-default flex items-center justify-center gap-2"
-                                                    >
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
-                                                        Subscribed
-                                                    </button>
+                                                    <div className="space-y-2">
+                                                        <div className="w-full py-2.5 rounded-lg font-medium text-sm bg-success-bg text-success-text border border-success-border flex items-center justify-center gap-2">
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+                                                            Subscribed
+                                                        </div>
+                                                        <button
+                                                            onClick={() => handleUnsubscribe(topic.topicId)}
+                                                            disabled={pendingTopic === topic.topicId}
+                                                            className={`w-full py-2 rounded-lg font-medium text-xs transition-all ${pendingTopic === topic.topicId
+                                                                ? 'text-gray-400 cursor-wait'
+                                                                : 'text-error-text hover:bg-error-bg/40 active:scale-95'
+                                                                }`}
+                                                        >
+                                                            {pendingTopic === topic.topicId ? 'Unsubscribing...' : 'Unsubscribe'}
+                                                        </button>
+                                                    </div>
                                                 ) : (
                                                     <button
                                                         onClick={() => handleSubscribe(topic.topicId)}
-                                                        disabled={processingAction}
-                                                        className={`w-full py-2.5 rounded-lg font-medium text-sm shadow-sm transition-all flex items-center justify-center gap-2 ${processingAction
+                                                        disabled={pendingTopic === topic.topicId}
+                                                        className={`w-full py-2.5 rounded-lg font-medium text-sm shadow-sm transition-all flex items-center justify-center gap-2 ${pendingTopic === topic.topicId
                                                             ? 'bg-gray-100 text-gray-400 cursor-wait'
                                                             : 'bg-primary text-white hover:bg-primary-hover hover:shadow-md active:scale-95'
                                                             }`}
                                                     >
-                                                        {processingAction ? 'Processing...' : 'Subscribe'}
+                                                        {pendingTopic === topic.topicId ? 'Processing...' : 'Subscribe'}
                                                     </button>
                                                 )}
 

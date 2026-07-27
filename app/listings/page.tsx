@@ -464,21 +464,6 @@ export default function ListingsPage() {
               >
                 Reset ✿
               </button>
-              <button
-                onClick={() => {
-                  window.postMessage({
-                    type: "SEALIFT_CROSSLIST_REQUEST",
-                    payload: {
-                      title: "Test Awesome Phone",
-                      price: "499",
-                      description: "Just testing the extension!"
-                    }
-                  }, "*");
-                }}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-sm font-bold active:scale-95"
-              >
-                FB Test
-              </button>
             </div>
 
             <div className="flex items-center rounded-lg shadow-sm border border-border overflow-hidden focus-within:ring-2 focus-within:ring-primary transition-all">
@@ -497,7 +482,7 @@ export default function ListingsPage() {
           </div>
         </div>
         {dateError && <p className="text-error-text text-lg mb-4">{dateError}</p>}
-        {error && <p className="text-error-text text-lg mb-4 hidden">{error}</p>}
+        {error && <p className="text-error-text text-lg mb-4">{error}</p>}
         {userLoading.global ? (
           <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
             <p className="text-primary text-lg">Loading Users... </p>

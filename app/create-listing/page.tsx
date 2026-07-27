@@ -40,7 +40,7 @@ export default function CreateListing() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isSending, setIsSending] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [genError, setGenError] = useState("");
   const [lastImage, setLastImage] = useState<{ base64: string; mimeType: string } | null>(null);
   
@@ -158,23 +158,22 @@ export default function CreateListing() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleApprove = () => {
-    setIsSending(true);
-    
-    // Communicate with the extension bridge
-    window.postMessage({
-      type: "SEALIFT_CROSSLIST_REQUEST",
-      payload: {
-        title: formData.title,
-        price: formData.price,
-        description: formData.description
-      }
-    }, "*");
+  const handleCopy = async () => {
+    const listing = [
+      formData.title,
+      formData.price ? `$${formData.price}` : "",
+      formData.description,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
 
-    // Reset generating button state after briefly showing success
-    setTimeout(() => {
-      setIsSending(false);
-    }, 1500);
+    try {
+      await navigator.clipboard.writeText(listing);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setGenError("Couldn't copy to the clipboard — select the text and copy manually.");
+    }
   };
 
   return (
@@ -182,7 +181,7 @@ export default function CreateListing() {
       <div className="max-w-5xl mx-auto space-y-8">
         <div className="flex flex-col gap-2">
           <h1 className="text-4xl font-extrabold tracking-tight text-primary drop-shadow-sm">Create Listing</h1>
-          <p className="text-secondary text-lg">Upload an image to generate a listing description, then post it directly to Marketplace.</p>
+          <p className="text-secondary text-lg">Upload a photo and let AI draft the listing copy, then copy it wherever you need it.</p>
         </div>
 
         <div className="grid @4xl:grid-cols-2 gap-8 items-start">
@@ -339,34 +338,33 @@ export default function CreateListing() {
 
             <div className="pt-4 mt-2 border-t border-border/50">
               <button
-                onClick={handleApprove}
-                disabled={isSending || (!formData.title && !formData.price && !formData.description)}
+                onClick={handleCopy}
+                disabled={!formData.title && !formData.price && !formData.description}
                 className={`relative w-full rounded-xl font-bold text-white transition-all duration-300 ${
-                  isSending || (!formData.title && !formData.price && !formData.description)
+                  !formData.title && !formData.price && !formData.description
                   ? "bg-primary/50 cursor-not-allowed"
                   : "bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/30"
                 }`}
               >
                 <div className="px-6 py-4 flex items-center justify-center gap-3">
-                  {isSending ? (
+                  {copied ? (
                     <>
-                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
-                      Crosslisting...
+                      Copied to clipboard
                     </>
                   ) : (
                     <>
-                      <span>Approve & Crosslist to FB</span>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                       </svg>
+                      <span>Copy listing</span>
                     </>
                   )}
                 </div>
               </button>
-              <p className="text-center text-xs text-secondary mt-3">Clicking approve will trigger the Sealift Chrome Extension.</p>
+              <p className="text-center text-xs text-secondary mt-3">Copies the title, price, and description so you can paste them anywhere.</p>
             </div>
           </div>
         </div>

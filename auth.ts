@@ -15,39 +15,28 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     // in to the same account as "foo@x.com".
                     const email = (credentials.username as string).trim().toLowerCase();
                     const apiUrl = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:443/api";
-                    const res = await fetch(`${apiUrl}/internal/get-user?email=${encodeURIComponent(email)}`);
+
+                    // The backend verifies the password; the hash never leaves it.
+                    const res = await fetch(`${apiUrl}/internal/verify-credentials`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ email, password: credentials.password }),
+                    });
 
                     if (!res.ok) {
-                        console.log("Auth failure: User not found.");
+                        console.log("Auth failure: invalid credentials.");
                         return null;
                     }
 
                     const userRecord = await res.json();
-                    let storedHash = userRecord.passwordHash;
-
-                    // Support legacy base64-encoded hashes from previous storage configuration
-                    if (storedHash && !storedHash.startsWith("$argon2")) {
-                        try {
-                            storedHash = Buffer.from(storedHash, "base64").toString("utf-8");
-                        } catch (e) {
-                            console.error("Failed to decode legacy password hash", e);
-                        }
-                    }
-
-                    const isValid = await argon2.verify(storedHash, credentials.password as string);
-
-                    if (isValid) {
-                        return {
-                            id: userRecord.id,
-                            name: "Sealift User",
-                            email: userRecord.email,
-                            rememberDevice: credentials.rememberMe === "true"
-                        };
-                    }
-
-                    console.log("Auth failure: Password verification failed.");
+                    return {
+                        id: userRecord.id,
+                        name: "Sealift User",
+                        email: userRecord.email,
+                        rememberDevice: credentials.rememberMe === "true"
+                    };
                 } catch (err) {
-                    console.error("Argon2 / DB verification error:", err);
+                    console.error("Credential verification error:", err);
                 }
 
                 return null;
