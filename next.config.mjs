@@ -5,6 +5,13 @@
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Next's gzip buffers responses until it has enough bytes, which stalls SSE:
+  // a stream that emits a little and then idles (the inbox stream, AI heartbeats)
+  // never fills the buffer, so the browser receives nothing. Setting
+  // Content-Encoding on the response is not enough — compression is applied
+  // after the route handler returns. Cloudflare compresses at the edge, so
+  // browsers still get compressed assets; only the internal hop is plain.
+  compress: false,
   experimental: {
     // Belt-and-suspenders with the client-side downscale in create-listing:
     // the default 1mb server-action limit silently rejected photo uploads.
