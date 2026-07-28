@@ -16,7 +16,7 @@ export default function RegisterSellerPage() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  const { users, loadingUsers: loading, refetchUsers } = useUsers();
+  const { users, sellers, loadingUsers: loading, refetchUsers } = useUsers();
 
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setAPIError] = useState<string | null>(null);
@@ -301,12 +301,39 @@ export default function RegisterSellerPage() {
               <p className="text-secondary text-lg">Loading users... </p>
             ) : users && users.length > 0 ? (
               <div className="--color-text-primary text-lg text-center">
-                {users.map((user) => (
+                {users.map((user) => {
+                  const seller = sellers.find((s) => s.user === user);
+                  const needsAttention = seller?.status === "expired" || seller?.status === "expiring";
+                  return (
                   <div
                     key={user}
-                    className="border-b border-border flex justify-between items-center py-2"
+                    className="border-b border-border flex justify-between items-center py-2 gap-2"
                   >
-                    <p>{user}</p>
+                    <div className="flex flex-col items-start min-w-0">
+                      <p className="truncate">{user}</p>
+                      {seller?.status === "expired" && (
+                        <span className="text-xs font-semibold text-error-text">
+                          eBay access expired — reconnect to restore data
+                        </span>
+                      )}
+                      {seller?.status === "expiring" && (
+                        <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+                          eBay access expires soon
+                          {seller.expiresAt ? ` (${new Date(seller.expiresAt).toLocaleDateString()})` : ""}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                    {needsAttention && (
+                      <button
+                        onClick={startOAuthFlow}
+                        disabled={isLoading}
+                        className="px-3 py-1 rounded-md text-xs font-bold text-white bg-btn-apply hover:bg-btn-apply-hover transition-colors disabled:opacity-50"
+                        title="Re-authorize this seller with eBay"
+                      >
+                        Reconnect
+                      </button>
+                    )}
                     <button
                       onClick={() => handleDeleteClick(user)}
                       disabled={isDeleting}
@@ -328,8 +355,10 @@ export default function RegisterSellerPage() {
                         />
                       </svg>
                     </button>
+                    </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <p className="flex justify-center items-center text-gray-600 text-lg">

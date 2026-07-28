@@ -4,8 +4,15 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { useSession } from "next-auth/react";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 
+export interface SellerStatus {
+    user: string;
+    status: "connected" | "expiring" | "expired";
+    expiresAt?: string;
+}
+
 interface UsersContextProps {
     users: string[];
+    sellers: SellerStatus[];
     loadingUsers: boolean;
     usersError: string | null;
     refetchUsers: () => Promise<void>;
@@ -16,6 +23,7 @@ const UsersContext = createContext<UsersContextProps | undefined>(undefined);
 export function UsersProvider({ children }: { children: React.ReactNode }) {
     const { data: session } = useSession();
     const [users, setUsers] = useState<string[]>([]);
+    const [sellers, setSellers] = useState<SellerStatus[]>([]);
     const [loadingUsers, setLoadingUsers] = useState(true);
     const [usersError, setUsersError] = useState<string | null>(null);
 
@@ -36,6 +44,7 @@ export function UsersProvider({ children }: { children: React.ReactNode }) {
             if (!res.ok) throw new Error(`Failed to fetch users: ${res.status}`);
             const data = await res.json();
             setUsers(data.users || []);
+            setSellers(data.sellers || []);
         } catch (err) {
             setUsersError(err instanceof Error ? err.message : "Failed to load users");
         } finally {
@@ -52,12 +61,17 @@ export function UsersProvider({ children }: { children: React.ReactNode }) {
             setLoadingUsers(false);
             return;
         }
-        if (!sessionUser) return; // No session yet
+        if (!sessionUser) {
+            // Without a session there is nothing to load — don't leave every
+            // consumer stuck on a permanent loading state.
+            setLoadingUsers(false);
+            return;
+        }
         refetchUsers();
     }, [sessionUser, isGuest, refetchUsers]);
 
     return (
-        <UsersContext.Provider value={{ users, loadingUsers, usersError, refetchUsers }}>
+        <UsersContext.Provider value={{ users, sellers, loadingUsers, usersError, refetchUsers }}>
             {children}
         </UsersContext.Provider>
     );
