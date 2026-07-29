@@ -10,33 +10,58 @@ export interface ApiUsage {
 }
 
 const STORAGE_KEY = "sealfx_api_usage";
-const GUEST_MODE_KEY = "sealfx_is_guest_mode";
-
-// Internal volatile flag for server-side or non-browser environments
-let _isGuestModeVolatile = true;
 
 /**
- * Gets the current guest mode status, checking persistence if available.
+ * Guest status is derived from the session by GuestSync, which reports it here
+ * as soon as the session resolves.
+ *
+ * It is deliberately NOT persisted and NOT guessed. Both were bugs:
+ *
+ *  - A missing value used to mean "assume guest, block the request". That is
+ *    exactly the state during the first render, so any page fetching from a
+ *    mount-only effect got a synthetic 403 and never retried — Gallery, Notes
+ *    and Notifications broke on a fresh load, in incognito, or after clearing
+ *    site data, and a manual refresh fixed it, which made it look random.
+ *  - Persisting it to localStorage leaked across tabs: signing out in one tab
+ *    wrote "true", so a different tab with a valid session started blocking.
+ *
+ * While the status is still unknown a request waits briefly for it rather than
+ * being denied — the answer is arriving momentarily. This gate is a UX
+ * optimisation to avoid pointless calls; the backend is what actually enforces
+ * access, and it rejects guest tokens on every data endpoint.
  */
-function getIsGuestMode(): boolean {
-    if (typeof window !== "undefined") {
-        const stored = localStorage.getItem(GUEST_MODE_KEY);
-        // If no value is stored, assume guest mode (blocked) for safety during initial load
-        if (stored === null) return true;
-        return stored === "true";
-    }
-    return _isGuestModeVolatile;
-}
+type GuestState = "unknown" | "guest" | "member";
+
+let guestState: GuestState = "unknown";
+let markResolved: (() => void) | null = null;
+const guestResolved = new Promise<void>((resolve) => {
+    markResolved = resolve;
+});
+
+/** How long a request waits for the session before proceeding anyway. */
+const GUEST_RESOLVE_TIMEOUT_MS = 3000;
 
 /**
- * Enable or disable global API blocking for guest mode
+ * Reports the session's guest status. Called by GuestSync once the session
+ * resolves, on every page load.
  */
 export function setGuestMode(isGuest: boolean) {
-    console.log(`[GuestSync] Setting guest mode to: ${isGuest}`);
-    _isGuestModeVolatile = isGuest;
-    if (typeof window !== "undefined") {
-        localStorage.setItem(GUEST_MODE_KEY, String(isGuest));
-    }
+    guestState = isGuest ? "guest" : "member";
+    markResolved?.();
+    markResolved = null;
+}
+
+async function resolveGuestState(): Promise<GuestState> {
+    if (guestState !== "unknown") return guestState;
+    if (typeof window === "undefined") return "unknown";
+
+    await Promise.race([
+        guestResolved,
+        new Promise((resolve) => setTimeout(resolve, GUEST_RESOLVE_TIMEOUT_MS)),
+    ]);
+    // Still unknown means GuestSync never reported — let the request through and
+    // let the server decide, rather than failing a signed-in user's page.
+    return guestState;
 }
 
 function getUsage(): ApiUsage {
@@ -74,14 +99,13 @@ function saveUsage(usage: ApiUsage) {
  */
 export async function trackedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
     const url = typeof input === "string" ? input : (input instanceof URL ? input.toString() : input.url);
-    const isGuestMode = getIsGuestMode();
-    if (isGuestMode) {
+
+    if ((await resolveGuestState()) === "guest") {
         const aiUrl = String(process.env.NEXT_PUBLIC_AI_URI);
         const isAiCall = url.includes(aiUrl);
         const allowGuestAi = process.env.NEXT_PUBLIC_ALLOW_GUEST_AI === "true";
 
         if (!(isAiCall && allowGuestAi)) {
-            console.log(`[Tracker] Blocking call to ${url} (isGuestMode: true)`);
             return new Response(JSON.stringify({
                 error: "Action not permitted for guest users",
                 success: false
@@ -94,17 +118,28 @@ export async function trackedFetch(input: RequestInfo | URL, init?: RequestInit)
 
     const usage = getUsage();
 
-    // Categorize the endpoint
+    // Categorize the endpoint. Unset env vars are skipped: String(undefined)
+    // is "undefined", which silently matched nothing (or worse, any URL that
+    // happened to contain that word).
+    const CATEGORIES: [string | undefined, string][] = [
+        [process.env.NEXT_PUBLIC_USERS_URI, "Users"],
+        [process.env.NEXT_PUBLIC_LISTINGS_URI, "Listings"],
+        [process.env.NEXT_PUBLIC_PAYOUTS_URI, "Payouts"],
+        [process.env.NEXT_PUBLIC_NOTES_URI, "Notes"],
+        [process.env.NEXT_PUBLIC_ACCOUNT_URI, "Account"],
+        [process.env.NEXT_PUBLIC_NOTIFICATIONS_TOPICS_URI, "Notification"],
+        [process.env.NEXT_PUBLIC_TRANSACTION_SUMMARIES_URI, "Transaction Summaries"],
+        [process.env.NEXT_PUBLIC_INBOX_URI, "Inbox"],
+        [process.env.NEXT_PUBLIC_AI_URI, "AI Assistant"],
+    ];
+
     let category = "other";
-    if (url.includes(String(process.env.NEXT_PUBLIC_USERS_URI))) category = "Users";
-    else if (url.includes(String(process.env.NEXT_PUBLIC_LISTINGS_URI))) category = "Listings";
-    else if (url.includes(String(process.env.NEXT_PUBLIC_PAYOUTS_URI))) category = "Payouts";
-    else if (url.includes(String(process.env.NEXT_PUBLIC_NOTES_URI))) category = "Notes";
-    else if (url.includes(String(process.env.NEXT_PUBLIC_ACCOUNT_URI))) category = "Account";
-    else if (url.includes(String(process.env.NEXT_PUBLIC_NOTIFICATION_URI))) category = "Notification";
-    else if (url.includes(String(process.env.NEXT_PUBLIC_TRANSACTION_SUMMARIES_URI))) category = "Transaction Summaries";
-    else if (url.includes(String(process.env.NEXT_PUBLIC_INBOX_URI))) category = "Inbox";
-    else if (url.includes(String(process.env.NEXT_PUBLIC_AI_URI))) category = "AI Assistant";
+    for (const [uri, label] of CATEGORIES) {
+        if (uri && url.includes(uri)) {
+            category = label;
+            break;
+        }
+    }
 
     usage.total += 1;
     usage.endpoints[category] = (usage.endpoints[category] || 0) + 1;
