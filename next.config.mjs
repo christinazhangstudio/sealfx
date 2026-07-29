@@ -36,6 +36,11 @@ const nextConfig = {
         destination: '/api/jwks/:path*',
       },
       {
+        // Do NOT proxy the frontend's own health endpoint
+        source: '/api/health',
+        destination: '/api/health',
+      },
+      {
         // Proxy everything else under /api to the Go backend
         source: '/api/:path*',
         destination: destination,
