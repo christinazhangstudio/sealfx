@@ -1,83 +1,33 @@
+import {
+    startOfDay,
+    addDays,
+} from "@/lib/date-range";
+import type { Item, Payout, PayoutsResponse, UserPayouts, Listings } from "@/lib/ebay-data";
+
+export type { Item, Payout, PayoutsResponse, UserPayouts, Listings };
+
+/**
+ * The range pickers hand us Date objects carrying the current clock time, but
+ * listings and payouts are fetched by whole day. Comparing a timestamp against
+ * them dropped anything earlier in the day than "now" at the start of the range
+ * and anything later at the end — quietly under-reporting at both ends.
+ */
+const dayWindow = (startDate: Date, endDate: Date) => ({
+    from: startOfDay(startDate),
+    to: addDays(startOfDay(endDate), 1), // exclusive upper bound
+});
+
 /**
  * Chart Utilities
  * Logic for processing and combining eBay API data for Chart.js
  */
 
-export interface SellingStatus {
-    CurrentPrice: { Value: number; CurrencyID: string };
-    ListingStatus: string;
-}
-
-export interface ListingDetails {
-    StartTime: string;
-    EndTime: string;
-    ViewItemURL: string;
-}
-
-export interface Item {
-    ItemID: string;
-    Title: string;
-    Quantity: number;
-    SellingStatus: SellingStatus;
-    ListingDetails: ListingDetails;
-}
-
-export interface ItemArray {
-    Items: Item[];
-}
-
-export interface Listings {
-    XMLName: { Space: string; Local: string };
-    Timestamp: string;
-    Ack: string;
-    Version: string;
-    Build: string;
-    PaginationResult: {
-        TotalNumberOfPages: number;
-        TotalNumberOfEntries: number;
-    };
-    HasMoreItems: boolean;
-    ItemArray: ItemArray;
-    ItemsPerPage: number;
-    PageNumber: number;
-    ReturnedItemCountActual: number;
-}
-
-export interface PayoutsResponse {
-    href: string;
-    next: string;
-    prev: string;
-    limit: number;
-    offset: number;
-    payouts: Payout[];
-    total: number;
-}
-
-export interface UserPayouts {
-    user: string;
-    payouts: PayoutsResponse;
-}
-
-export interface Payout {
-    payoutId: string;
-    payoutStatus: string;
-    payoutStatusDescription: string;
-    amount: { value: string; currency: string };
-    payoutDate: string;
-    lastAttemptedPayoutDate: string;
-    transactionCount: number;
-    payoutInstrument: {
-        instrumentType: string;
-        nickname: string;
-        accountLastFourDigits: string;
-    };
-}
-
 // Process listing data for cumulative line chart
 export const processListingData = (items: Item[], startDate: Date, endDate: Date) => {
+    const { from, to } = dayWindow(startDate, endDate);
     const filteredItems = items.filter((item) => {
         const startTime = new Date(item.ListingDetails.StartTime);
-        return startTime >= startDate && startTime <= endDate;
+        return startTime >= from && startTime < to;
     });
 
     const sortedItems = filteredItems.sort(
@@ -114,14 +64,17 @@ export const processPayoutData = (
     startDate: Date,
     endDate: Date
 ) => {
+    const { from, to } = dayWindow(startDate, endDate);
     const filteredPayouts = payouts.filter((payout) => {
+        if (!payout.payoutDate) return false;
         const payoutTime = new Date(payout.payoutDate);
-        return payoutTime >= startDate && payoutTime <= endDate;
+        return payoutTime >= from && payoutTime < to;
     });
 
+    // payoutDate is guaranteed present here: the filter above drops any without one.
     const sortedPayouts = filteredPayouts.sort(
         (a, b) =>
-            new Date(a.payoutDate).getTime() - new Date(b.payoutDate).getTime()
+            new Date(a.payoutDate!).getTime() - new Date(b.payoutDate!).getTime()
     );
 
     let cumulativeValue = 0;
@@ -133,7 +86,7 @@ export const processPayoutData = (
         const value = parseFloat(payout.amount.value);
         cumulativeValue += value;
         // Snap to start of day for grid alignment
-        const dateOnly = payout.payoutDate.split("T")[0];
+        const dateOnly = payout.payoutDate!.split("T")[0];
         labels.push(dateOnly);
         data.push(cumulativeValue);
         payoutDetails.push({

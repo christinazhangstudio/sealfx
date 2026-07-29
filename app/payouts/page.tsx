@@ -3,47 +3,21 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import LoginCtaBanner from "@/components/LoginCtaBanner";
-import { trackedFetch as fetch } from "@/lib/api-tracker";
+import {
+  fetchAllPayouts,
+  ReauthRequiredError,
+  type Payout,
+  type PayoutsResponse,
+  type UserPayouts,
+} from "@/lib/ebay-data";
 import UserTableOfContents from "@/components/UserTableOfContents";
 import { formatCurrency } from "@/lib/format-utils";
 import { useUsers } from "@/components/UsersContext";
 
-interface UserPayouts {
-  user: string;
-  payouts: PayoutsResponse;
-}
 
-interface PayoutsResponse {
-  href: string;
-  next: string;
-  prev: string;
-  limit: number;
-  offset: number;
-  payouts: Payout[] | null;
-  total: number;
-}
 
-interface Payout {
-  payoutId: string;
-  payoutStatus: string;
-  payoutStatusDescription: string;
-  amount: Amount;
-  payoutDate: string;
-  lastAttemptedPayoutDate: string;
-  transactionCount: number;
-  payoutInstrument: PayoutInstrument;
-}
 
-interface Amount {
-  value: string;
-  currency: string;
-}
 
-interface PayoutInstrument {
-  instrumentType: string;
-  nickname: string;
-  accountLastFourDigits: string;
-}
 
 export default function Payouts() {
   const { data: session } = useSession();
@@ -59,68 +33,23 @@ export default function Payouts() {
 
 
 
-  const fetchPayoutsForUser = async (user: string, pageIdx: number): Promise<UserPayouts> => {
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-    const payoutsUri = process.env.NEXT_PUBLIC_PAYOUTS_URI;
-
-    if (!apiBaseUrl || !payoutsUri) {
-      throw new Error("API base URL or Payouts URI env not defined");
-    }
-
-    const params = new URLSearchParams({
-      pageSize: apiPageSize.toString(), // Use apiPageSize for API requests
-      pageIdx: pageIdx.toString(),
-    });
-
-    const apiUrl = `${apiBaseUrl}/${payoutsUri}/${user}?${params.toString()}`;
-
-    const response = await fetch(apiUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch payouts for ${user}: ${response.status}`);
-    }
-    const data: UserPayouts = await response.json();
-    return data;
-  };
-
-  const fetchAllPayoutsForUser = async (user: string) => {
+  const fetchAllPayoutsForUser = async (user: string, signal?: AbortSignal) => {
     try {
       setUserLoading((prev) => ({ ...prev, [user]: true }));
-      let allPayouts: Payout[] = [];
-      let pageIdx = 0;
-      let hasMorePages = true;
 
-      // Fetch pages with apiPageSize until no more data
-      while (hasMorePages) {
-        const pageData = await fetchPayoutsForUser(user, pageIdx);
-        const payouts = Array.isArray(pageData.payouts.payouts) ? pageData.payouts.payouts : [];
-        allPayouts = [...allPayouts, ...payouts];
-        const total = pageData.payouts.total || 0;
-        hasMorePages = pageData.payouts.next !== "" && payouts.length === apiPageSize;
-        pageIdx++;
+      const payouts = await fetchAllPayouts(user, { signal });
+      if (signal?.aborted) return;
 
-        // Update total pages based on clientPageSize
-        setUserTotalPages((prev) => ({
-          ...prev,
-          [user]: Math.ceil(total / clientPageSize) || 1,
-        }));
-
-        // Store all payouts for client-side pagination
-        const payoutsResponse: PayoutsResponse = {
-          href: pageData.payouts.href || "",
-          next: pageData.payouts.next || "",
-          prev: pageData.payouts.prev || "",
-          limit: apiPageSize,
-          offset: 0,
-          payouts: allPayouts,
-          total,
-        };
-
-        setUserPayouts((prev) => ({
-          ...prev,
-          [user]: { user, payouts: payoutsResponse },
-        }));
-      }
+      setUserTotalPages((prev) => ({
+        ...prev,
+        [user]: Math.ceil(payouts.total / clientPageSize) || 1,
+      }));
+      setUserPayouts((prev) => ({ ...prev, [user]: { user, payouts } }));
     } catch (err) {
+      if ((err as Error)?.name === "AbortError") return;
+      if (err instanceof ReauthRequiredError) {
+        setError(`${err.user}: ${err.message}`);
+      }
       // Set a default UserPayouts object to avoid undefined access
       setUserPayouts((prev) => ({
         ...prev,
@@ -240,7 +169,7 @@ export default function Payouts() {
                       className="border-b border-border"
                     >
                       <td className="py-2 whitespace-nowrap">
-                        {new Date(payout.payoutDate).toLocaleDateString()}
+                        {payout.payoutDate ? new Date(payout.payoutDate).toLocaleDateString() : "—"}
                       </td>
                       <td className="py-2">
                         {payout.payoutStatus}
@@ -256,8 +185,10 @@ export default function Payouts() {
                         {payout.transactionCount}
                       </td>
                       <td className="py-2 truncate">
-                        {payout.payoutInstrument.nickname} (
-                        {payout.payoutInstrument.accountLastFourDigits})
+                        {payout.payoutInstrument?.nickname ?? "—"}
+                        {payout.payoutInstrument?.accountLastFourDigits
+                          ? ` (${payout.payoutInstrument.accountLastFourDigits})`
+                          : ""}
                       </td>
                     </tr>
                   ))}

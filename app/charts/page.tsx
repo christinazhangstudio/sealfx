@@ -1,9 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import LoginCtaBanner from "@/components/LoginCtaBanner";
-import { trackedFetch as fetch } from "@/lib/api-tracker";
+import {
+  fetchAllListings,
+  fetchAllPayouts,
+  ReauthRequiredError,
+  MAX_DAYS_PER_CHUNK,
+  formatApiDate,
+} from "@/lib/ebay-data";
 import UserTableOfContents from "@/components/UserTableOfContents";
 import { Inconsolata } from "next/font/google";
 import { useUsers } from "@/components/UsersContext";
@@ -224,6 +230,10 @@ export default function ChartsPage() {
   const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  // Supersede any in-flight crawl when a new one starts, and stop it on unmount.
+  const fetchAbortRef = useRef<AbortController | null>(null);
+  useEffect(() => () => fetchAbortRef.current?.abort(), []);
   const { users, loadingUsers: usersLoading } = useUsers();
   const [userCharts, setUserCharts] = useState<{
     [user: string]: ChartData | null;
@@ -245,230 +255,42 @@ export default function ChartsPage() {
   const { theme } = useTheme();
 
   const apiPageSize = 200;
-  const maxDaysPerChunk = 120;
 
-  const formatDate = (date: Date): string => {
-    return date.toISOString().split("T")[0];
-  };
-
-  const getDateChunks = (
-    from: Date,
-    to: Date
-  ): { start: Date; end: Date }[] => {
-    const chunks: { start: Date; end: Date }[] = [];
-    let currentStart = new Date(from);
-    const finalEnd = new Date(to);
-
-    while (currentStart <= finalEnd) {
-      const chunkEnd = new Date(
-        currentStart.getTime() + maxDaysPerChunk * 24 * 60 * 60 * 1000 - 1
-      );
-      chunks.push({
-        start: new Date(currentStart),
-        end: chunkEnd > finalEnd ? finalEnd : chunkEnd,
-      });
-      currentStart = new Date(chunkEnd.getTime() + 1);
-    }
-    return chunks;
-  };
-
-
-
-  const fetchListingsForChunk = async (
+  const fetchListingsForUser = async (
     user: string,
-    pageIdx: number,
-    from: Date,
-    to: Date
+    signal?: AbortSignal,
   ): Promise<Listings> => {
-    const params = new URLSearchParams({
-      pageSize: apiPageSize.toString(),
-      pageIdx: pageIdx.toString(),
-      startTo: formatDate(to),
-      startFrom: formatDate(from),
-    });
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-    const uri = process.env.NEXT_PUBLIC_LISTINGS_URI;
-    const apiUrl = `${apiBaseUrl}/${uri}/${user}?${params.toString()}`;
-    try {
-      const response = await fetch(apiUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch listings for ${user}: ${response.status}`);
-      }
-      const data = await response.json();
-      return data.listings as Listings;
-    } catch (err) {
-      throw new Error(
-        `Failed to fetch listings for user ${user}: ${err instanceof Error ? err.message : "Unknown error"
-        }`
-      );
-    }
-  };
-
-  const fetchPayoutsForUser = async (
-    user: string,
-    pageIdx: number
-  ): Promise<UserPayouts> => {
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-    const payoutsUri = process.env.NEXT_PUBLIC_PAYOUTS_URI;
-
-    if (!apiBaseUrl || !payoutsUri) {
-      throw new Error("API base URL or Payouts URI env not defined");
-    }
-
-    const params = new URLSearchParams({
-      pageSize: apiPageSize.toString(),
-      pageIdx: pageIdx.toString(),
-    });
-
-    const apiUrl = `${apiBaseUrl}/${payoutsUri}/${user}?${params.toString()}`;
-
-    const response = await fetch(apiUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch payouts for ${user}: ${response.status}`);
-    }
-    const data: UserPayouts = await response.json();
-    return data;
-  };
-
-  const fetchAllPayoutsForUser = async (user: string): Promise<Payout[]> => {
-    try {
-      let allPayouts: Payout[] = [];
-      let pageIdx = 0;
-      let hasMorePages = true;
-
-      while (hasMorePages) {
-        const pageData = await fetchPayoutsForUser(user, pageIdx);
-        const payouts = Array.isArray(pageData.payouts.payouts)
-          ? pageData.payouts.payouts
-          : [];
-        allPayouts = [...allPayouts, ...payouts];
-        hasMorePages = pageData.payouts.next !== "" && payouts.length > 0;
-        pageIdx++;
-      }
-
-      return allPayouts;
-
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : `Error fetching payouts for user ${user}`
-      );
-      return [];
-    }
-  };
-
-  const fetchAllPagesForListingChunk = async (
-    user: string,
-    from: Date,
-    to: Date
-  ): Promise<Listings> => {
-    let allItems: Item[] = [];
-    let pageIdx = 1;
-    let hasMoreItems = true;
-
-    const defaultListings: Listings = {
-      XMLName: { Space: "", Local: "" },
-      Timestamp: "",
-      Ack: "",
-      Version: "",
-      Build: "",
-      PaginationResult: { TotalNumberOfPages: 0, TotalNumberOfEntries: 0 },
-      HasMoreItems: false,
-      ItemArray: { Items: [] },
-      ItemsPerPage: apiPageSize,
-      PageNumber: 1,
-      ReturnedItemCountActual: 0,
-    };
-
-    while (hasMoreItems) {
-      const listings = await fetchListingsForChunk(user, pageIdx, from, to);
-      allItems = [
-        ...allItems,
-        ...(Array.isArray(listings.ItemArray.Items)
-          ? listings.ItemArray.Items
-          : []),
-      ];
-      hasMoreItems = listings.HasMoreItems;
-      pageIdx++;
-    }
-
+    const { items } = await fetchAllListings(user, startFrom, startTo, { signal });
     return {
-      ...defaultListings,
-      ItemArray: { Items: allItems },
-      ReturnedItemCountActual: allItems.length,
+      PaginationResult: {
+        TotalNumberOfEntries: items.length,
+        TotalNumberOfPages: 1,
+      },
+      HasMoreItems: false,
+      ItemArray: { Items: items },
+      ItemsPerPage: items.length,
+      PageNumber: 1,
+      ReturnedItemCountActual: items.length,
     };
   };
 
-  const fetchListingsForUser = async (user: string): Promise<Listings> => {
-    try {
-      const chunks = getDateChunks(startFrom, startTo);
-      const chunkListings: Listings[] = [];
-
-      for (const { start, end } of chunks) {
-        const listings = await fetchAllPagesForListingChunk(user, start, end);
-        if (listings.ReturnedItemCountActual > 0) {
-          chunkListings.push(listings);
-        }
-      }
-
-      const mergedItems = chunkListings.flatMap((listing) =>
-        Array.isArray(listing.ItemArray.Items) ? listing.ItemArray.Items : []
-      );
-
-      const defaultListings: Listings = {
-        XMLName: { Space: "", Local: "" },
-        Timestamp: "",
-        Ack: "",
-        Version: "",
-        Build: "",
-        PaginationResult: { TotalNumberOfPages: 0, TotalNumberOfEntries: 0 },
-        HasMoreItems: false,
-        ItemArray: { Items: [] },
-        ItemsPerPage: apiPageSize,
-        PageNumber: 1,
-        ReturnedItemCountActual: 0,
-      };
-
-      const mergedListings: Listings = {
-        ...(chunkListings[0] || defaultListings),
-        ItemArray: { Items: mergedItems },
-        ReturnedItemCountActual: mergedItems.length,
-      };
-
-      return mergedListings;
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : `Error fetching listings for user ${user}`
-      );
-      return {
-        XMLName: { Space: "", Local: "" },
-        Timestamp: "",
-        Ack: "",
-        Version: "",
-        Build: "",
-        PaginationResult: {
-          TotalNumberOfPages: 0,
-          TotalNumberOfEntries: 0,
-        },
-        HasMoreItems: false,
-        ItemArray: { Items: [] },
-        ItemsPerPage: apiPageSize,
-        PageNumber: 1,
-        ReturnedItemCountActual: 0,
-      };
-    }
+  const fetchPayoutsForUserAllPages = async (
+    user: string,
+    signal?: AbortSignal,
+  ): Promise<UserPayouts> => {
+    const payouts = await fetchAllPayouts(user, { signal });
+    return { user, payouts };
   };
 
-  const fetchDataForUser = async (user: string) => {
+  const fetchDataForUser = async (user: string, signal?: AbortSignal) => {
     try {
       setDataLoading((prev) => ({ ...prev, [user]: true }));
-      const [listings, payouts] = await Promise.all([
-        fetchListingsForUser(user),
-        fetchAllPayoutsForUser(user),
-      ]) as [Listings, Payout[]];
+      const [listings, payoutsResult] = await Promise.all([
+        fetchListingsForUser(user, signal),
+        fetchPayoutsForUserAllPages(user, signal),
+      ]);
+      if (signal?.aborted) return;
+      const payouts = payoutsResult.payouts.payouts;
 
       const listingData = processListingData(
         listings.ItemArray.Items as Item[],
@@ -499,6 +321,10 @@ export default function ChartsPage() {
   };
 
   const handleApply = useCallback(() => {
+    fetchAbortRef.current?.abort();
+    const controller = new AbortController();
+    fetchAbortRef.current = controller;
+
     if (startFrom > startTo) {
       setDateError("Start date cannot be after end date");
       return;
@@ -520,7 +346,7 @@ export default function ChartsPage() {
       return newState;
     });
     users.forEach((user) => {
-      fetchDataForUser(user);
+      fetchDataForUser(user, controller.signal);
     });
   }, [startFrom, startTo, users]);
 
@@ -548,16 +374,45 @@ export default function ChartsPage() {
     }
   }, [users, isInitialLoad, handleApply]);
 
+  // A theme change only alters two CSS colour variables, so recolour the charts
+  // we already have. This used to re-run the entire per-seller eBay crawl —
+  // hundreds of API calls — every time someone toggled light/dark, and again on
+  // first paint when next-themes resolved the stored theme.
   useEffect(() => {
-    // Re-process chart data when theme changes to update CSS variable colors in Chart.js
-    if (users.length > 0 && !isInitialLoad) {
-      users.forEach((user) => {
-        if (userCharts[user]) {
-          fetchDataForUser(user);
+    if (isInitialLoad) return;
+
+    const style = getComputedStyle(document.documentElement);
+    const chart1 = style.getPropertyValue("--color-chart-1").trim() || "#EC4899";
+    const chart2 = style.getPropertyValue("--color-chart-2").trim() || "#3B82F6";
+
+    setUserCharts((prev) => {
+      const recoloured: typeof prev = {};
+      let changed = false;
+
+      for (const [user, chart] of Object.entries(prev)) {
+        if (!chart?.datasets) {
+          recoloured[user] = chart;
+          continue;
         }
-      });
-    }
-  }, [theme]);
+        changed = true;
+        recoloured[user] = {
+          ...chart,
+          datasets: chart.datasets.map((dataset: any, i: number) => {
+            const colour = i === 0 ? chart1 : chart2;
+            return {
+              ...dataset,
+              borderColor: colour,
+              backgroundColor: colour,
+              pointBackgroundColor: colour,
+              pointHoverBorderColor: colour,
+            };
+          }),
+        } as typeof chart;
+      }
+
+      return changed ? recoloured : prev;
+    });
+  }, [theme, isInitialLoad]);
 
   if (!mounted) {
     return null;

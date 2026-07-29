@@ -1,79 +1,19 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import LoginCtaBanner from "@/components/LoginCtaBanner";
-import { trackedFetch as fetch } from "@/lib/api-tracker";
+import {
+  fetchAllListings,
+  ReauthRequiredError,
+  MAX_DAYS_PER_CHUNK,
+  formatApiDate,
+  type Item,
+  type Listings,
+} from "@/lib/ebay-data";
 import UserTableOfContents from "@/components/UserTableOfContents";
 import { useUsers } from "@/components/UsersContext";
 
-interface PackageDetails {
-  Weight: { Value: number; Unit: string };
-  Dimensions: { Height: number; Length: number; Width: number; Unit: string };
-}
-
-interface ListingDetails {
-  StartTime: string;
-  EndTime: string;
-  ViewItemURL: string;
-}
-
-interface PictureDetails {
-  GalleryURL: string;
-  PhotoDisplay: string;
-  PictureURLs: string[];
-}
-
-interface SellingStatus {
-  BidCount: number;
-  BidIncrement: { Value: number; CurrencyID: string };
-  ConvertedCurrentPrice: { Value: number; CurrencyID: string };
-  CurrentPrice: { Value: number; CurrencyID: string };
-  MinimumToBid: { Value: number; CurrencyID: string };
-  QuantitySold: number;
-  SecondChanceEligible: boolean;
-  ListingStatus: string;
-}
-
-interface PrimaryCategory {
-  CategoryID: string;
-  CategoryName: string;
-}
-
-interface Item {
-  ItemID: string;
-  Title: string;
-  SKU: string;
-  Quantity: number;
-  ConditionID: string;
-  ConditionDisplayName: string;
-  ListingDetails: ListingDetails;
-  PackageDetails: PackageDetails;
-  PictureDetails: PictureDetails;
-  SellingStatus: SellingStatus;
-  PrimaryCategory: PrimaryCategory;
-}
-
-interface ItemArray {
-  Items: Item[];
-}
-
-interface Listings {
-  XMLName: { Space: string; Local: string };
-  Timestamp: string;
-  Ack: string;
-  Version: string;
-  Build: string;
-  PaginationResult: {
-    TotalNumberOfPages: number;
-    TotalNumberOfEntries: number;
-  };
-  HasMoreItems: boolean;
-  ItemArray: ItemArray;
-  ItemsPerPage: number;
-  PageNumber: number;
-  ReturnedItemCountActual: number;
-}
 
 const renderUserTable = (
   user: string,
@@ -154,6 +94,10 @@ export default function ListingsPage() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  // Cancels the in-flight crawl on unmount and whenever a new one starts.
+  const fetchAbortRef = useRef<AbortController | null>(null);
+  useEffect(() => () => fetchAbortRef.current?.abort(), []);
+
   const { users, loadingUsers } = useUsers();
   const [userListings, setUserListings] = useState<{
     [user: string]: Listings;
@@ -178,185 +122,48 @@ export default function ListingsPage() {
   // Define separate page sizes
   const apiPageSize = 200; // For API requests
   const clientPageSize = 10; // For client-side pagination
-  const maxDaysPerChunk = 120;
 
-  const formatDate = (date: Date): string => {
-    return date.toISOString().split("T")[0];
-  };
-
-  const getDateChunks = (
-    from: Date,
-    to: Date
-  ): { start: Date; end: Date }[] => {
-    const chunks: { start: Date; end: Date }[] = [];
-    let currentStart = new Date(from);
-    const finalEnd = new Date(to);
-
-    while (currentStart <= finalEnd) {
-      const chunkEnd = new Date(
-        currentStart.getTime() + maxDaysPerChunk * 24 * 60 * 60 * 1000 - 1
-      );
-      chunks.push({
-        start: new Date(currentStart),
-        end: chunkEnd > finalEnd ? finalEnd : chunkEnd,
-      });
-      currentStart = new Date(chunkEnd.getTime() + 1);
-    }
-    return chunks;
-  };
-
-
-
-  const fetchListingsForChunk = async (
-    user: string,
-    pageIdx: number,
-    from: Date,
-    to: Date
-  ): Promise<Listings> => {
-    const params = new URLSearchParams({
-      pageSize: apiPageSize.toString(),
-      pageIdx: pageIdx.toString(),
-      startTo: formatDate(to),
-      startFrom: formatDate(from),
-    });
-
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-    const uri = process.env.NEXT_PUBLIC_LISTINGS_URI;
-    const apiUrl = `${apiBaseUrl}/${uri}/${user}?${params.toString()}`;
-
-    try {
-      const response = await fetch(apiUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch listings for ${user}: ${response.status}`);
-      }
-      const data = await response.json();
-      return data.listings as Listings;
-    } catch (err) {
-      throw new Error(
-        `Failed to fetch listings for ${user}: ${err instanceof Error ? err.message : "Unknown error"
-        }`
-      );
-    }
-  };
-
-  const fetchAllPagesForChunk = async (
-    user: string,
-    from: Date,
-    to: Date
-  ): Promise<Listings> => {
-    let allItems: Item[] = [];
-    let pageIdx = 1;
-    let hasMoreItems = true;
-    let totalEntries = 0;
-
-    const defaultListings: Listings = {
-      XMLName: { Space: "", Local: "" },
-      Timestamp: "",
-      Ack: "",
-      Version: "",
-      Build: "",
-      PaginationResult: {
-        TotalNumberOfPages: 0,
-        TotalNumberOfEntries: 0,
-      },
-      HasMoreItems: false,
-      ItemArray: { Items: [] },
-      ItemsPerPage: apiPageSize,
-      PageNumber: 1,
-      ReturnedItemCountActual: 0,
-    };
-
-    while (hasMoreItems) {
-      const listings = await fetchListingsForChunk(user, pageIdx, from, to);
-      allItems = [
-        ...allItems,
-        ...(Array.isArray(listings.ItemArray.Items)
-          ? listings.ItemArray.Items
-          : []),
-      ];
-      hasMoreItems = listings.HasMoreItems;
-      totalEntries = listings.PaginationResult.TotalNumberOfEntries;
-      pageIdx++;
-    }
-
-    return {
-      ...defaultListings,
-      ItemArray: { Items: allItems },
-      ReturnedItemCountActual: allItems.length,
-      PaginationResult: {
-        TotalNumberOfPages: Math.ceil(totalEntries / clientPageSize),
-        TotalNumberOfEntries: totalEntries,
-      },
-    };
-  };
-
-  const fetchListingsForUser = async (user: string) => {
+  const fetchListingsForUser = async (user: string, signal?: AbortSignal) => {
     try {
       setUserLoading((prev) => ({ ...prev, [user]: true }));
-      const chunks = getDateChunks(startFrom, startTo);
-      const chunkListings: Listings[] = [];
 
-      for (const { start, end } of chunks) {
-        const listings = await fetchAllPagesForChunk(user, start, end);
-        if (listings.ReturnedItemCountActual > 0) {
-          chunkListings.push(listings);
-        }
-      }
-
-      const mergedItems = chunkListings.flatMap((listing) =>
-        Array.isArray(listing.ItemArray.Items) ? listing.ItemArray.Items : []
-      );
-      const totalEntries = chunkListings.reduce(
-        (sum, listing) => sum + listing.PaginationResult.TotalNumberOfEntries,
-        0
-      );
-
-      const defaultListings: Listings = {
-        XMLName: { Space: "", Local: "" },
-        Timestamp: "",
-        Ack: "",
-        Version: "",
-        Build: "",
-        PaginationResult: {
-          TotalNumberOfPages: 0,
-          TotalNumberOfEntries: 0,
-        },
-        HasMoreItems: false,
-        ItemArray: { Items: [] },
-        ItemsPerPage: apiPageSize,
-        PageNumber: 1,
-        ReturnedItemCountActual: 0,
-      };
-
-      const mergedListings: Listings = {
-        ...(chunkListings[0] || defaultListings),
-        ItemArray: {
-          Items: mergedItems,
-        },
-        ReturnedItemCountActual: mergedItems.length,
-        PaginationResult: {
-          TotalNumberOfEntries: totalEntries,
-          TotalNumberOfPages: Math.ceil(totalEntries / clientPageSize),
-        },
-      };
+      const { items, truncated } = await fetchAllListings(user, startFrom, startTo, { signal });
+      if (signal?.aborted) return;
 
       setUserListings((prev) => ({
         ...prev,
-        [user]: mergedListings,
+        [user]: {
+          PaginationResult: {
+            TotalNumberOfEntries: items.length,
+            TotalNumberOfPages: Math.ceil(items.length / clientPageSize),
+          },
+          HasMoreItems: false,
+          ItemArray: { Items: items },
+          ItemsPerPage: apiPageSize,
+          PageNumber: 1,
+          ReturnedItemCountActual: items.length,
+        },
       }));
 
       setUserTotalPages((prev) => ({
         ...prev,
-        [user]: Math.ceil(totalEntries / clientPageSize) || 1,
+        [user]: Math.ceil(items.length / clientPageSize) || 1,
       }));
+
+      if (truncated) {
+        setError(`${user} has more listings than can be shown at once; narrow the date range to see the rest.`);
+      }
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : `Error fetching listings for user ${user}`
-      );
+      if ((err as Error)?.name === "AbortError") return;
+      if (err instanceof ReauthRequiredError) {
+        setError(`${err.user}: ${err.message}`);
+      } else {
+        setError(err instanceof Error ? err.message : `Error fetching listings for ${user}`);
+      }
     } finally {
-      setUserLoading((prev) => ({ ...prev, [user]: false }));
+      if (!signal?.aborted) {
+        setUserLoading((prev) => ({ ...prev, [user]: false }));
+      }
     }
   };
 
@@ -367,9 +174,17 @@ export default function ListingsPage() {
     }
     setDateError(null);
     setError(null);
+
+    // Each Apply supersedes the one before it. Without this, two clicks race and
+    // whichever crawl finishes last wins — so the table could end up showing the
+    // previous range while the date pickers show the new one.
+    fetchAbortRef.current?.abort();
+    const controller = new AbortController();
+    fetchAbortRef.current = controller;
+
     users.forEach((user) => {
       setUserPages((prev) => ({ ...prev, [user]: 1 }));
-      fetchListingsForUser(user);
+      fetchListingsForUser(user, controller.signal);
     });
   }, [startFrom, startTo, users]);
 
@@ -422,7 +237,7 @@ export default function ListingsPage() {
               <label className="bg-surface text-primary font-bold text-sm uppercase tracking-wider px-3 py-2 border-r border-border flex items-center h-full">From</label>
               <input
                 type="date"
-                value={formatDate(startFrom)}
+                value={formatApiDate(startFrom)}
                 onChange={(e) => {
                   const newDate = new Date(e.target.value);
                   if (!isNaN(newDate.getTime())) {
@@ -430,14 +245,14 @@ export default function ListingsPage() {
                   }
                 }}
                 className="px-4 py-2 h-full border-none text-text-primary focus:outline-none focus:ring-0 bg-surface hover:bg-hover hover:text-hover-content cursor-pointer font-heading transition-colors"
-                max={formatDate(new Date())}
+                max={formatApiDate(new Date())}
               />
             </div>
             <div className="flex items-center rounded-lg shadow-sm border border-border overflow-hidden focus-within:ring-2 focus-within:ring-primary transition-all">
               <label className="bg-surface text-primary font-bold text-sm uppercase tracking-wider px-3 py-2 border-r border-border flex items-center h-full">To</label>
               <input
                 type="date"
-                value={formatDate(startTo)}
+                value={formatApiDate(startTo)}
                 onChange={(e) => {
                   const newDate = new Date(e.target.value);
                   if (!isNaN(newDate.getTime())) {
@@ -445,7 +260,7 @@ export default function ListingsPage() {
                   }
                 }}
                 className="px-4 py-2 h-full border-none text-text-primary focus:outline-none focus:ring-0 bg-surface hover:bg-hover hover:text-hover-content cursor-pointer font-heading transition-colors"
-                max={formatDate(new Date())}
+                max={formatApiDate(new Date())}
               />
             </div>
           </div>

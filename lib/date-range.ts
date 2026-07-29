@@ -1,0 +1,59 @@
+/**
+ * Date helpers for eBay's whole-day range parameters.
+ *
+ * Kept dependency-free and pure so the boundary arithmetic can be exercised
+ * directly — it is the part that was silently wrong (see getDateChunks).
+ */
+
+/** eBay rejects Trading API date ranges longer than 120 days. */
+export const MAX_DAYS_PER_CHUNK = 120;
+
+/**
+ * Formats a date as YYYY-MM-DD in the *local* calendar.
+ *
+ * toISOString() converts to UTC first, so for anyone west of UTC an evening
+ * date becomes tomorrow — shifting the whole requested range by a day.
+ */
+export function formatApiDate(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+}
+
+export function startOfDay(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+export function addDays(date: Date, days: number): Date {
+    const next = new Date(date);
+    next.setDate(next.getDate() + days);
+    return next;
+}
+
+/**
+ * Splits a range into consecutive windows of at most MAX_DAYS_PER_CHUNK whole
+ * days, with no day in two windows and no day skipped between them.
+ *
+ * The previous implementation subtracted a millisecond from each window's end
+ * and started the next one a millisecond later. Because the API takes dates,
+ * both windows truncated to the same calendar day — so every item listed on a
+ * boundary day was fetched and counted twice, and the default range (exactly
+ * one window long) always produced such a boundary.
+ */
+export function getDateChunks(from: Date, to: Date): { start: Date; end: Date }[] {
+    const chunks: { start: Date; end: Date }[] = [];
+    const finalEnd = startOfDay(to);
+    let currentStart = startOfDay(from);
+
+    if (currentStart > finalEnd) return chunks;
+
+    while (currentStart <= finalEnd) {
+        // -1 because both endpoints are inclusive.
+        const proposedEnd = addDays(currentStart, MAX_DAYS_PER_CHUNK - 1);
+        const end = proposedEnd > finalEnd ? finalEnd : proposedEnd;
+        chunks.push({ start: currentStart, end });
+        currentStart = addDays(end, 1);
+    }
+    return chunks;
+}
