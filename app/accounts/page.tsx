@@ -217,7 +217,7 @@ export default function Accounts() {
           key={user}
           className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
         >
-          <h2 className="text-3xl text-primary mb-4">{user} 🌸</h2>
+          <h2 className="text-xl sm:text-3xl text-primary mb-4">{user} 🌸</h2>
           {errors.length > 0 && (
             <p className="text-error-text text-lg mb-4">
               {errors.map((error, index) => (
@@ -244,7 +244,7 @@ export default function Accounts() {
         id={`user-section-${user}`}
         className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
       >
-        <h2 className="text-3xl text-primary mb-4">{user} 🌸</h2>
+        <h2 className="text-xl sm:text-3xl text-primary mb-4">{user} 🌸</h2>
         <p className="text-sm sm:text-xl text-primary mb-4">
           Current Balance: ${summary.CurrentBalance && typeof summary.CurrentBalance.value === 'number' ? formatCurrency(summary.CurrentBalance.value) : "0.00"} 💸
         </p>
@@ -303,7 +303,7 @@ export default function Accounts() {
       <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
         <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center lg:text-left drop-shadow-sm font-heading break-words">Account Summaries</h1>
         {!error && Object.keys(userAccounts).length > 0 && (
-          <p className="text-2xl text-primary mb-8">
+          <p className="text-lg sm:text-2xl text-primary mb-8">
             Total Balance: ${formatCurrency(calculateTotalAccountBalance())} 💰
           </p>
         )}

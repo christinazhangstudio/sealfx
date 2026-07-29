@@ -327,8 +327,8 @@ export default function ListingsPage() {
         id={`user-section-${user}`}
         className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
       >
-        <h2 className="text-2xl text-primary mb-4">{user} 🌸</h2>
-        <p className="text-xl text-primary mb-8">
+        <h2 className="text-lg sm:text-2xl text-primary mb-4">{user} 🌸</h2>
+        <p className="text-base sm:text-xl text-primary mb-8">
           Total Items: {filteredItems.length} 📦
         </p>
         {paginatedItems.length > 0 ? (
@@ -482,7 +482,7 @@ export default function ListingsPage() {
                 <div key={user}>
                   {userLoading[user] ? (
                     <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
-                      <h2 className="text-2xl text-primary mb-4">{user} 🌸</h2>
+                      <h2 className="text-lg sm:text-2xl text-primary mb-4">{user} 🌸</h2>
                       <p className="text-primary text-lg">
                         Loading Listings...
                       </p>
@@ -497,7 +497,7 @@ export default function ListingsPage() {
                     )
                   ) : (
                     <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
-                      <h2 className="text-2xl text-primary mb-4">{user} 🌸</h2>
+                      <h2 className="text-lg sm:text-2xl text-primary mb-4">{user} 🌸</h2>
                       <p className="text-text-secondary text-lg">
                         No listings for {user}.
                       </p>

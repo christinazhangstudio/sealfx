@@ -47,17 +47,17 @@ const renderUserTable = (
       id={`user-section-${user}`}
       className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border"
     >
-      <h2 className="text-2xl text-primary mb-4">{user} 🌸</h2>
-      <p className="text-xl text-primary mb-4">
+      <h2 className="text-lg sm:text-2xl text-primary mb-4">{user} 🌸</h2>
+      <p className="text-base sm:text-xl text-primary mb-4">
         Total Items: {filteredItems.length} 📦
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-text-primary">
           <thead>
             <tr className="text-primary border-b border-border">
-              <th className="p-2">ID</th>
-              <th className="p-2">Title</th>
-              <th className="p-2">Status</th>
+              <th className="p-2 hidden sm:table-cell">ID</th>
+              <th className="p-2 text-left">Title</th>
+              <th className="p-2 hidden sm:table-cell">Status</th>
               <th className="p-2">Date</th>
             </tr>
           </thead>
@@ -65,10 +65,17 @@ const renderUserTable = (
             {paginatedItems.length > 0 ? (
               paginatedItems.map((listing) => (
                 <tr key={listing.ItemID} className="border-t border-border">
-                  <td className="p-2">{listing.ItemID}</td>
-                  <td className="p-2">{listing.Title}</td>
-                  <td className="p-2">{listing.SellingStatus.ListingStatus}</td>
-                  <td className="p-2">
+                  <td className="p-2 hidden sm:table-cell">{listing.ItemID}</td>
+                  <td className="p-2 text-left align-top">
+                    <span className="block">{listing.Title}</span>
+                    {/* Folded in on small screens, where they'd otherwise
+                        squeeze the title into an unreadable column. */}
+                    <span className="sm:hidden block mt-1 text-xs text-text-secondary">
+                      {listing.SellingStatus.ListingStatus} · {listing.ItemID}
+                    </span>
+                  </td>
+                  <td className="p-2 hidden sm:table-cell">{listing.SellingStatus.ListingStatus}</td>
+                  <td className="p-2 align-top whitespace-nowrap">
                     {new Date(
                       listing.ListingDetails.StartTime
                     ).toLocaleDateString()}
@@ -310,7 +317,7 @@ export default function ListingsPage() {
                 <div key={user}>
                   {userLoading[user] ? (
                     <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
-                      <h2 className="text-2xl text-primary mb-4">{user} 🌸</h2>
+                      <h2 className="text-lg sm:text-2xl text-primary mb-4">{user} 🌸</h2>
                       <p className="text-primary text-lg">
                         Loading Listings...
                       </p>
@@ -325,7 +332,7 @@ export default function ListingsPage() {
                     )
                   ) : (
                     <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
-                      <h2 className="text-2xl text-primary mb-4">{user} 🌸</h2>
+                      <h2 className="text-lg sm:text-2xl text-primary mb-4">{user} 🌸</h2>
                       <p className="text-text-secondary text-lg">
                         No listings for {user}.
                       </p>

@@ -101,7 +101,7 @@ const renderUserChart = (user: string, chartData: any) => {
 
   return (
     <div className="chart-container bg-surface p-4 sm:p-6 md:p-8 rounded-lg shadow-md border border-border container-inline-size mb-8">
-      <h2 className="text-2xl text-primary mb-4">{user} 🌸</h2>
+      <h2 className="text-lg sm:text-2xl text-primary mb-4">{user} 🌸</h2>
       <div className="relative h-[350px] sm:h-[450px] md:h-[500px]">
         <Line
           data={chartData}
@@ -487,7 +487,7 @@ export default function ChartsPage() {
                     <div key={user} id={`user-section-${user}`}>
                       {dataLoading[user] ? (
                         <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
-                          <h2 className="text-2xl text-primary mb-4">{user} 🌸</h2>
+                          <h2 className="text-lg sm:text-2xl text-primary mb-4">{user} 🌸</h2>
                           <p className="text-primary text-lg">Loading Data... </p>
                         </div>
                       ) : userCharts[user] &&
@@ -499,7 +499,7 @@ export default function ChartsPage() {
                         renderUserChart(user, userCharts[user])
                       ) : (
                         <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
-                          <h2 className="text-2xl text-primary mb-4">{user} 🌸</h2>
+                          <h2 className="text-lg sm:text-2xl text-primary mb-4">{user} 🌸</h2>
                           <p className="text-text-secondary text-lg">
                             No data for {user}.
                           </p>

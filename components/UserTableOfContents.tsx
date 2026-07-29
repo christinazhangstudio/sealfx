@@ -82,7 +82,16 @@ export default function UserTableOfContents({ users }: UserTableOfContentsProps)
                 )}
 
                 {/* Mobile Drawer */}
-                <div className={`fixed right-0 top-0 h-full w-72 bg-surface shadow-2xl z-[var(--z-overlay)] transform transition-transform duration-300 ease-in-out border-l border-border ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+                <div
+                    className={`fixed right-0 top-0 h-full w-72 max-w-[85vw] bg-surface shadow-2xl z-[var(--z-overlay)] transform transition-transform duration-300 ease-in-out border-l border-border ${isOpen ? 'translate-x-0' : 'translate-x-full invisible'}`}
+                    aria-hidden={!isOpen}
+                    // invisible (not just translated) keeps the closed drawer out
+                    // of the tab order and out of the page's measured width.
+                    inert={!isOpen}
+                    role="dialog"
+                    aria-modal={isOpen}
+                    aria-label="Jump to user"
+                >
                     <div className="p-6 h-full flex flex-col">
                         <div className="flex items-center justify-between mb-8">
                             <h3 className="text-lg font-bold text-primary uppercase tracking-wider font-heading">

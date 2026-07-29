@@ -109,7 +109,7 @@ export default function Payouts() {
           key={user}
           className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
         >
-          <h2 className="text-3xl text-primary mb-4">{user} 🌸</h2>
+          <h2 className="text-xl sm:text-3xl text-primary mb-4">{user} 🌸</h2>
           <p className="text-text-secondary text-lg">
             No payouts available for {user}.
           </p>
@@ -128,7 +128,7 @@ export default function Payouts() {
         id={`user-section-${user}`}
         className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
       >
-        <h2 className="text-3xl text-primary mb-4">{user} 🌸</h2>
+        <h2 className="text-xl sm:text-3xl text-primary mb-4">{user} 🌸</h2>
         {total > 0 && (
           <p className="text-sm sm:text-xl text-primary mb-4">
             Total: ${formatCurrency(calculateUserPayoutTotal(payouts))} 💸
@@ -144,7 +144,7 @@ export default function Payouts() {
                       <span className="text-secondary mr-2">✦</span>
                       Date
                     </th>
-                    <th className="py-2 text-left w-1/5 sm:min-w-[200px]">
+                    <th className="py-2 text-left w-1/5 sm:min-w-[200px] hidden sm:table-cell">
                       <span className="text-secondary mr-2">✦</span>
                       Status
                     </th>
@@ -152,11 +152,11 @@ export default function Payouts() {
                       <span className="text-secondary mr-2">✦</span>
                       Amount
                     </th>
-                    <th className="py-2 text-left w-1/5 sm:min-w-[160px]">
+                    <th className="py-2 text-left w-1/5 sm:min-w-[160px] hidden sm:table-cell">
                       <span className="text-secondary mr-2">✦</span>
                       Transactions
                     </th>
-                    <th className="py-2 text-left w-1/5 sm:min-w-[140px]">
+                    <th className="py-2 text-left w-1/5 sm:min-w-[140px] hidden sm:table-cell">
                       <span className="text-secondary mr-2">✦</span>
                       Payment Method
                     </th>
@@ -171,20 +171,25 @@ export default function Payouts() {
                       <td className="py-2 whitespace-nowrap">
                         {payout.payoutDate ? new Date(payout.payoutDate).toLocaleDateString() : "—"}
                       </td>
-                      <td className="py-2">
+                      <td className="py-2 hidden sm:table-cell">
                         {payout.payoutStatus}
                         <br />
                         <small className="text-secondary text-base truncate block">
                           {payout.payoutStatusDescription}
                         </small>
                       </td>
-                      <td className="py-2">
+                      <td className="py-2 text-right sm:text-left whitespace-nowrap font-medium">
                         ${formatCurrency(payout.amount.value)}
+                        {/* Status and count ride along under the amount on
+                            phones, where their own columns don't fit. */}
+                        <span className="sm:hidden block text-xs font-normal text-text-secondary">
+                          {payout.payoutStatus} · {payout.transactionCount} txn
+                        </span>
                       </td>
-                      <td className="py-2">
+                      <td className="py-2 hidden sm:table-cell">
                         {payout.transactionCount}
                       </td>
-                      <td className="py-2 truncate">
+                      <td className="py-2 truncate hidden sm:table-cell">
                         {payout.payoutInstrument?.nickname ?? "—"}
                         {payout.payoutInstrument?.accountLastFourDigits
                           ? ` (${payout.payoutInstrument.accountLastFourDigits})`
@@ -243,7 +248,7 @@ export default function Payouts() {
           Note: Only payouts less than 5 years in the past can be retrieved.
         </p>
         {Object.keys(userPayouts).length > 0 && (
-          <p className="text-2xl text-primary mb-8">
+          <p className="text-lg sm:text-2xl text-primary mb-8">
             Total: ${formatCurrency(calculateTotalPayoutAmount())} 💰
           </p>
         )}
@@ -262,7 +267,7 @@ export default function Payouts() {
                     key={user}
                     className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
                   >
-                    <h2 className="text-3xl text-primary mb-4">{user} 🌸</h2>
+                    <h2 className="text-xl sm:text-3xl text-primary mb-4">{user} 🌸</h2>
                     <p className="text-primary text-lg">Loading payouts... </p>
                   </div>
                 ) : (

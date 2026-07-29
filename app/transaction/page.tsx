@@ -117,7 +117,7 @@ export default function TransactionPage() {
                   id={`user-section-${s.user}`}
                   className="bg-surface p-6 rounded-2xl shadow-md border border-border"
                 >
-                  <h2 className="text-3xl text-primary mb-4">{s.user} 🌸</h2>
+                  <h2 className="text-xl sm:text-3xl text-primary mb-4">{s.user} 🌸</h2>
                   <div className="overflow-x-auto -mx-2 px-2">
                     <table className="w-full text-base sm:text-2xl text-text-primary border-collapse">
                     <tbody>
