@@ -114,12 +114,17 @@ export default function PrivacyPage() {
                     reject requests that aren't authenticated as you.
                 </p>
                 <p>
-                    In the interest of being straight with you: your eBay developer keys and access
-                    tokens are currently stored unencrypted in our database, protected by access
-                    controls on the database rather than by encryption at rest. Encrypting them is
-                    planned. Until then, treat your Cert ID the way you would any password — and if
-                    you ever suspect it has been exposed, rotate it in the eBay Developer portal and
-                    update it in Sealift's Settings page.
+                    Your eBay Cert ID and the access tokens for your seller accounts are encrypted
+                    at rest with AES-256-GCM, using a key held separately from the database. Someone
+                    who obtained a copy of the database would not be able to read them. They are
+                    decrypted only in memory, at the moment a request needs to call eBay on your
+                    behalf, and are never sent back to your browser — Settings shows only a masked
+                    hint of your Cert ID.
+                </p>
+                <p>
+                    Even so, treat your Cert ID the way you would any password. If you ever suspect
+                    it has been exposed, rotate it in the eBay Developer portal and update it on
+                    Sealift's Settings page.
                 </p>
                 <p>
                     No service can promise perfect security, and we are not going to pretend otherwise.
