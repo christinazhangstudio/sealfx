@@ -119,7 +119,7 @@ export default function RegisterPage() {
                             <div>
                                 <label className="block text-[11px] text-[var(--color-text-secondary)] font-bold uppercase tracking-wider mb-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-text-hover)] bg-clip-text text-transparent">eBay Developer API Keys</label>
                                 <p className="text-xs text-[var(--color-text-secondary)] mb-3 leading-relaxed opacity-60">
-                                    You must <a href="https://developer.ebay.com/" target="_blank" className="underline hover:text-[var(--color-primary)] font-bold">create a free eBay Developer account</a> to generate these keys. Your keys are encrypted.
+                                    You must <a href="https://developer.ebay.com/" target="_blank" className="underline hover:text-[var(--color-primary)] font-bold">create a free eBay Developer account</a> to generate these keys. Sealift stores them so it can call eBay on your behalf, and only ever shows you a masked hint afterwards. See our <a href="/privacy" className="underline hover:text-[var(--color-primary)] font-bold">Privacy Policy</a>.
                                 </p>
 
                                 <div className="space-y-3">
@@ -191,6 +191,13 @@ export default function RegisterPage() {
                             </Link>
                         </div>
                     </form>
+
+                            <p className="mt-6 text-center text-[10px] text-[var(--color-text-secondary)]/70 leading-relaxed">
+                                By creating an account you agree to our{" "}
+                                <a href="/terms" className="underline hover:text-[var(--color-primary)]">Terms of Service</a>
+                                {" "}and{" "}
+                                <a href="/privacy" className="underline hover:text-[var(--color-primary)]">Privacy Policy</a>.
+                            </p>
                 </div>
 
                 {/* Right Side: Tutorial Slideshow (Responsive to AI panel) */}

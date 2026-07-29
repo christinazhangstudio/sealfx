@@ -169,6 +169,13 @@ export default function LoginPage() {
                         </Link>
                     </div>
                 </form>
+
+                <p className="mt-8 text-center text-[10px] text-[var(--color-text-secondary)]/70 leading-relaxed">
+                    By signing in you agree to our{" "}
+                    <Link href="/terms" className="underline hover:text-[var(--color-primary)]">Terms of Service</Link>
+                    {" "}and{" "}
+                    <Link href="/privacy" className="underline hover:text-[var(--color-primary)]">Privacy Policy</Link>.
+                </p>
             </div>
         </div>
     );

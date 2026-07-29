@@ -74,6 +74,8 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
     { name: "Transactions", href: "/transaction" },
     { name: "Notifications", href: "/notifications" },
     { name: "Settings", href: "/settings" },
+    { name: "Terms", href: "/terms" },
+    { name: "Privacy", href: "/privacy" },
     { name: "Admin", href: "/admin" },
   ];
 

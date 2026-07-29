@@ -49,7 +49,7 @@ export default auth((req) => {
 export const config = {
     // https://nextjs.org/docs/app/building-your-application/routing/middleware#matcher
     matcher: [
-        "/((?!api|_next/static|_next/image|favicon.ico|.*\\.png$|.*\\.svg$|.*\\.jpg$|.*\\.jpeg$|login|register|guest|forgot-password|reset-password).*)",
+        "/((?!api|_next/static|_next/image|favicon.ico|.*\\.png$|.*\\.svg$|.*\\.jpg$|.*\\.jpeg$|login|register|guest|forgot-password|reset-password|terms|privacy).*)",
         // Exempted from the pattern above (it excludes all of /api), so it has
         // to be listed explicitly.
         "/api/internal/:path*",
