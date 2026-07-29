@@ -245,30 +245,30 @@ export default function Accounts() {
         className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
       >
         <h2 className="text-3xl text-primary mb-4">{user} 🌸</h2>
-        <p className="text-xl text-primary mb-4">
+        <p className="text-sm sm:text-xl text-primary mb-4">
           Current Balance: ${summary.CurrentBalance && typeof summary.CurrentBalance.value === 'number' ? formatCurrency(summary.CurrentBalance.value) : "0.00"} 💸
         </p>
         <div className="overflow-x-auto">
-          <table className="w-full text-xl text-text-primary border-collapse">
+          <table className="w-full text-sm sm:text-xl text-text-primary border-collapse">
             <thead>
               <tr className="border-b border-border">
-                <th className="py-2 text-left w-1/5 min-w-[140px]">
+                <th className="py-2 text-left w-1/5 sm:min-w-[140px]">
                   <span className="text-secondary mr-2">✦</span>
                   Account State
                 </th>
-                <th className="py-2 text-left w-1/5 min-w-[140px]">
+                <th className="py-2 text-left w-1/5 sm:min-w-[140px]">
                   <span className="text-secondary mr-2">✦</span>
                   Invoice Balance
                 </th>
-                <th className="py-2 text-left w-1/5 min-w-[140px]">
+                <th className="py-2 text-left w-1/5 sm:min-w-[140px]">
                   <span className="text-secondary mr-2">✦</span>
                   Last Payment
                 </th>
-                <th className="py-2 text-left w-1/5 min-w-[140px]">
+                <th className="py-2 text-left w-1/5 sm:min-w-[140px]">
                   <span className="text-secondary mr-2">✦</span>
                   Payment Method
                 </th>
-                <th className="py-2 text-left w-1/5 min-w-[140px]">
+                <th className="py-2 text-left w-1/5 sm:min-w-[140px]">
                   <span className="text-secondary mr-2">✦</span>
                   Past Due
                 </th>

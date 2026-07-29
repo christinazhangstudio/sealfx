@@ -132,7 +132,7 @@ export default function LoginPage() {
 
                         <Link
                             href="/forgot-password"
-                            className="text-[11px] text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] transition-colors font-bold uppercase tracking-wider"
+                            className="py-2 text-[11px] text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] transition-colors font-bold uppercase tracking-wider"
                         >
                             Forgot password?
                         </Link>
@@ -164,7 +164,7 @@ export default function LoginPage() {
                     </button>
 
                     <div className="text-center mt-6">
-                        <Link href="/register" className="text-[11px] text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] transition-colors font-bold uppercase tracking-wider">
+                        <Link href="/register" className="py-2 text-[11px] text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] transition-colors font-bold uppercase tracking-wider">
                             don't have an account? create one
                         </Link>
                     </div>

@@ -93,7 +93,10 @@ function ThinkingBlock({ thinking, isActive }: { thinking: string; isActive: boo
     );
 }
 
-function useIsMobile(breakpoint = 768) {
+// Must match the breakpoint in client-layout-wrapper.tsx: the wrapper reserves
+// space for whichever form this panel takes, and a mismatch left a dead zone
+// (roughly tablet widths) padded for a bottom sheet while showing a side panel.
+function useIsMobile(breakpoint = 1024) {
     const [isMobile, setIsMobile] = useState(false);
     useEffect(() => {
         const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);
@@ -396,8 +399,8 @@ export default function AiHelpButton({
         };
 
     const panelClassName = isMobile
-        ? `fixed bottom-0 left-0 right-0 bg-[var(--color-surface)]/95 backdrop-blur-3xl border-t border-[var(--color-border)] shadow-[0_-20px_50px_-15px_rgba(0,0,0,0.5)] flex flex-col z-[500] rounded-t-2xl ${isResizingState ? '' : 'transition-[transform,opacity] duration-300 ease-in-out'} ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`
-        : `fixed top-0 right-0 h-screen bg-[var(--color-surface)]/90 backdrop-blur-3xl border-l border-[var(--color-border)] shadow-[-40px_0_60px_-15px_rgba(0,0,0,0.2)] flex flex-col z-[500] ${isResizingState ? '' : 'transition-[transform,opacity] duration-300 ease-in-out'} ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`;
+        ? `fixed bottom-0 left-0 right-0 bg-[var(--color-surface)]/95 backdrop-blur-3xl border-t border-[var(--color-border)] shadow-[0_-20px_50px_-15px_rgba(0,0,0,0.5)] flex flex-col z-[var(--z-panel)] rounded-t-2xl ${isResizingState ? '' : 'transition-[transform,opacity] duration-300 ease-in-out'} ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`
+        : `fixed top-0 right-0 h-screen bg-[var(--color-surface)]/90 backdrop-blur-3xl border-l border-[var(--color-border)] shadow-[-40px_0_60px_-15px_rgba(0,0,0,0.2)] flex flex-col z-[var(--z-panel)] ${isResizingState ? '' : 'transition-[transform,opacity] duration-300 ease-in-out'} ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`;
 
     const startResize = () => {
         isResizing.current = true;
@@ -573,7 +576,7 @@ export default function AiHelpButton({
                 <button
                     onClick={() => setIsOpen(!isOpen)}
                     title="AI Documentation Assistant"
-                    className={`fixed bottom-4 right-4 z-[490] w-14 h-14 bg-[var(--color-surface)] border border-[var(--color-border)] shadow-xl flex items-center justify-center transition-all duration-300 hover:bg-[var(--color-primary)] hover:text-white rounded-full ${isOpen ? "scale-0 opacity-0 pointer-events-none" : "scale-100 text-[var(--color-primary)]"
+                    className={`fixed bottom-4 right-4 z-[var(--z-launcher)] w-14 h-14 bg-[var(--color-surface)] border border-[var(--color-border)] shadow-xl flex items-center justify-center transition-all duration-300 hover:bg-[var(--color-primary)] hover:text-white rounded-full ${isOpen ? "scale-0 opacity-0 pointer-events-none" : "scale-100 text-[var(--color-primary)]"
                         }`}
                 >
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /><path d="M9 10h.01M12 10h.01M15 10h.01" /></svg>
@@ -582,7 +585,7 @@ export default function AiHelpButton({
                 <button
                     onClick={() => setIsOpen(!isOpen)}
                     title="AI Documentation Assistant"
-                    className={`fixed top-[10rem] right-0 z-[490] w-12 h-14 bg-[var(--color-surface)] border-y border-l border-[var(--color-border)] shadow-xl flex items-center justify-center transition-all duration-300 hover:bg-[var(--color-primary)] hover:text-white rounded-l-xl opacity-90 hover:opacity-100 ${isOpen ? "translate-x-full opacity-0 pointer-events-none" : "translate-x-0 text-[var(--color-primary)]"
+                    className={`fixed top-[10rem] right-0 z-[var(--z-launcher)] w-12 h-14 bg-[var(--color-surface)] border-y border-l border-[var(--color-border)] shadow-xl flex items-center justify-center transition-all duration-300 hover:bg-[var(--color-primary)] hover:text-white rounded-l-xl opacity-90 hover:opacity-100 ${isOpen ? "translate-x-full opacity-0 pointer-events-none" : "translate-x-0 text-[var(--color-primary)]"
                         }`}
                 >
                     <div className="flex flex-col items-center justify-center gap-0.5">

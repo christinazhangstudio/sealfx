@@ -251,7 +251,7 @@ export default function NotificationsPage() {
 
                 {/* Feedback Messages */}
                 {(error || successMsg) && (
-                    <div className={`fixed bottom-8 right-8 z-50 px-6 py-4 rounded-xl shadow-2xl transform transition-all duration-300 animate-in slide-in-from-bottom-5 ${error ? 'bg-error-bg border-l-4 border-error-border text-error-text' : 'bg-success-bg border-l-4 border-success-border text-success-text'
+                    <div className={`fixed bottom-24 right-4 left-4 sm:left-auto sm:right-8 sm:bottom-8 z-[var(--z-toast)] sm:max-w-md px-5 py-4 rounded-xl shadow-2xl transform transition-all duration-300 animate-in slide-in-from-bottom-5 ${error ? 'bg-error-bg border-l-4 border-error-border text-error-text' : 'bg-success-bg border-l-4 border-success-border text-success-text'
                         }`}>
                         <div className="flex items-center gap-3">
                             {error ? (

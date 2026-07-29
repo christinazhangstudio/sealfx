@@ -276,7 +276,7 @@ export default function RegisterSellerPage() {
 
           {/* Notification Popup */}
           {notification && (
-            <div className={`fixed top-24 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-md shadow-xl border-l-4 transition-all duration-500 ${notification.type === 'success'
+            <div className={`fixed top-20 left-1/2 -translate-x-1/2 z-[var(--z-toast)] w-[calc(100vw-2rem)] max-w-md px-5 py-3 rounded-md shadow-xl border-l-4 transition-all duration-500 ${notification.type === 'success'
               ? 'bg-success-bg border-success-border text-success-text'
               : 'bg-error-bg border-error-border text-error-text'
               }`}>
@@ -328,7 +328,7 @@ export default function RegisterSellerPage() {
                       <button
                         onClick={startOAuthFlow}
                         disabled={isLoading}
-                        className="px-3 py-1 rounded-md text-xs font-bold text-white bg-btn-apply hover:bg-btn-apply-hover transition-colors disabled:opacity-50"
+                        className="px-3 py-2.5 min-h-[44px] rounded-md text-xs font-bold text-white bg-btn-apply hover:bg-btn-apply-hover transition-colors disabled:opacity-50"
                         title="Re-authorize this seller with eBay"
                       >
                         Reconnect
@@ -337,7 +337,7 @@ export default function RegisterSellerPage() {
                     <button
                       onClick={() => handleDeleteClick(user)}
                       disabled={isDeleting}
-                      className="text-error-text hover:text-error-border transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="p-3 -m-1 text-error-text hover:text-error-border transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                       title="Delete user"
                     >
                       <svg
@@ -370,8 +370,16 @@ export default function RegisterSellerPage() {
 
       {/* Delete Confirmation Popup */}
       {showDeletePopup && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div className={`bg-surface rounded-xl shadow-lg p-6 max-w-sm w-full z-50`}>
+        <div
+          className="fixed inset-0 flex items-center justify-center overflow-y-auto bg-black/50 p-4 z-[var(--z-modal)]"
+          onClick={handleCancelDelete}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="bg-surface rounded-xl shadow-lg p-6 max-w-sm w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="text-xl text-text-primary mb-4 text-center">
               Confirm Deletion
             </h3>

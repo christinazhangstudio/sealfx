@@ -128,7 +128,7 @@ export default function SettingsPage() {
     const card = "bg-surface p-8 rounded-3xl shadow-lg border border-border/50 space-y-6";
 
     return (
-        <div className="min-h-screen p-8">
+        <div className="min-h-screen p-4 sm:p-8">
             <div className="max-w-2xl mx-auto space-y-8">
                 <div>
                     <h1 className="text-4xl font-extrabold tracking-tight text-primary">Settings</h1>

@@ -57,6 +57,17 @@
   /* Notifications */
   --color-message-pill: var(--color-message-pill);
 
+  /* Referenced by components but previously undefined, so Tailwind emitted
+     nothing and the styling silently disappeared (muted text rendered at full
+     strength, drawer rows lost their background, slideshow dots vanished). */
+  --color-text-muted: var(--color-text-secondary);
+  --color-surface-light: var(--color-hover-bg);
+  --color-surface-lighter: var(--color-border);
+  --color-background-start: var(--color-background-start);
+  --color-surface-foreground: var(--color-text-primary);
+  --color-text-hover: var(--color-hover-text);
+  --color-destructive: var(--color-error-text);
+
   /* Theme Switcher */
   --color-switcher-bg: var(--color-switcher-bg);
   --color-switcher-border: var(--color-switcher-border);
@@ -115,4 +126,44 @@ body {
 
 .animate-fade-in {
   animation: fadeIn 0.4s ease-out forwards;
+}
+
+/*
+ * Stacking order, in one place.
+ *
+ * These used to be scattered literals, and the AI chat launcher (z-490) and
+ * panel (z-500) outranked every modal, drawer and toast in the app (all z-50) —
+ * so a floating chat bubble sat on top of confirmation dialogs.
+ *
+ * Order: page chrome < floating launchers < overlays that take over the screen.
+ */
+:root {
+  --z-nav: 100;
+  --z-launcher: 200;      /* floating action buttons */
+  --z-panel: 300;         /* the AI side panel / bottom sheet */
+  --z-overlay: 400;       /* modal backdrops and drawers */
+  --z-modal: 410;         /* modal content itself */
+  --z-toast: 500;         /* transient messages, always on top */
+}
+
+/*
+ * Nothing should be able to scroll the document sideways on a phone. Individual
+ * wide elements (data tables) scroll inside their own container instead.
+ */
+html,
+body {
+  overflow-x: hidden;
+}
+
+/*
+ * iOS Safari zooms the page when a focused input's font is under 16px, and
+ * never zooms back out. Enforce the floor on touch devices rather than
+ * hand-auditing every field.
+ */
+@media (hover: none) and (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
 }

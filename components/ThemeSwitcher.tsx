@@ -20,18 +20,21 @@ export default function ThemeSwitcher() {
             className={`flex items-center bg-switcher-bg rounded-full p-1 border border-switcher-border transition-all duration-300 overflow-hidden relative ${isExpanded ? 'w-auto' : 'w-18'}`}
             onMouseEnter={() => setIsExpanded(true)}
             onMouseLeave={() => setIsExpanded(false)}
+            // Touch devices have no hover: without this the control could never
+            // be expanded, and taps landed on the transparent buttons behind it.
+            onClick={() => setIsExpanded((v) => !v)}
             suppressHydrationWarning
         >
             {/* Collapsed State Text */}
             <div
-                className={`absolute inset-0 flex items-center justify-center text-xs font-semibold text-switcher-text pointer-events-none transition-opacity duration-300 ${isExpanded ? 'opacity-0' : 'opacity-100'}`}
+                className={`absolute inset-0 flex items-center justify-center text-xs font-semibold text-switcher-text pointer-events-none transition-opacity duration-300 ${isExpanded ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
                 suppressHydrationWarning
             >
                 Theme
             </div>
 
             {/* Expanded Options */}
-            <div className={`flex items-center transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
+            <div className={`flex items-center transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                 <button
                     onClick={() => setTheme("light")}
                     className={`whitespace-nowrap px-2 py-1 rounded-full text-xs font-semibold transition-all duration-300 ${currentTheme === "light" ? "bg-white text-primary shadow-sm" : "text-switcher-button-text hover:text-switcher-button-hover hover:scale-110"

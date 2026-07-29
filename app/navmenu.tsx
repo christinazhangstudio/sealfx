@@ -130,7 +130,7 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
                   </svg>
                 </button>
                 {isAnalyticsOpen && (
-                  <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-surface border border-border ring-1 ring-black ring-opacity-5 focus:outline-none z-50 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-surface border border-border ring-1 ring-black ring-opacity-5 focus:outline-none z-[var(--z-nav)] animate-in fade-in zoom-in-95 duration-100">
                     {analyticsLinks.map((link) => (
                       <Link
                         key={link.name}
@@ -160,7 +160,7 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
                   </svg>
                 </button>
                 {isMoreOpen && (
-                  <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-surface border border-border ring-1 ring-black ring-opacity-5 focus:outline-none z-50 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-surface border border-border ring-1 ring-black ring-opacity-5 focus:outline-none z-[var(--z-nav)] animate-in fade-in zoom-in-95 duration-100">
                     {moreLinks.map((link) => (
                       <Link
                         key={link.name}

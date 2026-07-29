@@ -214,23 +214,32 @@ export default function NotesPage() {
           <p className="text-center text-text-secondary col-span-full py-10">No notes available. </p>
         ) : (
           notes.map((note) => (
-            <div
+            <NoteShell
               key={note.id}
+              expanded={expandedNoteId === note.id}
+              onDismiss={() => setExpandedNoteId(null)}
+            >
+            <div
+              // Expanded, this is a dialog: it sits in a flex-centred fixed
+              // layer (rendered below) rather than being fixed itself, so the
+              // editor can size to the viewport and scroll. It previously used
+              // a fixed 80vh with an h-full textarea inside, which pushed the
+              // colour swatches and Save/Cancel past the bottom edge — on a
+              // phone, with the keyboard open, they were unreachable.
               className={`${expandedNoteId === note.id
-                ? "fixed inset-0 z-50 bg-opacity-90"
+                ? "w-full max-w-[800px] max-h-[85dvh] overflow-y-auto"
                 : "relative"
-                } ${expandedNoteId === note.id ? (previewColor || editColor) : note.color} p-4 rounded-lg flex flex-col justify-between border-2 border-border`}
+                } ${expandedNoteId === note.id ? (previewColor || editColor) : note.color} p-4 rounded-lg flex flex-col border-2 border-border ${expandedNoteId === note.id ? "" : "justify-between"}`}
               style={{
-                height: expandedNoteId === note.id ? "80vh" : "200px",
-                width: expandedNoteId === note.id ? "80vw" : "100%",
-                maxWidth: expandedNoteId === note.id ? "800px" : "700px",
-                margin: expandedNoteId === note.id ? "auto" : "0",
+                height: expandedNoteId === note.id ? undefined : "200px",
+                width: expandedNoteId === note.id ? undefined : "100%",
+                maxWidth: expandedNoteId === note.id ? undefined : "700px",
               }}
             >
               {expandedNoteId === note.id ? (
                 <>
                   <textarea
-                    className="w-full h-full p-2 text-2xl hover:bg-none focus:outline-none text-note-text bg-transparent"
+                    className="w-full min-h-[40dvh] flex-1 p-2 text-lg sm:text-2xl hover:bg-none focus:outline-none text-note-text bg-transparent resize-none"
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
                   />
@@ -238,7 +247,7 @@ export default function NotesPage() {
                     {colorOptions.map((color) => (
                       <div
                         key={color.value}
-                        className={`w-6 h-6 rounded-full cursor-pointer border-2 ${editColor === color.value ? "border-primary" : "border-border"
+                        className={`w-9 h-9 rounded-full cursor-pointer border-2 ${editColor === color.value ? "border-primary" : "border-border"
                           } ${color.value}`}
                         onClick={() => setEditColor(color.value)}
                         onMouseEnter={() => setPreviewColor(color.value)}
@@ -285,7 +294,7 @@ export default function NotesPage() {
                       Copy
                     </button>
                     <button
-                      className="px-2 py-1 text-primary hover:text-primary-hover"
+                      className="px-3 py-2.5 min-h-[44px] text-primary hover:text-primary-hover"
                       onClick={() => deleteNote(note.id)}
                     >
                       Delete
@@ -294,6 +303,7 @@ export default function NotesPage() {
                 </>
               )}
             </div>
+            </NoteShell>
           ))
         )}
       </div>
@@ -304,6 +314,54 @@ export default function NotesPage() {
           Copied!
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Renders a note inline, or — when expanded — as a centred dialog over a real
+ * backdrop that scrolls and dismisses on tap-outside.
+ *
+ * The expanded note previously set `fixed inset-0` on itself with
+ * `bg-opacity-90`, which is Tailwind v3 syntax and emits nothing in v4: there
+ * was no backdrop, the page scrolled behind it, and tapping away did nothing.
+ */
+function NoteShell({
+  expanded,
+  onDismiss,
+  children,
+}: {
+  expanded: boolean;
+  onDismiss: () => void;
+  children: React.ReactNode;
+}) {
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onDismiss();
+    };
+    window.addEventListener("keydown", onKey);
+    // Stop the page behind the dialog from scrolling with it.
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previous;
+    };
+  }, [expanded, onDismiss]);
+
+  if (!expanded) return <>{children}</>;
+
+  return (
+    <div
+      className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center overflow-y-auto bg-black/50 p-4"
+      onClick={onDismiss}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="w-full flex justify-center" onClick={(e) => e.stopPropagation()}>
+        {children}
+      </div>
     </div>
   );
 }

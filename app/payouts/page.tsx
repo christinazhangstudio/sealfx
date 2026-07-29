@@ -130,33 +130,33 @@ export default function Payouts() {
       >
         <h2 className="text-3xl text-primary mb-4">{user} 🌸</h2>
         {total > 0 && (
-          <p className="text-xl text-primary mb-4">
+          <p className="text-sm sm:text-xl text-primary mb-4">
             Total: ${formatCurrency(calculateUserPayoutTotal(payouts))} 💸
           </p>
         )}
         {total > 0 && paginatedPayouts.length > 0 ? (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-xl text-text-primary border-collapse">
+              <table className="w-full text-sm sm:text-xl text-text-primary border-collapse">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="py-2 text-left w-1/5 min-w-[120px]">
+                    <th className="py-2 text-left w-1/5 sm:min-w-[120px]">
                       <span className="text-secondary mr-2">✦</span>
                       Date
                     </th>
-                    <th className="py-2 text-left w-1/5 min-w-[200px]">
+                    <th className="py-2 text-left w-1/5 sm:min-w-[200px]">
                       <span className="text-secondary mr-2">✦</span>
                       Status
                     </th>
-                    <th className="py-2 text-left w-1/5 min-w-[140px]">
+                    <th className="py-2 text-left w-1/5 sm:min-w-[140px]">
                       <span className="text-secondary mr-2">✦</span>
                       Amount
                     </th>
-                    <th className="py-2 text-left w-1/5 min-w-[160px]">
+                    <th className="py-2 text-left w-1/5 sm:min-w-[160px]">
                       <span className="text-secondary mr-2">✦</span>
                       Transactions
                     </th>
-                    <th className="py-2 text-left w-1/5 min-w-[140px]">
+                    <th className="py-2 text-left w-1/5 sm:min-w-[140px]">
                       <span className="text-secondary mr-2">✦</span>
                       Payment Method
                     </th>

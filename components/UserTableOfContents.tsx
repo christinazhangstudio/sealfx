@@ -76,13 +76,13 @@ export default function UserTableOfContents({ users }: UserTableOfContentsProps)
                 {/* Backdrop Overlay */}
                 {isOpen && (
                     <div
-                        className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm transition-opacity duration-300"
+                        className="fixed inset-0 z-[var(--z-overlay)] bg-black/40 backdrop-blur-sm transition-opacity duration-300"
                         onClick={() => setIsOpen(false)}
                     />
                 )}
 
                 {/* Mobile Drawer */}
-                <div className={`fixed right-0 top-0 h-full w-72 bg-surface shadow-2xl z-50 transform transition-transform duration-300 ease-in-out border-l border-border ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+                <div className={`fixed right-0 top-0 h-full w-72 bg-surface shadow-2xl z-[var(--z-overlay)] transform transition-transform duration-300 ease-in-out border-l border-border ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
                     <div className="p-6 h-full flex flex-col">
                         <div className="flex items-center justify-between mb-8">
                             <h3 className="text-lg font-bold text-primary uppercase tracking-wider font-heading">

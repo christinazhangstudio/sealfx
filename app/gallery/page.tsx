@@ -253,7 +253,7 @@ export default function ListingsPage() {
 
   const sizeStyles = {
     small: {
-      grid: "grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-10",
+      grid: "grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-10",
       imageHeight: "h-[160px]",
       captionSize: "text-sm",
       placeholder: "https://via.placeholder.com/150x112?text=No+Image",
