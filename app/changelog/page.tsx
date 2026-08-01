@@ -2,12 +2,23 @@ export default function Changelog() {
   const changes = [
     {
       version: "v1",
+      date: "July 2026",
+      updates: [
+        "Password reset and account configurability.",
+        "Denote availability of topics to subscribe to.",
+        "Automatically configure alert address as Sealift acccount email.",
+        "AI token streaming."
+      ],
+    },
+    {
+      version: "v1",
       date: "April 2026",
       updates: [
         "Multi-tenant support.",
         "JWT authentication.",
         "AI chatbot (self-hosted and Cloud option).",
         "Support sandbox mode.",
+        "Removed Notes feature.",
       ],
     },
     {
@@ -73,7 +84,7 @@ export default function Changelog() {
             <div key={index} className="mb-10 ml-6">
               <div className="bg-surface rounded-lg shadow-md p-6 border border-border">
                 <h2 className="text-2xl text-primary font-semibold">
-                  version {change.version}
+                  {change.version}
                 </h2>
                 <p className="text-text-secondary text-sm mb-4">{change.date}</p>
                 <ul className="list-disc pl-5 space-y-2">

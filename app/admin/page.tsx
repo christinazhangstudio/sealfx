@@ -77,7 +77,7 @@ export default function AdminPage() {
                 <div>
                   <h3 className="text-text-primary font-bold">Delete Sealift Account</h3>
                   <p className="text-text-secondary text-sm mt-1">
-                    Permanently delete your account and all associated data. This removes all eBay seller registrations, notification subscriptions, destinations, inbox messages, and notes.
+                    Permanently delete your account and all associated data. This removes all eBay seller registrations, notification subscriptions, destinations, and inbox messages.
                   </p>
                   <br />
                   <p className="text-text-secondary text-sm mt-1">

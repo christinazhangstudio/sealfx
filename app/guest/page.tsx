@@ -42,12 +42,6 @@ export default async function GuestPage(props: { searchParams: Promise<{ p?: str
         cta = "Sign In";
         blockTitle = "Smart Notifications";
         blockDesc = "Customize alerts and never miss important updates";
-    } else if (pathname.startsWith("/notes")) {
-        title = "Access Your Notes";
-        description = "Sign in to view and create personal notes";
-        cta = "Sign In";
-        blockTitle = "Notes & Reminders";
-        blockDesc = "Organize your thoughts and keep track of important reminders";
     } else if (pathname.startsWith("/inbox")) {
         title = "Unlock Your Inbox";
         description = "Sign in to read, reply, and manage important messages from your buyers and eBay contacts.";

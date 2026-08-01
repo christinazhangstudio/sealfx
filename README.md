@@ -59,7 +59,7 @@ apparently, `suppressHydrationWarning` is a common solution to Flash of Unstyled
   "endpoints": {
     "Listings": 20,
     "Payouts": 10,
-    "Notes": 12
+    "Inbox": 12
   },
   "lastReset": "2026-02-07T22:00:32.000Z"
 }

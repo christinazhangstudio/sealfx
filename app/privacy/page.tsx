@@ -50,9 +50,6 @@ export default function PrivacyPage() {
                     usernames involved.
                 </p>
                 <p>
-                    <strong>Notes.</strong> Anything you type into the Notes feature.
-                </p>
-                <p>
                     <strong>Images you upload.</strong> Photos you add in Create Listing are sent to
                     our AI service to generate a description. They are processed to produce that text
                     and are not stored afterwards.
@@ -133,7 +130,7 @@ export default function PrivacyPage() {
 
             <Section heading="How long we keep it">
                 <p>
-                    Account details, eBay keys, tokens, notes and stored notifications are kept until
+                    Account details, eBay keys, tokens and stored notifications are kept until
                     you delete them or delete your account. Short-lived security records expire
                     automatically: password reset links within an hour, sign-in security tokens within
                     a day.
@@ -142,13 +139,13 @@ export default function PrivacyPage() {
 
             <Section heading="Deleting your data">
                 <p>
-                    You can delete individual notes and notifications at any time. Removing a seller
+                    You can delete individual notifications at any time. Removing a seller
                     from the Add Sellers page deletes Sealift's stored tokens for that account and
                     ends its access.
                 </p>
                 <p>
                     Deleting your account from the Admin page removes your account, your eBay keys,
-                    your seller tokens, your notes and your notifications. It cannot be undone. One
+                    your seller tokens and your notifications. It cannot be undone. One
                     caveat we want to be explicit about: if another Sealift account has also
                     authorized the same eBay seller, that seller's stored notifications are retained
                     because they belong to that account too.

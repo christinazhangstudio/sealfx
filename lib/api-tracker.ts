@@ -19,7 +19,7 @@ const STORAGE_KEY = "sealfx_api_usage";
  *
  *  - A missing value used to mean "assume guest, block the request". That is
  *    exactly the state during the first render, so any page fetching from a
- *    mount-only effect got a synthetic 403 and never retried — Gallery, Notes
+ *    mount-only effect got a synthetic 403 and never retried — Gallery
  *    and Notifications broke on a fresh load, in incognito, or after clearing
  *    site data, and a manual refresh fixed it, which made it look random.
  *  - Persisting it to localStorage leaked across tabs: signing out in one tab
@@ -125,7 +125,6 @@ export async function trackedFetch(input: RequestInfo | URL, init?: RequestInit)
         [process.env.NEXT_PUBLIC_USERS_URI, "Users"],
         [process.env.NEXT_PUBLIC_LISTINGS_URI, "Listings"],
         [process.env.NEXT_PUBLIC_PAYOUTS_URI, "Payouts"],
-        [process.env.NEXT_PUBLIC_NOTES_URI, "Notes"],
         [process.env.NEXT_PUBLIC_ACCOUNT_URI, "Account"],
         [process.env.NEXT_PUBLIC_NOTIFICATIONS_TOPICS_URI, "Notification"],
         [process.env.NEXT_PUBLIC_TRANSACTION_SUMMARIES_URI, "Transaction Summaries"],

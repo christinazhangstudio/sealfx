@@ -22,6 +22,8 @@ interface Topic {
     authorizationScopes?: string[];
     supportedPayloads: SupportedPayload[];
     filterable: boolean;
+    canSubscribe: boolean;
+    availability: "available" | "application" | "not_authorized" | "unavailable";
 }
 
 interface TopicsResponse {
@@ -185,6 +187,13 @@ export default function NotificationsPage() {
 
             if (!response.ok) {
                 const text = await response.text();
+                if (response.status === 403) {
+                    setTopics(current => current.map(topic =>
+                        topic.topicId === topicId
+                            ? { ...topic, canSubscribe: false, availability: "not_authorized" }
+                            : topic
+                    ));
+                }
                 throw new Error(text || "Failed to subscribe");
             }
 
@@ -251,19 +260,19 @@ export default function NotificationsPage() {
 
                 {/* Feedback Messages */}
                 {(error || successMsg) && (
-                    <div className={`fixed bottom-24 right-4 left-4 sm:left-auto sm:right-8 sm:bottom-8 z-[var(--z-toast)] sm:max-w-md px-5 py-4 rounded-xl shadow-2xl transform transition-all duration-300 animate-in slide-in-from-bottom-5 ${error ? 'bg-error-bg border-l-4 border-error-border text-error-text' : 'bg-success-bg border-l-4 border-success-border text-success-text'
+                    <div className={`fixed bottom-24 right-4 left-4 sm:left-auto sm:right-8 sm:bottom-8 z-[var(--z-toast)] sm:max-w-md px-5 py-4 rounded-xl shadow-2xl transform transition-all duration-300 animate-in slide-in-from-bottom-5 ${error ? 'bg-error-bg text-error-text' : 'bg-success-bg text-success-text'
                         }`}>
-                        <div className="flex items-center gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
                             {error ? (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                             ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                 </svg>
                             )}
-                            <p className="font-medium">{error || successMsg}</p>
+                            <p className="min-w-0 whitespace-pre-wrap break-words font-medium">{error || successMsg}</p>
                         </div>
                     </div>
                 )}
@@ -323,6 +332,11 @@ export default function NotificationsPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                                 {topics.map((topic) => {
                                     const subscribed = isSubscribed(topic.topicId);
+                                    const availabilityLabel = topic.availability === "application"
+                                        ? "App-level"
+                                        : topic.availability === "not_authorized"
+                                            ? "Not authorized"
+                                            : "Unavailable";
 
                                     return (
                                         <div
@@ -336,11 +350,13 @@ export default function NotificationsPage() {
                                                 <h3 className="text-lg font-bold text-primary break-all pr-2">
                                                     {topic.topicId}
                                                 </h3>
-                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${topic.status === 'ENABLED'
+                                                <span className={`w-28 shrink-0 whitespace-nowrap rounded-full px-2 py-1 text-center text-xs font-medium ${topic.canSubscribe
                                                     ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                                                    : topic.availability === 'not_authorized'
+                                                        ? 'bg-error-bg text-error-text'
+                                                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
                                                     }`}>
-                                                    {topic.status}
+                                                    {topic.canSubscribe ? topic.status : availabilityLabel}
                                                 </span>
                                             </div>
 
@@ -366,7 +382,7 @@ export default function NotificationsPage() {
                                                             {pendingTopic === topic.topicId ? 'Unsubscribing...' : 'Unsubscribe'}
                                                         </button>
                                                     </div>
-                                                ) : (
+                                                ) : topic.canSubscribe ? (
                                                     <button
                                                         onClick={() => handleSubscribe(topic.topicId)}
                                                         disabled={pendingTopic === topic.topicId}
@@ -377,6 +393,23 @@ export default function NotificationsPage() {
                                                     >
                                                         {pendingTopic === topic.topicId ? 'Processing...' : 'Subscribe'}
                                                     </button>
+                                                ) : (
+                                                    <div className="space-y-1 text-center">
+                                                        <button
+                                                            type="button"
+                                                            disabled
+                                                            className="w-full cursor-not-allowed rounded-lg bg-gray-100 py-2.5 text-sm font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                                                        >
+                                                            {availabilityLabel}
+                                                        </button>
+                                                        <p className="text-xs leading-4 text-text-muted">
+                                                            {topic.availability === "application"
+                                                                ? "This topic is managed for the application, not an individual seller."
+                                                                : topic.availability === "not_authorized"
+                                                                    ? "The configured eBay permissions don’t grant access to this topic."
+                                                                    : "eBay is not currently accepting subscriptions to this topic."}
+                                                        </p>
+                                                    </div>
                                                 )}
 
                                                 <div className="pt-4 border-t border-border/50 text-xs text-text-muted space-y-2">
