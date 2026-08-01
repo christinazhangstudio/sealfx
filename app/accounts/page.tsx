@@ -7,6 +7,7 @@ import { trackedFetch as fetch } from "@/lib/api-tracker";
 import UserTableOfContents from "@/components/UserTableOfContents";
 import { formatCurrency } from "@/lib/format-utils";
 import { useUsers } from "@/components/UsersContext";
+import PageHeader from "@/components/PageHeader";
 
 interface AmountType {
   value: number;
@@ -215,9 +216,10 @@ export default function Accounts() {
       return (
         <div
           key={user}
-          className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
+          id={`user-section-${user}`}
+          className="seller-card"
         >
-          <h2 className="text-xl sm:text-3xl text-primary mb-4">{user} 🌸</h2>
+          <h2 className="seller-card-title">{user} 🌸</h2>
           {errors.length > 0 && (
             <p className="text-error-text text-lg mb-4">
               {errors.map((error, index) => (
@@ -242,9 +244,9 @@ export default function Accounts() {
       <div
         key={user}
         id={`user-section-${user}`}
-        className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
+        className="seller-card"
       >
-        <h2 className="text-xl sm:text-3xl text-primary mb-4">{user} 🌸</h2>
+        <h2 className="seller-card-title">{user} 🌸</h2>
         <p className="text-sm sm:text-xl text-primary mb-4">
           Current Balance: ${summary.CurrentBalance && typeof summary.CurrentBalance.value === 'number' ? formatCurrency(summary.CurrentBalance.value) : "0.00"} 💸
         </p>
@@ -300,8 +302,8 @@ export default function Accounts() {
 
   return (
     <div>
-      <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
-        <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center lg:text-left drop-shadow-sm font-heading break-words">Account Summaries</h1>
+      <div className="page-content-shell bg-background">
+        <PageHeader title="Account Summaries" />
         {!error && Object.keys(userAccounts).length > 0 && (
           <p className="text-lg sm:text-2xl text-primary mb-8">
             Total Balance: ${formatCurrency(calculateTotalAccountBalance())} 💰
@@ -310,12 +312,12 @@ export default function Accounts() {
         {userLoading.global ? (
           <p className="text-primary text-lg animate-pulse">Loading Users... </p>
         ) : users.length > 0 ? (
-          <div className="flex flex-col lg:flex-row gap-8 items-start">
+          <div className="space-y-6">
             <UserTableOfContents users={users} />
-            <div className="flex-1 w-full space-y-6">
+            <div className="w-full min-w-0 space-y-8">
               {users.map((user) =>
                 userLoading[user] ? (
-                  <p key={user} className="text-primary text-lg animate-pulse mb-8">
+                  <p key={user} id={`user-section-${user}`} className="text-primary text-lg animate-pulse mb-8">
                     {user}: Loading account summary...
                   </p>
                 ) : (
@@ -325,7 +327,7 @@ export default function Accounts() {
             </div>
           </div>
         ) : (
-          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+          <div className="seller-card">
             <p className="text-text-secondary text-lg">No users available. </p>
           </div>
         )}

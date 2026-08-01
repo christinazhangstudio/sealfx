@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import { useUsers } from "@/components/UsersContext";
+import PageHeader from "@/components/PageHeader";
 
 interface UsersResponse {
   users: string[];
@@ -230,14 +231,12 @@ export default function RegisterSellerPage() {
 
   return (
     <div
-      className={`min-h-screen flex justify-center bg-[var(--background)] pt-8 px-4 sm:px-6 lg:px-8 relative`}
+      className="page-content-shell bg-[var(--background)] relative"
     >
-      <div className={`max-w-md w-full space-y-6 ${showDeletePopup ? 'blur-sm' : ''}`}>
-          <div className="max-w-md w-full bg-surface rounded-xl shadow-md border border-border mb-8 p-8 transform transition-all duration-300 hover:shadow-xl mt-8 relative">
-            <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center drop-shadow-sm font-heading break-words">
-              add sellers
-            </h1>
-
+      <div className={`max-w-5xl mx-auto ${showDeletePopup ? 'blur-sm' : ''}`}>
+        <PageHeader title="Add Sellers" />
+        <div className="max-w-md w-full space-y-6">
+            <div className="w-full bg-surface rounded-xl shadow-md border border-border p-8 transform transition-all duration-300 hover:shadow-xl relative">
             <button
               onClick={startOAuthFlow}
               disabled={isLoading}
@@ -274,25 +273,25 @@ export default function RegisterSellerPage() {
             </button>
           </div>
 
-          {/* Notification Popup */}
-          {notification && (
-            <div className={`fixed top-20 left-1/2 -translate-x-1/2 z-[var(--z-toast)] w-[calc(100vw-2rem)] max-w-md px-5 py-3 rounded-md shadow-xl border-l-4 transition-all duration-500 ${notification.type === 'success'
-              ? 'bg-success-bg border-success-border text-success-text'
-              : 'bg-error-bg border-error-border text-error-text'
-              }`}>
-              <div className="flex items-center space-x-3">
-                {notification.type === 'success' ? (
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
-                ) : (
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                )}
-                <span className="font-medium">{notification.message}</span>
+            {/* Notification Popup */}
+            {notification && (
+              <div className={`fixed top-20 left-1/2 -translate-x-1/2 z-[var(--z-toast)] w-[calc(100vw-2rem)] max-w-md px-5 py-3 rounded-md shadow-xl border-l-4 transition-all duration-500 ${notification.type === 'success'
+                ? 'bg-success-bg border-success-border text-success-text'
+                : 'bg-error-bg border-error-border text-error-text'
+                }`}>
+                <div className="flex items-center space-x-3">
+                  {notification.type === 'success' ? (
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+                  ) : (
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                  )}
+                  <span className="font-medium">{notification.message}</span>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Second card */}
-          <div className="bg-surface rounded-lg border border-border mb-8 shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl">
+            {/* Second card */}
+            <div className="bg-surface rounded-lg border border-border shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl">
             <h2 className="text-2xl text-primary mb-6 text-center drop-shadow-sm font-heading">
               registered sellers
             </h2>
@@ -365,8 +364,9 @@ export default function RegisterSellerPage() {
                 No users available.
               </p>
             )}
-          </div>
+            </div>
         </div>
+      </div>
 
       {/* Delete Confirmation Popup */}
       {showDeletePopup && (

@@ -68,13 +68,10 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
   ];
 
   const moreLinks = [
-    { name: "Changelog", href: "/changelog" },
     { name: "Accounts", href: "/accounts" },
     { name: "Transactions", href: "/transaction" },
     { name: "Notifications", href: "/notifications" },
     { name: "Settings", href: "/settings" },
-    { name: "Terms", href: "/terms" },
-    { name: "Privacy", href: "/privacy" },
     { name: "Admin", href: "/admin" },
   ];
 

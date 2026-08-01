@@ -6,6 +6,7 @@ import LoginCtaBanner from "@/components/LoginCtaBanner";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import UserTableOfContents from "@/components/UserTableOfContents";
 import { formatCurrency } from "@/lib/format-utils";
+import PageHeader from "@/components/PageHeader";
 
 interface UserSummary {
   user: string;
@@ -99,25 +100,23 @@ export default function TransactionPage() {
 
   return (
     <div>
-          <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
-        <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center lg:text-left drop-shadow-sm font-heading break-words">
-          Transaction Summaries
-        </h1>
+          <div className="page-content-shell bg-background">
+        <PageHeader title="Transaction Summaries" />
         {loading ? (
           <p className="text-primary text-lg">Loading summaries... </p>
         ) : error ? (
           <p className="text-error-text text-lg">{error}</p>
         ) : summaries && summaries.length > 0 ? (
-          <div className="flex flex-col lg:flex-row gap-8 items-start">
+          <div className="space-y-6">
             <UserTableOfContents users={summaries.map(s => s.user)} />
-            <div className="flex-1 w-full space-y-5">
+            <div className="w-full min-w-0 space-y-8">
               {summaries.map((s, index) => (
                 <div
                   key={index}
                   id={`user-section-${s.user}`}
-                  className="bg-surface p-6 rounded-2xl shadow-md border border-border"
+                  className="seller-card"
                 >
-                  <h2 className="text-xl sm:text-3xl text-primary mb-4">{s.user} 🌸</h2>
+                  <h2 className="seller-card-title">{s.user} 🌸</h2>
                   <div className="overflow-x-auto -mx-2 px-2">
                     <table className="w-full text-base sm:text-2xl text-text-primary border-collapse">
                     <tbody>
@@ -174,7 +173,7 @@ export default function TransactionPage() {
             </div>
           </div>
         ) : (
-          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md">
+          <div className="seller-card">
             <p className="text-text-secondary text-lg">No summaries available. </p>
           </div>
         )}

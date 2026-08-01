@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import LoginCtaBanner from "@/components/LoginCtaBanner";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
+import PageHeader from "@/components/PageHeader";
 import { useUsers } from "@/components/UsersContext";
 
 interface SupportedPayload {
@@ -226,36 +227,30 @@ export default function NotificationsPage() {
     }
 
     return (
-        <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8 relative">
+        <div className="page-content-shell bg-background relative">
             <div className="max-w-7xl mx-auto space-y-8">
 
-                {/* Header & User Selection */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-border">
-                    <div>
-                        <h1 className="text-3xl sm:text-4xl lg:text-5xl text-primary font-heading mb-2">
-                            Notifications
-                        </h1>
-                        <p className="text-text-secondary text-sm sm:text-base">
-                            Manage notification subscriptions for your sellers.
-                        </p>
-                    </div>
+                <PageHeader
+                    title="Notifications"
+                    description="Manage notification subscriptions for your sellers."
+                    flush
+                />
 
-                    <div className="w-full md:w-72">
-                        <label htmlFor="user-select" className="block text-sm font-medium text-secondary mb-2">
-                            Select Seller
-                        </label>
-                        <select
-                            id="user-select"
-                            value={selectedUser}
-                            onChange={(e) => setSelectedUser(e.target.value)}
-                            className="w-full bg-surface border border-border text-text-primary rounded-lg p-3 ring-offset-background focus:ring-2 focus:ring-primary focus:outline-none transition-all"
-                        >
-                            <option value="" disabled>-- Select a Seller --</option>
-                            {users.map(user => (
-                                <option key={user} value={user}>{user}</option>
-                            ))}
-                        </select>
-                    </div>
+                <div className="w-full md:w-72">
+                    <label htmlFor="user-select" className="block text-sm font-medium text-secondary mb-2">
+                        Select Seller
+                    </label>
+                    <select
+                        id="user-select"
+                        value={selectedUser}
+                        onChange={(e) => setSelectedUser(e.target.value)}
+                        className="w-full bg-surface border border-border text-text-primary rounded-lg p-3 ring-offset-background focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                    >
+                        <option value="" disabled>-- Select a Seller --</option>
+                        {users.map(user => (
+                            <option key={user} value={user}>{user}</option>
+                        ))}
+                    </select>
                 </div>
 
                 {/* Feedback Messages */}

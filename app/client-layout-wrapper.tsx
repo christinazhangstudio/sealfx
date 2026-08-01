@@ -3,10 +3,12 @@
 import { useState, useEffect } from "react";
 
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import Image from "next/image";
 import NavMenu from "./navmenu";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
 import AiHelpButton from "@/components/AiHelpButton";
+import { footerLinks, isFooterPath, rememberReturnPath } from "@/lib/footer-links";
 
 function useIsMobile(breakpoint = 1024) {
     const [isMobile, setIsMobile] = useState(false);
@@ -28,13 +30,19 @@ export default function ClientLayoutWrapper({
     const pathname = usePathname();
     const isLoginPage = pathname?.startsWith("/login");
     const isRegisterPage = pathname?.startsWith("/register");
+    const isFooterPage = isFooterPath(pathname);
+    const usesMinimalLayout = isLoginPage || isRegisterPage || isFooterPage;
     const [isAiOpen, setIsAiOpen] = useState(false);
     const [aiPanelWidth, setAiPanelWidth] = useState(450);
     const [aiPanelHeight, setAiPanelHeight] = useState(350);
     const [isAiResizing, setIsAiResizing] = useState(false);
     const isMobile = useIsMobile();
 
-    const paddingStyle = isAiOpen && !isLoginPage
+    useEffect(() => {
+        if (usesMinimalLayout) setIsAiOpen(false);
+    }, [usesMinimalLayout]);
+
+    const paddingStyle = isAiOpen && !usesMinimalLayout
         ? isMobile
             ? { paddingBottom: `${aiPanelHeight}px` }
             : { paddingRight: `${aiPanelWidth}px` }
@@ -69,9 +77,9 @@ export default function ClientLayoutWrapper({
                                 {/* Center: Empty space */}
                                 <div></div>
 
-                                {/* Right: Tagline (only on normal pages) or Theme Switcher (on login/register) */}
+                                {/* Minimal pages match the Sign In header. */}
                                 <div className="flex items-center justify-end">
-                                    {(isLoginPage || isRegisterPage) ? (
+                                    {usesMinimalLayout ? (
                                         <ThemeSwitcher />
                                     ) : (
                                         <div className="hidden sm:block">
@@ -86,15 +94,34 @@ export default function ClientLayoutWrapper({
                     </div>
                 </div>
 
-                {!isLoginPage && !isRegisterPage && <NavMenu isMobile={isMobile} />}
+                {!usesMinimalLayout && <NavMenu isMobile={isMobile} />}
 
                 {/* Main content */}
-                <main className={`@container/main max-w-7xl px-4 sm:px-6 lg:px-8 py-8 border-0 w-full ${!isAiOpen ? 'mx-auto' : 'ml-0 lg:ml-8'}`}>
+                <main className={`@container/main max-w-7xl px-4 sm:px-6 lg:px-8 py-8 border-0 w-full ${!isAiOpen || usesMinimalLayout ? 'mx-auto' : 'ml-0 lg:ml-8'}`}>
                     {children}
                 </main>
 
+                <footer className="mt-auto border-t border-[var(--color-border)]/10 bg-[var(--color-surface)]/10 backdrop-blur-sm">
+                    <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-x-4 gap-y-1 px-4 py-3 text-center text-[10px] font-medium tracking-[0.2em] uppercase text-[var(--color-text-secondary)]/80 sm:px-6 lg:px-8">
+                        {footerLinks.map(({ label, href }) => (
+                            <Link
+                                key={href}
+                                href={href}
+                                onClick={() => {
+                                    if (!isFooterPage) {
+                                        rememberReturnPath(`${window.location.pathname}${window.location.search}${window.location.hash}`);
+                                    }
+                                }}
+                                className="rounded-sm underline decoration-dotted underline-offset-4 transition-colors hover:text-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/50"
+                            >
+                                {label}
+                            </Link>
+                        ))}
+                    </div>
+                </footer>
+
                 {/* Global AI Assistant Overlay */}
-                {!isLoginPage && (
+                {!usesMinimalLayout && (
                     <AiHelpButton isOpen={isAiOpen} setIsOpen={setIsAiOpen} panelWidth={aiPanelWidth} setPanelWidth={setAiPanelWidth} panelHeight={aiPanelHeight} setPanelHeight={setAiPanelHeight} isResizingState={isAiResizing} setIsResizing={setIsAiResizing} />
                 )}
             </>

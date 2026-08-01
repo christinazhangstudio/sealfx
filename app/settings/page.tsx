@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
+import PageHeader from "@/components/PageHeader";
 
 interface EbayConfig {
     appId: string;
@@ -125,22 +126,20 @@ export default function SettingsPage() {
     const field =
         "w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-primary placeholder:text-secondary/40";
     const label = "block text-sm font-semibold text-primary mb-2";
-    const card = "bg-surface p-8 rounded-3xl shadow-lg border border-border/50 space-y-6";
+    const card = "max-w-2xl bg-surface p-8 rounded-3xl shadow-lg border border-border/50 space-y-6";
 
     return (
-        <div className="min-h-screen p-4 sm:p-8">
-            <div className="max-w-2xl mx-auto space-y-8">
-                <div>
-                    <h1 className="text-4xl font-extrabold tracking-tight text-primary">Settings</h1>
-                    <p className="text-secondary text-lg mt-2">Your account and eBay connection.</p>
-                </div>
+        <div className="page-content-shell">
+            <div className="max-w-5xl mx-auto">
+                <PageHeader title="Settings" description="Your account and eBay connection." />
 
-                {loading ? (
-                    <p className="text-secondary">Loading settings…</p>
-                ) : loadError ? (
-                    <p className="text-error-text font-medium">{loadError}</p>
-                ) : (
-                    <>
+                <div className="max-w-2xl space-y-8">
+                    {loading ? (
+                        <p className="text-secondary">Loading settings…</p>
+                    ) : loadError ? (
+                        <p className="text-error-text font-medium">{loadError}</p>
+                    ) : (
+                        <>
                         <section className={card}>
                             <div>
                                 <h2 className="text-xl font-bold text-primary">Account</h2>
@@ -271,8 +270,9 @@ export default function SettingsPage() {
                                 </form>
                             )}
                         </section>
-                    </>
-                )}
+                        </>
+                    )}
+                </div>
             </div>
         </div>
     );

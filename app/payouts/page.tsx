@@ -13,6 +13,7 @@ import {
 import UserTableOfContents from "@/components/UserTableOfContents";
 import { formatCurrency } from "@/lib/format-utils";
 import { useUsers } from "@/components/UsersContext";
+import PageHeader from "@/components/PageHeader";
 
 
 
@@ -107,9 +108,10 @@ export default function Payouts() {
       return (
         <div
           key={user}
-          className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
+          id={`user-section-${user}`}
+          className="seller-card"
         >
-          <h2 className="text-xl sm:text-3xl text-primary mb-4">{user} 🌸</h2>
+          <h2 className="seller-card-title">{user} 🌸</h2>
           <p className="text-text-secondary text-lg">
             No payouts available for {user}.
           </p>
@@ -126,9 +128,9 @@ export default function Payouts() {
       <div
         key={user}
         id={`user-section-${user}`}
-        className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
+        className="seller-card"
       >
-        <h2 className="text-xl sm:text-3xl text-primary mb-4">{user} 🌸</h2>
+        <h2 className="seller-card-title">{user} 🌸</h2>
         {total > 0 && (
           <p className="text-sm sm:text-xl text-primary mb-4">
             Total: ${formatCurrency(calculateUserPayoutTotal(payouts))} 💸
@@ -242,11 +244,11 @@ export default function Payouts() {
 
   return (
     <>
-      <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
-        <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-2 lg:mb-4 text-center lg:text-left drop-shadow-sm font-heading break-words">Payouts</h1>
-        <p className="text-sm text-text-secondary mb-6 lg:mb-10 text-center lg:text-left italic">
-          Note: Only payouts less than 5 years in the past can be retrieved.
-        </p>
+      <div className="page-content-shell bg-background">
+        <PageHeader
+          title="Payouts"
+          description={<span className="italic">Note: Only payouts less than 5 years in the past can be retrieved.</span>}
+        />
         {Object.keys(userPayouts).length > 0 && (
           <p className="text-lg sm:text-2xl text-primary mb-8">
             Total: ${formatCurrency(calculateTotalPayoutAmount())} 💰
@@ -254,20 +256,21 @@ export default function Payouts() {
         )}
         {error && <p className="text-error-text text-lg mb-4">{error}</p>}
         {userLoading.global ? (
-          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
+          <div className="seller-card">
             <p className="text-primary text-lg">Loading Users... </p>
           </div>
         ) : users.length > 0 ? (
-          <div className="flex flex-col lg:flex-row gap-8 items-start">
+          <div className="space-y-6">
             <UserTableOfContents users={users} />
-            <div className="flex-1 w-full min-w-0 space-y-6">
+            <div className="w-full min-w-0 space-y-8">
               {users.map((user) =>
                 userLoading[user] ? (
                   <div
                     key={user}
-                    className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
+                    id={`user-section-${user}`}
+                    className="seller-card"
                   >
-                    <h2 className="text-xl sm:text-3xl text-primary mb-4">{user} 🌸</h2>
+                    <h2 className="seller-card-title">{user} 🌸</h2>
                     <p className="text-primary text-lg">Loading payouts... </p>
                   </div>
                 ) : (
@@ -277,7 +280,7 @@ export default function Payouts() {
             </div>
           </div>
         ) : (
-          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
+          <div className="seller-card">
             <p className="text-text-secondary text-lg">No users available. </p>
           </div>
         )}

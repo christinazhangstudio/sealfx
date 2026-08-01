@@ -74,11 +74,11 @@ export default function RegisterPage() {
             <div className="w-full max-w-6xl grid grid-cols-1 @[950px]:grid-cols-2 gap-12 items-center">
                 {/* Left Side: Registration Form */}
                 <div className="bg-[var(--color-surface)]/30 backdrop-blur-xl rounded-[1.5rem] p-8 shadow-sm border border-[var(--color-border)] relative z-10 hover:border-[var(--color-primary)]/30 transition-all duration-500 group group/form">
-                    <div className="text-center mb-8">
-                        <h1 className="text-2xl font-bold text-[var(--color-primary)] tracking-tight mb-1">
+                    <div className="flex flex-col items-center justify-center text-center mb-8 w-full">
+                        <h1 className="page-title text-2xl font-bold text-[var(--color-primary)] tracking-tight mb-1">
                             create an account
                         </h1>
-                        <p className="text-[var(--color-text-secondary)] text-[10px] font-bold uppercase tracking-[0.2em] mt-2">
+                        <p className="text-[var(--color-text-secondary)] text-[10px] font-bold uppercase tracking-[0.2em] mt-2 mx-auto max-w-[90%]">
                             Sealift Multi-Store Integration
                         </p>
                     </div>
@@ -191,13 +191,6 @@ export default function RegisterPage() {
                             </Link>
                         </div>
                     </form>
-
-                            <p className="mt-6 text-center text-[10px] text-[var(--color-text-secondary)]/70 leading-relaxed">
-                                By creating an account you agree to our{" "}
-                                <a href="/terms" className="underline hover:text-[var(--color-primary)]">Terms of Service</a>
-                                {" "}and{" "}
-                                <a href="/privacy" className="underline hover:text-[var(--color-primary)]">Privacy Policy</a>.
-                            </p>
                 </div>
 
                 {/* Right Side: Tutorial Slideshow (Responsive to AI panel) */}

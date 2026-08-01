@@ -15,6 +15,7 @@ import { Inconsolata } from "next/font/google";
 import { useUsers } from "@/components/UsersContext";
 import { formatCurrency } from "@/lib/format-utils";
 import { Line } from "react-chartjs-2";
+import PageHeader from "@/components/PageHeader";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -100,8 +101,8 @@ const renderUserChart = (user: string, chartData: any) => {
   const gridColor = style?.getPropertyValue("--color-chart-axis-grid").trim() || "#e0e0e040";
 
   return (
-    <div className="chart-container bg-surface p-4 sm:p-6 md:p-8 rounded-lg shadow-md border border-border container-inline-size mb-8">
-      <h2 className="text-lg sm:text-2xl text-primary mb-4">{user} 🌸</h2>
+    <div className="seller-card">
+      <h2 className="seller-card-title">{user} 🌸</h2>
       <div className="relative h-[350px] sm:h-[450px] md:h-[500px]">
         <Line
           data={chartData}
@@ -311,12 +312,24 @@ export default function ChartsPage() {
 
       const chartData = combineChartData(listingData, payoutData, colors);
       setUserCharts((prev) => ({ ...prev, [user]: chartData as any }));
-      setDataLoading((prev) => ({ ...prev, [user]: false }));
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : `Error fetching data for ${user}`
-      );
-      setDataLoading((prev) => ({ ...prev, [user]: false }));
+      // A new Apply or React's development remount can supersede this crawl.
+      // Browser abort errors are expected control flow, not a user-facing API
+      // failure (some runtimes report them as a TypeError instead of AbortError).
+      if (signal?.aborted || (err as Error)?.name === "AbortError") return;
+
+      if (err instanceof ReauthRequiredError) {
+        setError(`${err.user}: ${err.message}`);
+      } else {
+        setError(
+          err instanceof Error ? err.message : `Error fetching data for ${user}`
+        );
+      }
+    } finally {
+      // The replacement crawl owns this user's loading state after an abort.
+      if (!signal?.aborted) {
+        setDataLoading((prev) => ({ ...prev, [user]: false }));
+      }
     }
   };
 
@@ -420,31 +433,8 @@ export default function ChartsPage() {
 
   return (
     <div>
-      <style jsx>{`
-        .container-inline-size {
-          container-type: inline-size;
-        }
-        @container (min-width: 800px) {
-          .chart-container {
-            max-width: 896px;
-            margin-left: auto;
-            margin-right: auto;
-          }
-        }
-        @supports not (container-type: inline-size) {
-          @media (min-width: 1024px) {
-            .chart-container {
-              max-width: 896px;
-              margin-left: auto;
-              margin-right: auto;
-            }
-          }
-        }
-      `}</style>
-      <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
-        <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center lg:text-left drop-shadow-sm font-heading break-words">
-          Charts
-        </h1>
+      <div className="page-content-shell bg-background">
+        <PageHeader title="Charts" />
         <div className="mb-8 flex flex-col lg:flex-row gap-4 items-center xl:items-center">
           <div className="flex flex-wrap justify-center xl:justify-start gap-4">
             <div className="flex items-center gap-2 bg-surface rounded-lg shadow-sm border border-border p-1">
@@ -470,24 +460,24 @@ export default function ChartsPage() {
         {dateError && <p className="text-error-text text-lg mb-4">{dateError}</p>}
         {error && <p className="text-error-text text-lg mb-4">{error}</p>}
         {usersLoading ? (
-          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
+          <div className="seller-card">
             <p className="text-primary text-lg">Loading Users... </p>
           </div>
         ) : users.length > 0 ? (
-          <div className="flex flex-col xl:flex-row gap-8 items-start">
+          <div className="space-y-6">
             <UserTableOfContents users={users} />
-            <div className="flex-1 w-full min-w-0">
+            <div className="w-full min-w-0">
               {Object.keys(dataLoading).length > 0 && Object.values(dataLoading).some(v => v) ? (
-                <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
+                <div className="seller-card">
                   <p className="text-primary text-lg">Loading Charts...</p>
                 </div>
               ) : (
-                <div>
+                <div className="space-y-8">
                   {users.map((user) => (
                     <div key={user} id={`user-section-${user}`}>
                       {dataLoading[user] ? (
-                        <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
-                          <h2 className="text-lg sm:text-2xl text-primary mb-4">{user} 🌸</h2>
+                        <div className="seller-card">
+                          <h2 className="seller-card-title">{user} 🌸</h2>
                           <p className="text-primary text-lg">Loading Data... </p>
                         </div>
                       ) : userCharts[user] &&
@@ -498,8 +488,8 @@ export default function ChartsPage() {
                         ) ? (
                         renderUserChart(user, userCharts[user])
                       ) : (
-                        <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
-                          <h2 className="text-lg sm:text-2xl text-primary mb-4">{user} 🌸</h2>
+                        <div className="seller-card">
+                          <h2 className="seller-card-title">{user} 🌸</h2>
                           <p className="text-text-secondary text-lg">
                             No data for {user}.
                           </p>
@@ -512,7 +502,7 @@ export default function ChartsPage() {
             </div>
           </div>
         ) : (
-          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
+          <div className="seller-card">
             <p className="text-text-secondary text-lg">No users available. </p>
           </div>
         )}

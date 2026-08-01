@@ -105,7 +105,7 @@ export default function ResetPasswordPage() {
     return (
         <div className="min-h-screen flex items-center justify-center p-6">
             <div className="w-full max-w-md bg-[var(--color-surface)]/60 border border-[var(--color-border)] rounded-2xl p-8 space-y-6">
-                <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Choose a new password</h1>
+                <h1 className="page-title text-2xl font-bold text-[var(--color-text-primary)]">Choose a new password</h1>
                 <Suspense fallback={<p className="text-sm text-[var(--color-text-secondary)]">Loading…</p>}>
                     <ResetPasswordForm />
                 </Suspense>

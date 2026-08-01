@@ -62,11 +62,11 @@ export default function LoginPage() {
     return (
         <div className="flex items-center justify-center py-20 px-4">
             <div className="w-full max-w-sm bg-[var(--color-surface)]/30 backdrop-blur-xl rounded-[1.5rem] p-8 shadow-sm border border-[var(--color-border)] relative z-10 hover:border-[var(--color-primary)]/30 transition-all duration-500 group">
-                <div className="text-center mb-8">
-                    <h1 className="text-2xl font-bold text-[var(--color-primary)] tracking-tight mb-1">
+                <div className="flex flex-col items-center justify-center text-center mb-8 w-full">
+                    <h1 className="page-title text-2xl font-bold text-[var(--color-primary)] tracking-tight mb-1">
                         sign in
                     </h1>
-                    <p className="text-[var(--color-text-secondary)] text-[10px] font-bold uppercase tracking-[0.2em]">
+                    <p className="text-[var(--color-text-secondary)] text-[10px] font-bold uppercase tracking-[0.2em] mx-auto max-w-[90%]">
                         to your sealift account
                     </p>
                 </div>
@@ -170,12 +170,6 @@ export default function LoginPage() {
                     </div>
                 </form>
 
-                <p className="mt-8 text-center text-[10px] text-[var(--color-text-secondary)]/70 leading-relaxed">
-                    By signing in you agree to our{" "}
-                    <Link href="/terms" className="underline hover:text-[var(--color-primary)]">Terms of Service</Link>
-                    {" "}and{" "}
-                    <Link href="/privacy" className="underline hover:text-[var(--color-primary)]">Privacy Policy</Link>.
-                </p>
             </div>
         </div>
     );

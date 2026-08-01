@@ -13,6 +13,7 @@ import {
   type Listings,
 } from "@/lib/ebay-data";
 import UserTableOfContents from "@/components/UserTableOfContents";
+import PageHeader from "@/components/PageHeader";
 
 
 
@@ -324,10 +325,9 @@ export default function ListingsPage() {
     return (
       <div
         key={user}
-        id={`user-section-${user}`}
-        className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
+        className="seller-card"
       >
-        <h2 className="text-lg sm:text-2xl text-primary mb-4">{user} 🌸</h2>
+        <h2 className="seller-card-title">{user} 🌸</h2>
         <p className="text-base sm:text-xl text-primary mb-8">
           Total Items: {filteredItems.length} 📦
         </p>
@@ -380,12 +380,8 @@ export default function ListingsPage() {
 
   return (
     <>
-          <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 lg:mb-10 gap-4">
-          <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary text-center sm:text-left drop-shadow-sm font-heading break-words">
-            Listing Gallery
-          </h1>
-        </div>
+          <div className="page-content-shell bg-background">
+        <PageHeader title="Listing Gallery" />
         <div className="mb-8 flex flex-col lg:flex-row gap-6 items-center lg:items-center lg:flex-wrap">
           <div className="flex flex-wrap justify-center lg:justify-start gap-4">
             <div className="flex items-center rounded-lg shadow-sm border border-border overflow-hidden focus-within:ring-2 focus-within:ring-primary transition-all">
@@ -471,18 +467,18 @@ export default function ListingsPage() {
         {dateError && <p className="text-error-text text-lg mb-4">{dateError}</p>}
         {error && <p className="text-error-text text-lg mb-4">{error}</p>}
         {userLoading.global ? (
-          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
+          <div className="seller-card">
             <p className="text-primary text-lg">Loading Users... </p>
           </div>
         ) : users.length > 0 ? (
-          <div className="flex flex-col lg:flex-row gap-8 items-start">
+          <div className="space-y-6">
             <UserTableOfContents users={users} />
-            <div className="flex-1 w-full">
+            <div className="w-full min-w-0 space-y-8">
               {users.map((user) => (
-                <div key={user}>
+                <div key={user} id={`user-section-${user}`}>
                   {userLoading[user] ? (
-                    <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
-                      <h2 className="text-lg sm:text-2xl text-primary mb-4">{user} 🌸</h2>
+                    <div className="seller-card">
+                      <h2 className="seller-card-title">{user} 🌸</h2>
                       <p className="text-primary text-lg">
                         Loading Listings...
                       </p>
@@ -496,8 +492,8 @@ export default function ListingsPage() {
                       clientPageSize
                     )
                   ) : (
-                    <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
-                      <h2 className="text-lg sm:text-2xl text-primary mb-4">{user} 🌸</h2>
+                    <div className="seller-card">
+                      <h2 className="seller-card-title">{user} 🌸</h2>
                       <p className="text-text-secondary text-lg">
                         No listings for {user}.
                       </p>
@@ -539,7 +535,7 @@ export default function ListingsPage() {
             </div>
           </div>
         ) : (
-          <div className="mb-8 p-6 bg-surface rounded-lg shadow-md border border-border">
+          <div className="seller-card">
             <p className="text-text-secondary text-lg">No listings available. </p>
           </div>
         )}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
+import PageHeader from "@/components/PageHeader";
 
 export default function DebugPage() {
   const [destinations, setDestinations] = useState<any>(null);
@@ -73,20 +74,16 @@ export default function DebugPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8 relative">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="page-content-shell bg-background relative">
+      <div className="max-w-7xl mx-auto">
 
-        <div className="pb-6 border-b border-border">
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl text-primary font-heading mb-2">
-            Raw Endpoint Data
-          </h1>
-          <p className="text-text-secondary text-sm sm:text-base">
-            Admin debug view for raw JSON responses from background endpoints.
-          </p>
-        </div>
+        <PageHeader
+          title="Raw Endpoint Data"
+          description="Admin debug view for raw JSON responses from background endpoints."
+        />
 
         {error && (
-          <div className="bg-error-bg border-l-4 border-error-border text-error-text px-6 py-4 rounded-xl shadow-md">
+          <div className="mb-8 bg-error-bg border-l-4 border-error-border text-error-text px-6 py-4 rounded-xl shadow-md">
             <p className="font-medium">{error}</p>
           </div>
         )}

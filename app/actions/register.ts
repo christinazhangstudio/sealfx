@@ -48,7 +48,7 @@ export async function registerUser(formData: FormData) {
             if (res.status === 409) {
                 return { error: "An account with this email already exists." };
             }
-            return { error: "Registration failed on the backend server." };
+            return { error: "Registration failed on the backend server. Are the keys correct?" };
         }
 
         return { success: true };

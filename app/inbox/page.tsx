@@ -1,9 +1,35 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import Link from "next/link";
 import { useNotifications } from "@/components/NotificationContext";
-import LoginCtaBanner from "@/components/LoginCtaBanner";
+import { trackedFetch as fetch } from "@/lib/api-tracker";
+import PageHeader from "@/components/PageHeader";
+
+interface Subscription {
+    subscriptionId: string;
+    topicId: string;
+    status: string;
+}
+
+interface SubscriptionsResponse {
+    subscriptions?: Subscription[];
+}
+
+interface SubscriptionTestResponse {
+    notificationId?: string;
+}
+
+interface PendingTest {
+    user: string;
+    topicId: string;
+    notificationId: string;
+}
+
+type TestFeedback = {
+    kind: "pending" | "success" | "error";
+    message: string;
+};
 
 function BellIcon({ count }: { count: number }) {
     return (
@@ -35,15 +61,50 @@ function BellIcon({ count }: { count: number }) {
 }
 
 export default function InboxPage() {
-    const { data: session } = useSession();
     const [mounted, setMounted] = useState(false);
     useEffect(() => setMounted(true), []);
     const { users, envelopes, unreadCount, selectMessage: contextSelectMessage, trashMessage, deleteMessage, loadingUsers, error } = useNotifications();
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<"inbox" | "trash">("inbox");
+    const [testingDelivery, setTestingDelivery] = useState(false);
+    const [testFeedback, setTestFeedback] = useState<TestFeedback | null>(null);
+    const [pendingTests, setPendingTests] = useState<PendingTest[]>([]);
+
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
+    const usersBaseUri = process.env.NEXT_PUBLIC_NOTIFICATIONS_USERS_BASE_URI;
+    const subscriptionsUri = process.env.NEXT_PUBLIC_NOTIFICATIONS_SUBSCRIPTIONS_URI;
 
     const displayedEnvelopes = envelopes.filter(e => activeTab === 'trash' ? e.trashed : !e.trashed);
     const selectedEnvelope = envelopes.find((e) => e.id === selectedId) ?? null;
+
+    useEffect(() => {
+        if (pendingTests.length === 0) return;
+
+        const allDelivered = pendingTests.every((test) =>
+            envelopes.some((envelope) => envelope.id === test.notificationId),
+        );
+        if (!allDelivered) return;
+
+        setTestFeedback({
+            kind: "success",
+            message: `End-to-end test passed. ${pendingTests.length} eBay test notification${pendingTests.length === 1 ? "" : "s"} arrived in the Inbox.`,
+        });
+        setPendingTests([]);
+    }, [envelopes, pendingTests]);
+
+    useEffect(() => {
+        if (pendingTests.length === 0) return;
+
+        const timer = window.setTimeout(() => {
+            setTestFeedback({
+                kind: "error",
+                message: `eBay accepted the test, but ${pendingTests.length === 1 ? "it has" : "they have"} not reached the Inbox after 45 seconds. Check the destination status and inbound webhook logs.`,
+            });
+            setPendingTests([]);
+        }, 45_000);
+
+        return () => window.clearTimeout(timer);
+    }, [pendingTests]);
 
     const selectMessage = (id: string, user: string) => {
         setSelectedId(id);
@@ -64,43 +125,182 @@ export default function InboxPage() {
         }
     };
 
+    const handleTestDelivery = async () => {
+        if (testingDelivery) return;
+        if (!apiBaseUrl || !usersBaseUri || !subscriptionsUri) {
+            setTestFeedback({ kind: "error", message: "Notification API configuration is incomplete." });
+            return;
+        }
+        if (users.length === 0) {
+            setTestFeedback({ kind: "error", message: "Connect a seller before testing notification delivery." });
+            return;
+        }
+
+        setTestingDelivery(true);
+        setTestFeedback(null);
+        setPendingTests([]);
+
+        const results = await Promise.all(users.map(async (user) => {
+            let attemptedTopic = "";
+            try {
+                const seller = encodeURIComponent(user);
+                const subscriptionsResponse = await fetch(
+                    `${apiBaseUrl}/${usersBaseUri}/${seller}/${subscriptionsUri}`,
+                );
+                if (!subscriptionsResponse.ok) {
+                    const detail = (await subscriptionsResponse.text()).trim();
+                    throw new Error(detail || `could not load subscriptions (${subscriptionsResponse.status})`);
+                }
+
+                const data: SubscriptionsResponse = await subscriptionsResponse.json();
+                const subscription = data.subscriptions
+                    ?.filter((item) => item.status === "ENABLED")
+                    .sort((left, right) => {
+                        const leftPriority = left.topicId === "NEW_MESSAGE" ? 0 : 1;
+                        const rightPriority = right.topicId === "NEW_MESSAGE" ? 0 : 1;
+                        return leftPriority - rightPriority
+                            || left.topicId.localeCompare(right.topicId)
+                            || left.subscriptionId.localeCompare(right.subscriptionId);
+                    })[0];
+                if (!subscription) return { user, outcome: "skipped" as const };
+                attemptedTopic = subscription.topicId;
+
+                const testResponse = await fetch(
+                    `${apiBaseUrl}/${usersBaseUri}/${seller}/${subscriptionsUri}/${encodeURIComponent(subscription.subscriptionId)}/test`,
+                    { method: "POST" },
+                );
+                if (!testResponse.ok) {
+                    const detail = (await testResponse.text()).trim();
+                    throw new Error(detail || `eBay rejected the test (${testResponse.status})`);
+                }
+
+                const testData: SubscriptionTestResponse = await testResponse.json();
+                return {
+                    user,
+                    topicId: subscription.topicId,
+                    notificationId: testData.notificationId || "",
+                    outcome: "sent" as const,
+                };
+            } catch (err) {
+                return {
+                    user,
+                    topicId: attemptedTopic,
+                    outcome: "failed" as const,
+                    detail: err instanceof Error ? err.message : "test failed",
+                };
+            }
+        }));
+
+        const sent = results.filter((result) => result.outcome === "sent");
+        const skipped = results.filter((result) => result.outcome === "skipped");
+        const failed = results.filter((result) => result.outcome === "failed");
+
+        if (failed.length > 0) {
+            const successfulPrefix = sent.length > 0
+                ? `eBay accepted ${sent.length} test${sent.length === 1 ? "" : "s"}. `
+                : "";
+            setTestFeedback({
+                kind: "error",
+                message: `${successfulPrefix}Could not test ${failed.map((result) => `${result.user}${result.topicId ? ` (${result.topicId})` : ""}: ${result.detail}`).join("; ")}`,
+            });
+        } else if (sent.length === 0) {
+            setTestFeedback({
+                kind: "error",
+                message: "No enabled subscriptions were found. Subscribe to a notification topic first.",
+            });
+        } else {
+            const skippedSuffix = skipped.length > 0
+                ? ` ${skipped.length} seller${skipped.length === 1 ? " has" : "s have"} no enabled subscription.`
+                : "";
+            const traceableTests = sent
+                .filter((result) => result.notificationId !== "")
+                .map((result) => ({
+                    user: result.user,
+                    topicId: result.topicId,
+                    notificationId: result.notificationId,
+                }));
+            setPendingTests(traceableTests);
+            setTestFeedback({
+                kind: traceableTests.length > 0 ? "pending" : "success",
+                message: `eBay accepted ${sent.length} test${sent.length === 1 ? "" : "s"} for ${sent.map((result) => `${result.user} (${result.topicId})`).join(", ")}. ${traceableTests.length > 0 ? "Waiting for Inbox delivery…" : "Watch the Inbox for delivery."}${skippedSuffix}`,
+            });
+        }
+
+        setTestingDelivery(false);
+    };
+
     if (!mounted) {
         return null;
     }
 
     return (
-        <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8 relative">
+        <div className="page-content-shell bg-background relative">
             <div className="max-w-7xl mx-auto space-y-8 h-full flex flex-col">
 
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-border flex-shrink-0">
-                    <div>
-                        <h1 className="text-3xl sm:text-4xl lg:text-5xl text-primary font-heading mb-2">
-                            Inbox
-                        </h1>
-                        <p className="text-text-secondary text-sm sm:text-base">
-                            Live notifications across all sellers.
+                <PageHeader
+                    title="Inbox"
+                    flush
+                    description={(
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <span>Live notifications across all sellers.</span>
+                            <Link
+                                href="/notifications"
+                                className="rounded-sm text-xs font-medium text-text-muted underline decoration-dotted underline-offset-4 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                            >
+                                Manage Notifications
+                            </Link>
+                            <span className="group relative inline-flex">
+                                <button
+                                    type="button"
+                                    onClick={handleTestDelivery}
+                                    disabled={testingDelivery || loadingUsers || users.length === 0}
+                                    aria-describedby="test-delivery-tooltip"
+                                    className="rounded-sm text-xs font-medium text-text-muted underline decoration-dotted underline-offset-4 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    {testingDelivery ? "Sending test…" : "Test delivery"}
+                                </button>
+                                <span
+                                    id="test-delivery-tooltip"
+                                    role="tooltip"
+                                    className="pointer-events-none invisible absolute left-0 top-full z-20 mt-2 w-72 rounded-lg border border-border bg-surface px-3 py-2 text-left text-xs font-normal leading-relaxed text-text-secondary opacity-0 shadow-lg transition-opacity sm:left-1/2 sm:-translate-x-1/2 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100"
+                                >
+                                    Sends one eBay test per seller, preferring the NEW_MESSAGE subscription. Sealift then waits up to 45 seconds for the exact test notification to arrive here.
+                                </span>
+                            </span>
+                        </div>
+                    )}
+                >
+                    {testFeedback && (
+                        <p
+                            role="status"
+                            className={`max-w-2xl whitespace-pre-wrap break-words text-xs ${testFeedback.kind === "success"
+                                ? "text-success-text"
+                                : testFeedback.kind === "pending"
+                                    ? "text-primary"
+                                    : "text-error-text"
+                                }`}
+                        >
+                            {testFeedback.message}
                         </p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        {/* Bell */}
-                        <BellIcon count={unreadCount} />
-                        {/* User pill badges */}
-                        {loadingUsers ? (
-                            <div className="h-6 w-40 bg-surface rounded-full animate-pulse" />
-                        ) : (
-                            <div className="flex flex-wrap gap-2">
-                                {users.map((u) => (
-                                    <span
-                                        key={u}
-                                        className="text-xs font-mono bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded-full"
-                                    >
-                                        {u}
-                                    </span>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                    )}
+                </PageHeader>
+
+                <div className="flex items-center gap-4">
+                    <BellIcon count={unreadCount} />
+                    {loadingUsers ? (
+                        <div className="h-6 w-40 bg-surface rounded-full animate-pulse" />
+                    ) : (
+                        <div className="flex flex-wrap gap-2">
+                            {users.map((u) => (
+                                <span
+                                    key={u}
+                                    className="text-xs font-mono bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded-full"
+                                >
+                                    {u}
+                                </span>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {error && (

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import LoginCtaBanner from "@/components/LoginCtaBanner";
 import { signOut } from "next-auth/react";
+import PageHeader from "@/components/PageHeader";
 
 export default function AdminPage() {
   const { data: session } = useSession();
@@ -54,10 +55,8 @@ export default function AdminPage() {
 
   return (
     <div>
-          <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
-        <h1 className="text-2xl sm:text-3xl lg:text-5xl text-primary mb-6 lg:mb-10 text-center lg:text-left drop-shadow-sm font-heading break-words">
-          Admin
-        </h1>
+          <div className="page-content-shell bg-background">
+        <PageHeader title="Admin" />
 
         <div className="max-w-2xl space-y-8">
           {/* Delete Account */}

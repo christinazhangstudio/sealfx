@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { generateListingDescription } from "./actions";
+import PageHeader from "@/components/PageHeader";
 
 // Downscale client-side before sending to the server action: full-resolution
 // photos base64-encode past Next's server-action body limit (the action then
@@ -177,12 +178,12 @@ export default function CreateListing() {
   };
 
   return (
-    <div className="min-h-screen p-4 sm:p-8 @container">
-      <div className="max-w-5xl mx-auto space-y-8">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-4xl font-extrabold tracking-tight text-primary drop-shadow-sm">Create Listing</h1>
-          <p className="text-secondary text-lg">Upload a photo and let AI draft the listing copy, then copy it wherever you need it.</p>
-        </div>
+    <div className="page-content-shell @container">
+      <div className="max-w-5xl mx-auto">
+        <PageHeader
+          title="Create Listing"
+          description="Upload a photo and let AI draft the listing copy, then copy it wherever you need it."
+        />
 
         <div className="grid @4xl:grid-cols-2 gap-8 items-start">
           {/* Left Column: Image Upload Area */}
