@@ -219,7 +219,7 @@ export default function Accounts() {
           id={`user-section-${user}`}
           className="seller-card"
         >
-          <h2 className="seller-card-title">{user} 🌸</h2>
+          <h2 className="seller-card-title">{user} </h2>
           {errors.length > 0 && (
             <p className="text-error-text text-lg mb-4">
               {errors.map((error, index) => (
@@ -246,7 +246,7 @@ export default function Accounts() {
         id={`user-section-${user}`}
         className="seller-card"
       >
-        <h2 className="seller-card-title">{user} 🌸</h2>
+        <h2 className="seller-card-title">{user}</h2>
         <p className="text-sm sm:text-xl text-primary mb-4">
           Current Balance: ${summary.CurrentBalance && typeof summary.CurrentBalance.value === 'number' ? formatCurrency(summary.CurrentBalance.value) : "0.00"} 💸
         </p>

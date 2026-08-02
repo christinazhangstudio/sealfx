@@ -116,7 +116,7 @@ export default function TransactionPage() {
                   id={`user-section-${s.user}`}
                   className="seller-card"
                 >
-                  <h2 className="seller-card-title">{s.user} 🌸</h2>
+                  <h2 className="seller-card-title">{s.user} ⟢</h2>
                   <div className="overflow-x-auto -mx-2 px-2">
                     <table className="w-full text-base sm:text-2xl text-text-primary border-collapse">
                     <tbody>

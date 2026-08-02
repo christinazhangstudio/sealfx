@@ -221,7 +221,7 @@ export default function NotificationsPage() {
     if (loadingTopics || loadingUsers) {
         return (
             <div className="min-h-screen bg-background p-8 flex items-center justify-center">
-                <p className="text-xl text-primary animate-pulse">Loading... 🌸</p>
+                <p className="text-xl text-primary animate-pulse">Loading... ⟢</p>
             </div>
         );
     }

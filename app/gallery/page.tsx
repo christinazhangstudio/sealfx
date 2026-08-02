@@ -327,7 +327,7 @@ export default function ListingsPage() {
         key={user}
         className="seller-card"
       >
-        <h2 className="seller-card-title">{user} 🌸</h2>
+        <h2 className="seller-card-title">{user} ⟢</h2>
         <p className="text-base sm:text-xl text-primary mb-8">
           Total Items: {filteredItems.length} 📦
         </p>
@@ -478,7 +478,7 @@ export default function ListingsPage() {
                 <div key={user} id={`user-section-${user}`}>
                   {userLoading[user] ? (
                     <div className="seller-card">
-                      <h2 className="seller-card-title">{user} 🌸</h2>
+                      <h2 className="seller-card-title">{user} ⟢</h2>
                       <p className="text-primary text-lg">
                         Loading Listings...
                       </p>
@@ -493,7 +493,7 @@ export default function ListingsPage() {
                     )
                   ) : (
                     <div className="seller-card">
-                      <h2 className="seller-card-title">{user} 🌸</h2>
+                      <h2 className="seller-card-title">{user}  ⟢</h2>
                       <p className="text-text-secondary text-lg">
                         No listings for {user}.
                       </p>

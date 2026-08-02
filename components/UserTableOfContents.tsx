@@ -71,7 +71,7 @@ export default function UserTableOfContents({ users }: UserTableOfContentsProps)
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7" />
                     </svg>
-                    <span className="max-w-0 overflow-hidden group-hover:max-w-xs group-hover:ml-2 transition-all duration-300 font-medium">Users</span>
+                    <span className="max-w-0 overflow-hidden group-hover:max-w-xs group-hover:ml-2 transition-all duration-300">Users</span>
                 </button>
 
                 {/* Backdrop Overlay */}
@@ -118,8 +118,8 @@ export default function UserTableOfContents({ users }: UserTableOfContentsProps)
                                 </button>
                             ))}
                         </nav>
-                        <div className="mt-8 pt-8 border-t border-border shrink-0">
-                            <p className="text-xs text-text-secondary opacity-70 italic text-center">
+                        <div className="mt-8 pt-4 border-t border-border shrink-0">
+                            <p className="text-xs text-text-secondary opacity-60 text-center">
                                 Select a user to scroll to their section
                             </p>
                         </div>

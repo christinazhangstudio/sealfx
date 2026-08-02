@@ -15,13 +15,13 @@ export default async function GuestPage(props: { searchParams: Promise<{ p?: str
     if (pathname === "/") {
         title = "Manage Your Sellers";
         description = "Sign in to add and manage your eBay seller accounts. Connect multiple seller profiles and centralize your marketplace operations.";
-        cta = "Sign In to Add Sellers";
+        cta = "Sign In";
         blockTitle = "Seller Management Hub";
         blockDesc = "Add and monitor all your authorized eBay seller accounts in one place.";
     } else if (pathname.startsWith("/payouts")) {
         title = "Track Your Payouts";
         description = "Sign in to view and manage payouts across all your eBay seller accounts";
-        cta = "Sign In to View Payouts";
+        cta = "Sign In";
         blockTitle = "Centralized Payout Tracking";
         blockDesc = "Monitor daily payouts, track statuses, and view historical payout data for all your linked eBay accounts in one unified dashboard.";
     } else if (pathname.startsWith("/listings")) {
@@ -45,7 +45,7 @@ export default async function GuestPage(props: { searchParams: Promise<{ p?: str
     } else if (pathname.startsWith("/inbox")) {
         title = "Unlock Your Inbox";
         description = "Sign in to read, reply, and manage important messages from your buyers and eBay contacts.";
-        cta = "Sign In to Message";
+        cta = "Sign In";
         blockTitle = "Live Message Stream";
         blockDesc = (
             <>
@@ -84,24 +84,24 @@ export default async function GuestPage(props: { searchParams: Promise<{ p?: str
     } else if (pathname.startsWith("/create-listing")) {
         title = "Create Listing";
         description = "Sign in to generate unlimited AI-powered descriptions from your images for Facebook Marketplace.";
-        cta = "Sign In to Use AI";
+        cta = "Sign In";
         blockTitle = "AI-Powered Listing Creator";
         blockDesc = "Upload a photo and let Vision AI write a compelling description. Free guests get 2 tries.";
     }
 
     return (
-        <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8 relative">
+        <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8 relative ">
             <div className="max-w-2xl mx-auto space-y-6">
                 <LoginCtaBanner
                     title={title}
                     description={description}
                     cta={cta}
                 />
-                <div className="bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-8 text-center mt-8">
-                    <h2 className="text-2xl font-semibold text-primary mb-4">
+                <div className="mt-8 rounded-[0.8rem] border border-[var(--color-border)]/40 bg-[var(--color-surface)]/70 p-8 text-center shadow-sm backdrop-blur-sm">
+                    <h2 className="font-semibold text-[var(--color-primary)] [font-family:var(--font-page-title),sans-serif] mb-3 text-2xl font-semibold text-[var(--color-primary)]">
                         {blockTitle}
                     </h2>
-                    <div className="text-text-secondary">
+                    <div className="text-sm leading-relaxed text-[var(--color-text-secondary)]">
                         {blockDesc}
                     </div>
                 </div>

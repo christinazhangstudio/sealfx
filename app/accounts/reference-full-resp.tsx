@@ -367,7 +367,7 @@ export default function Accounts() {
           key={user}
           className="bg-surface p-6 rounded-2xl shadow-md border border-border mb-8"
         >
-          <h2 className="text-3xl text-primary mb-4">{user} 🌸</h2>
+          <h2 className="text-3xl text-primary mb-4">{user}</h2>
           {errors.length > 0 && (
             <p className="text-error-text text-lg mb-4">
               {errors.map((error, index) => (

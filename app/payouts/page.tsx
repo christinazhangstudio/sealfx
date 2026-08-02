@@ -111,7 +111,7 @@ export default function Payouts() {
           id={`user-section-${user}`}
           className="seller-card"
         >
-          <h2 className="seller-card-title">{user} 🌸</h2>
+          <h2 className="seller-card-title">{user} ⟢</h2>
           <p className="text-text-secondary text-lg">
             No payouts available for {user}.
           </p>
@@ -130,7 +130,7 @@ export default function Payouts() {
         id={`user-section-${user}`}
         className="seller-card"
       >
-        <h2 className="seller-card-title">{user} 🌸</h2>
+        <h2 className="seller-card-title">{user} ⟢</h2>
         {total > 0 && (
           <p className="text-sm sm:text-xl text-primary mb-4">
             Total: ${formatCurrency(calculateUserPayoutTotal(payouts))} 💸
@@ -270,7 +270,7 @@ export default function Payouts() {
                     id={`user-section-${user}`}
                     className="seller-card"
                   >
-                    <h2 className="seller-card-title">{user} 🌸</h2>
+                    <h2 className="seller-card-title">{user} ⟢</h2>
                     <p className="text-primary text-lg">Loading payouts... </p>
                   </div>
                 ) : (

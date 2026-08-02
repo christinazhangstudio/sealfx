@@ -1,8 +1,8 @@
 [data-theme="ebay"] {
     /* Colors - eBay Brand Colors */
-    --color-primary: #0064D2;
-    --color-primary-hover: #0053a0;
-    --color-secondary: #e54432;
+    --color-primary: #6e6e6e;
+    --color-primary-hover: #5e5d5c;
+    --color-secondary: #4979f3;
     --color-background-start: #f5f5f5;
     --color-background-end: #e5e5e5;
     --color-surface: #ffffff;
@@ -10,12 +10,12 @@
     --color-text-secondary: #555555;
     --color-border: #62c27a;
     --color-hover-bg: #e5e7eb;
-    --color-hover-text: #0064D2;
+    --color-hover-text: #06c019;
 
-    --color-btn-apply: #12a72b;
-    --color-btn-apply-hover: #07991f;
-    --color-btn-reset: #eec707c1;
-    --color-btn-reset-hover: #d5b205c1;
+    --color-btn-apply: #35b043;
+    --color-btn-apply-hover: #1e9532;
+    --color-btn-reset: #9b9790;
+    --color-btn-reset-hover: #898682;
 
     --color-message-pill: #33f063;
 
