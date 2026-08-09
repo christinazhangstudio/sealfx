@@ -214,8 +214,8 @@ export default function SettingsPage() {
                             </div>
 
                             {ebay?.isSandbox && (
-                                <div className="px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-sm font-medium">
-                                    Sandbox mode is on — every figure in Sealift is eBay test data, not your real store.
+                                <div className="px-4 py-3 rounded-lg bg-amber-400/5 border border-amber-500/30 text-amber-700 dark:text-amber-500 text-sm font-medium">
+                                    Sandbox mode is on: every figure in Sealift is eBay test data, not your real store.
                                 </div>
                             )}
 
@@ -238,7 +238,7 @@ export default function SettingsPage() {
                                         <input id="certId" type="password" value={certId}
                                             onChange={(e) => setCertId(e.target.value)}
                                             className={field} spellCheck={false}
-                                            placeholder={ebay.certIdHint ? `Currently ${ebay.certIdHint} — leave blank to keep it` : "Enter your Cert ID"} />
+                                            placeholder={ebay.certIdHint ? `Currently ${ebay.certIdHint} - leave blank to keep it` : "Enter your Cert ID"} />
                                         <p className="text-xs text-secondary mt-2">
                                             For your security this is never shown. Leave it blank unless you're replacing it.
                                         </p>

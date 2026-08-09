@@ -36,11 +36,10 @@
     --color-error-border: #dc2626;
     --color-error-text: #f87171;
 
-    /* Fonts (same as default) */
-    --font-heading: 'Nunito', sans-serif;
-    --font-body: 'Nunito', sans-serif;
-    --font-nav: 'Nunito', sans-serif;
-
+    --color-warning-border: #f59e0b;
+    --color-warning-text: #fbbf24;
+    --color-info-border: #38bdf8;
+    --color-info-text: #7dd3fc;
 
     /* Nav */
     --nav-bg: #1e293b;

@@ -14,6 +14,7 @@ import UserTableOfContents from "@/components/UserTableOfContents";
 import { formatCurrency } from "@/lib/format-utils";
 import { useUsers } from "@/components/UsersContext";
 import PageHeader from "@/components/PageHeader";
+import PersonIcon from "@/components/PersonIcon";
 
 
 
@@ -111,7 +112,10 @@ export default function Payouts() {
           id={`user-section-${user}`}
           className="seller-card"
         >
-          <h2 className="seller-card-title">{user} ⟢</h2>
+          <h2 className="seller-card-title flex items-center gap-2">
+            <span>{user}</span>
+            <PersonIcon />
+          </h2>
           <p className="text-text-secondary text-lg">
             No payouts available for {user}.
           </p>
@@ -130,7 +134,10 @@ export default function Payouts() {
         id={`user-section-${user}`}
         className="seller-card"
       >
-        <h2 className="seller-card-title">{user} ⟢</h2>
+        <h2 className="seller-card-title flex items-center gap-2">
+          <span>{user}</span>
+          <PersonIcon />
+        </h2>
         {total > 0 && (
           <p className="text-sm sm:text-xl text-primary mb-4">
             Total: ${formatCurrency(calculateUserPayoutTotal(payouts))} 💸
@@ -214,7 +221,7 @@ export default function Payouts() {
               </button>
               <span className="text-lg text-primary">
                 Showing {startIdx + 1} -{" "}
-                {Math.min(startIdx + clientPageSize, total)} of {total} ✿
+                {Math.min(startIdx + clientPageSize, total)} of {total}
               </span>
               <button
                 onClick={() => {
@@ -270,7 +277,10 @@ export default function Payouts() {
                     id={`user-section-${user}`}
                     className="seller-card"
                   >
-                    <h2 className="seller-card-title">{user} ⟢</h2>
+                    <h2 className="seller-card-title flex items-center gap-2">
+                      <span>{user}</span>
+                      <PersonIcon />
+                    </h2>
                     <p className="text-primary text-lg">Loading payouts... </p>
                   </div>
                 ) : (

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import StatusAlert from "@/components/StatusAlert";
 export default function LoginPage() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
@@ -73,9 +74,12 @@ export default function LoginPage() {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {error && (
-                        <div className="p-3 bg-[var(--color-error-bg)] border border-[var(--color-error-border)] rounded-xl text-[var(--color-error-text)] text-xs font-semibold text-center">
-                            {error}
-                        </div>
+                        <StatusAlert
+                            className="text-center text-xs font-semibold"
+                            density="compact"
+                            message={error}
+                            variant="error"
+                        />
                     )}
 
                     <div className="space-y-1">

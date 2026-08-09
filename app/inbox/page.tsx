@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useNotifications } from "@/components/NotificationContext";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import PageHeader from "@/components/PageHeader";
+import StatusAlert from "@/components/StatusAlert";
 
 interface Subscription {
     subscriptionId: string;
@@ -304,9 +305,11 @@ export default function InboxPage() {
                 </div>
 
                 {error && (
-                    <div className="bg-error-bg border-l-4 border-error-border text-error-text p-4 rounded shadow-sm">
-                        {error}
-                    </div>
+                    <StatusAlert
+                        className="border-l-4 shadow-sm"
+                        message={error}
+                        variant="error"
+                    />
                 )}
 
                 {/* Main layout */}

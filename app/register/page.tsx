@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { registerUser } from "../actions/register";
 import TutorialSlideshow from "../../components/TutorialSlideshow";
+import StatusAlert from "@/components/StatusAlert";
 
 export default function RegisterPage() {
     const [error, setError] = useState("");
@@ -85,9 +86,12 @@ export default function RegisterPage() {
 
                     <form onSubmit={handleSubmit} className="space-y-4 text-sm font-medium">
                         {error && (
-                            <div className="p-3 bg-[var(--color-error-bg)] border border-[var(--color-error-border)] rounded-xl text-[var(--color-error-text)] text-xs font-semibold text-center">
-                                {error}
-                            </div>
+                            <StatusAlert
+                                className="text-center text-xs font-semibold"
+                                density="compact"
+                                message={error}
+                                variant="error"
+                            />
                         )}
 
                         <div className="space-y-4 mb-8">

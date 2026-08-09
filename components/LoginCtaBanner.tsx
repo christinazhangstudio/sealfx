@@ -34,7 +34,7 @@ export default function LoginCtaBanner({
                 </div>
                 <Link
                     href="/login"
-                    className="flex-shrink-0 px-4 py-2 bg-primary hover:bg-primary-hover text-white font-semibold rounded-lg transition-colors duration-200 whitespace-nowrap text-sm"
+                    className="shine-button flex-shrink-0 px-4 py-2 text-white font-semibold rounded-lg whitespace-nowrap text-sm"
                 >
                     {cta}
                 </Link>

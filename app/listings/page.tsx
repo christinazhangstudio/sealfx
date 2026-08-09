@@ -14,6 +14,7 @@ import {
 import UserTableOfContents from "@/components/UserTableOfContents";
 import { useUsers } from "@/components/UsersContext";
 import PageHeader from "@/components/PageHeader";
+import PersonIcon from "@/components/PersonIcon";
 
 
 const renderUserTable = (
@@ -47,7 +48,10 @@ const renderUserTable = (
       key={user}
       className="seller-card"
     >
-      <h2 className="seller-card-title">{user} ⟢</h2>
+      <h2 className="seller-card-title flex items-center gap-2">
+        <span>{user}</span>
+        <PersonIcon />
+      </h2>
       <p className="text-base sm:text-xl text-primary mb-4">
         Total Items: {filteredItems.length} 📦
       </p>
@@ -251,7 +255,7 @@ export default function ListingsPage() {
                     setStartFrom(newDate);
                   }
                 }}
-                className="px-4 py-2 h-full border-none text-text-primary focus:outline-none focus:ring-0 bg-surface hover:bg-hover hover:text-hover-content cursor-pointer font-heading transition-colors"
+                className="px-4 py-2 h-full border-none text-text-primary focus:outline-none focus:ring-0 bg-surface hover:bg-hover hover:text-hover-content cursor-pointer font-mono transition-colors"
                 max={formatApiDate(new Date())}
               />
             </div>
@@ -266,7 +270,7 @@ export default function ListingsPage() {
                     setStartTo(newDate);
                   }
                 }}
-                className="px-4 py-2 h-full border-none text-text-primary focus:outline-none focus:ring-0 bg-surface hover:bg-hover hover:text-hover-content cursor-pointer font-heading transition-colors"
+                className="px-4 py-2 h-full border-none text-text-primary focus:outline-none focus:ring-0 bg-surface hover:bg-hover hover:text-hover-content cursor-pointer font-mono transition-colors"
                 max={formatApiDate(new Date())}
               />
             </div>
@@ -278,13 +282,13 @@ export default function ListingsPage() {
                 onClick={handleApply}
                 className="px-6 py-2 bg-btn-apply text-white rounded-lg hover:bg-btn-apply-hover transition-all shadow-sm font-bold active:scale-95"
               >
-                Apply ✿
+                Apply
               </button>
               <button
                 onClick={resetDateRange}
                 className="px-6 py-2 bg-btn-reset text-white rounded-lg hover:bg-btn-reset-hover transition-all shadow-sm font-bold active:scale-95"
               >
-                Reset ✿
+                Reset
               </button>
             </div>
 
@@ -293,7 +297,7 @@ export default function ListingsPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2 h-full border-none text-text-primary focus:outline-none focus:ring-0 bg-surface hover:bg-hover hover:text-hover-content cursor-pointer font-heading transition-colors"
+                className="px-4 py-2 h-full border-none text-text-primary focus:outline-none focus:ring-0 bg-surface hover:bg-hover hover:text-hover-content cursor-pointer font-mono transition-colors"
               >
                 <option value="ALL" className="bg-surface text-text-primary">ALL</option>
                 <option value="Active" className="bg-surface text-text-primary">Active</option>
@@ -317,7 +321,10 @@ export default function ListingsPage() {
                 <div key={user} id={`user-section-${user}`}>
                   {userLoading[user] ? (
                     <div className="seller-card">
-                      <h2 className="seller-card-title">{user} ⟢</h2>
+                      <h2 className="seller-card-title flex items-center gap-2">
+                        <span>{user}</span>
+                        <PersonIcon />
+                      </h2>
                       <p className="text-primary text-lg">
                         Loading Listings...
                       </p>
@@ -332,7 +339,10 @@ export default function ListingsPage() {
                     )
                   ) : (
                     <div className="seller-card">
-                      <h2 className="seller-card-title">{user} ⟢</h2>
+                      <h2 className="seller-card-title flex items-center gap-2">
+                        <span>{user}</span>
+                        <PersonIcon />
+                      </h2>
                       <p className="text-text-secondary text-lg">
                         No listings for {user}.
                       </p>

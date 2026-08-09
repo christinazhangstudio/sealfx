@@ -34,10 +34,10 @@
     --color-error-border: #ef4444;
     --color-error-text: #b91c1c;
 
-    /* Fonts */
-    --font-heading: 'Nunito', sans-serif;
-    --font-body: 'Nunito', sans-serif;
-    --font-nav: 'Nunito', sans-serif;
+    --color-warning-border: #d97706;
+    --color-warning-text: #a16207;
+    --color-info-border: #0284c7;
+    --color-info-text: #0369a1;
 
     /* Nav */
     --nav-bg: linear-gradient(to bottom, #faf5f1, #f7eeee);

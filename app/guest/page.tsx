@@ -98,7 +98,7 @@ export default async function GuestPage(props: { searchParams: Promise<{ p?: str
                     cta={cta}
                 />
                 <div className="mt-8 rounded-[0.8rem] border border-[var(--color-border)]/40 bg-[var(--color-surface)]/70 p-8 text-center shadow-sm backdrop-blur-sm">
-                    <h2 className="font-semibold text-[var(--color-primary)] [font-family:var(--font-page-title),sans-serif] mb-3 text-2xl font-semibold text-[var(--color-primary)]">
+                    <h2 className="font-semibold text-[var(--color-primary)] [font-family:var(--font-page-title-family)] mb-3 text-2xl font-semibold text-[var(--color-primary)]">
                         {blockTitle}
                     </h2>
                     <div className="text-sm leading-relaxed text-[var(--color-text-secondary)]">

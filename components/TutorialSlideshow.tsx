@@ -18,9 +18,9 @@ const DEFAULT_SLIDES: Slide[] = [
         description: "Your unified dashboard for managing multi-store eBay integrations. Seamlessly sync inventory and monitor performance.",
         imagePath: "/tutorial/slide1.png",
         splashPool: [
-            "99% Bug Free!",
-            "Margins for days",
-            "Business, at scale",
+            "Sensible selling interface for no-nonsense power sellers.",
+            "Modern tools without hassle.",
+            "Monitor your logisitics your way.",
         ]
     },
     {
@@ -29,9 +29,9 @@ const DEFAULT_SLIDES: Slide[] = [
         description: "Modern AI tools to help automate sales and analytics. Optimize language-dependent labor and context-switching toil.",
         imagePath: "/tutorial/slide2.png",
         splashPool: [
-            "Now with 200% more AI!",
-            "Automating the automated",
-            "Powered by vector math"
+            "Incorporate AI for faster analytics.",
+            "AI tailored to your data.",
+            "Intelligence-driven workflows for sellers"
         ]
     },
 ];

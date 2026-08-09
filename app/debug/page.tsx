@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import PageHeader from "@/components/PageHeader";
+import StatusAlert from "@/components/StatusAlert";
 
 export default function DebugPage() {
   const [destinations, setDestinations] = useState<any>(null);
@@ -83,9 +84,12 @@ export default function DebugPage() {
         />
 
         {error && (
-          <div className="mb-8 bg-error-bg border-l-4 border-error-border text-error-text px-6 py-4 rounded-xl shadow-md">
-            <p className="font-medium">{error}</p>
-          </div>
+          <StatusAlert
+            className="mb-8 border-l-4 shadow-md"
+            message={error}
+            messageClassName="font-medium"
+            variant="error"
+          />
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import LoginCtaBanner from "@/components/LoginCtaBanner";
 import { signOut } from "next-auth/react";
 import PageHeader from "@/components/PageHeader";
+import StatusAlert from "@/components/StatusAlert";
 
 export default function AdminPage() {
   const { data: session } = useSession();
@@ -97,18 +98,25 @@ export default function AdminPage() {
 
           {/* Success Message */}
           {result && (
-            <div className="p-6 bg-success-bg border border-success-border rounded-lg text-success-text">
-              <p className="font-bold text-lg">Account deleted successfully.</p>
-              <p className="text-sm mt-1">{result.sellers_removed} seller(s) removed. Redirecting to login...</p>
-            </div>
+            <StatusAlert
+              density="spacious"
+              message={`${result.sellers_removed} seller(s) removed. Redirecting to login...`}
+              messageClassName="mt-1 text-sm"
+              title="Account deleted successfully."
+              titleClassName="text-lg"
+              variant="success"
+            />
           )}
 
           {/* Error Message */}
           {error && (
-            <div className="p-6 bg-error-bg border border-error-border rounded-lg text-error-text">
-              <p className="font-bold">Failed to delete account</p>
-              <p className="text-sm mt-1">{error}</p>
-            </div>
+            <StatusAlert
+              density="spacious"
+              message={error}
+              messageClassName="mt-1 text-sm"
+              title="Failed to delete account"
+              variant="error"
+            />
           )}
         </div>
 

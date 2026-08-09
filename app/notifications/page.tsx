@@ -5,6 +5,8 @@ import { useSession } from "next-auth/react";
 import LoginCtaBanner from "@/components/LoginCtaBanner";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import PageHeader from "@/components/PageHeader";
+import PersonIcon from "@/components/PersonIcon";
+import StatusToast from "@/components/StatusToast";
 import { useUsers } from "@/components/UsersContext";
 
 interface SupportedPayload {
@@ -221,7 +223,10 @@ export default function NotificationsPage() {
     if (loadingTopics || loadingUsers) {
         return (
             <div className="min-h-screen bg-background p-8 flex items-center justify-center">
-                <p className="text-xl text-primary animate-pulse">Loading... ⟢</p>
+                <p className="text-xl text-primary animate-pulse flex items-center gap-2">
+                    <span>Loading...</span>
+                    <PersonIcon className="h-5 w-5" />
+                </p>
             </div>
         );
     }
@@ -255,21 +260,11 @@ export default function NotificationsPage() {
 
                 {/* Feedback Messages */}
                 {(error || successMsg) && (
-                    <div className={`fixed bottom-24 right-4 left-4 sm:left-auto sm:right-8 sm:bottom-8 z-[var(--z-toast)] sm:max-w-md px-5 py-4 rounded-xl shadow-2xl transform transition-all duration-300 animate-in slide-in-from-bottom-5 ${error ? 'bg-error-bg text-error-text' : 'bg-success-bg text-success-text'
-                        }`}>
-                        <div className="flex min-w-0 items-center gap-3">
-                            {error ? (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                            )}
-                            <p className="min-w-0 whitespace-pre-wrap break-words font-medium">{error || successMsg}</p>
-                        </div>
-                    </div>
+                    <StatusToast
+                        message={error ?? successMsg ?? ""}
+                        placement="bottom-right"
+                        variant={error ? "error" : "success"}
+                    />
                 )}
 
                 {!selectedUser ? (

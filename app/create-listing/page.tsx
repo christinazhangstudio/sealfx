@@ -148,7 +148,7 @@ export default function CreateListing() {
       }
     } catch (err) {
       console.error("Failed to generate description", err);
-      setGenError("AI generation failed — the service may be unreachable. Try again or write a description manually.");
+      setGenError("AI generation failed - the service may be unreachable. Try again or write a description manually.");
     } finally {
       setIsGenerating(false);
     }
@@ -189,7 +189,7 @@ export default function CreateListing() {
           {/* Left Column: Image Upload Area */}
           <div 
             className={`relative flex items-center justify-center w-full min-h-[400px] h-full rounded-3xl border-2 border-dashed transition-all duration-300 overflow-hidden cursor-pointer group ${
-              isDragging ? "border-blue-500 bg-blue-500/10 shadow-[0_0_40px_rgba(59,130,246,0.5)]" : "border-border hover:border-hover-content bg-surface hover:bg-hover"
+              isDragging ? "border-primary bg-primary/10 shadow-lg shadow-primary/30" : "border-border hover:border-hover-content bg-surface hover:bg-hover"
             }`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -218,7 +218,7 @@ export default function CreateListing() {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center p-6 text-center">
-                <div className="w-20 h-20 mb-4 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <div className="w-20 h-20 mb-4 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                   </svg>
@@ -231,7 +231,7 @@ export default function CreateListing() {
             {/* Scanning Overlay Animation */}
             {isGenerating && (
               <div className="absolute inset-0 bg-background/60 backdrop-blur-sm flex flex-col items-center justify-center z-10 transition-all">
-                <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
+                <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin shadow-lg shadow-primary/30"></div>
                 <p className="mt-6 text-lg font-medium text-primary animate-pulse w-full text-center tracking-wide">Analyzing image...</p>
               </div>
             )}
@@ -248,7 +248,7 @@ export default function CreateListing() {
                 value={formData.title}
                 onChange={handleChange}
                 placeholder="E.g. Vintage Leather Sofa"
-                className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all duration-200 text-primary placeholder:text-secondary/50 shadow-inner"
+                className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-200 text-primary placeholder:text-secondary/50 shadow-inner"
               />
             </div>
 
@@ -261,7 +261,7 @@ export default function CreateListing() {
                 value={formData.price}
                 onChange={handleChange}
                 placeholder="0.00"
-                className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all duration-200 text-primary placeholder:text-secondary/50 shadow-inner font-mono"
+                className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-200 text-primary placeholder:text-secondary/50 shadow-inner font-mono"
               />
             </div>
 
@@ -277,13 +277,13 @@ export default function CreateListing() {
                             key={i} 
                             className={`w-2.5 h-2.5 rounded-full border transition-all duration-200 ${
                               i < aiUses 
-                                ? (limitReached ? 'bg-red-500 border-red-500' : 'bg-blue-500 border-blue-500') 
-                                : 'border-blue-500/40 bg-transparent'
+                                ? (limitReached ? 'bg-error-border border-error-border' : 'bg-primary border-primary')
+                                : 'border-primary/40 bg-transparent'
                             }`} 
                           />
                         ))}
                       </div>
-                      <span className={`font-medium tracking-tight ${limitReached ? 'text-red-500' : 'text-blue-500/90'}`}>
+                      <span className={`font-medium tracking-tight ${limitReached ? 'text-error-text' : 'text-primary'}`}>
                         {limitReached 
                           ? '0 tries left'
                           : aiUses === 0 
@@ -295,12 +295,12 @@ export default function CreateListing() {
                   )}
                 </div>
                 {isGenerating ? (
-                  <span className="text-xs text-blue-500 font-medium animate-pulse">Generating...</span>
+                  <span className="text-xs text-primary font-medium animate-pulse">Generating...</span>
                 ) : lastImage ? (
                   <button
                     type="button"
                     onClick={() => runGeneration(lastImage)}
-                    className="px-2 py-2 text-xs font-medium text-blue-500 hover:text-blue-400 transition-colors"
+                    className="px-2 py-2 text-xs font-medium text-primary hover:text-primary-hover transition-colors"
                   >
                     ↻ Regenerate
                   </button>
@@ -313,28 +313,28 @@ export default function CreateListing() {
                 onChange={handleChange}
                 rows={6}
                 placeholder="Description will be generated here once you upload an image..."
-                className={`w-full px-4 py-3 rounded-xl bg-background border ${isGenerating ? 'border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)]' : 'border-border focus:border-blue-500'} focus:ring-2 focus:ring-blue-500/20 outline-none transition-all duration-300 text-primary placeholder:text-secondary/50 shadow-inner resize-none leading-relaxed`}
+                className={`w-full px-4 py-3 rounded-xl bg-background border ${isGenerating ? 'border-primary shadow-lg shadow-primary/20' : 'border-border focus:border-primary'} focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-300 text-primary placeholder:text-secondary/50 shadow-inner resize-none leading-relaxed`}
               />
               {genError && (
-                <p className="mt-2 text-xs font-medium text-red-500">{genError}</p>
+                <p className="mt-2 text-xs font-medium text-error-text">{genError}</p>
               )}
             </div>
 
             {/* Guest AI limit prompt */}
             {isGuest && limitReached && (
-              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400">
-                  <div className="flex-1 min-w-0">
-                    <Link 
-                      href="/login" 
-                      className="inline-flex items-center gap-2 px-4 py-1.5 text-sm font-bold rounded-xl bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white transition-all shadow-sm"
-                    >
-                      Create a free account to unlock unlimited AI generations
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                      </svg>
-                    </Link>
-                  </div>
+              <div className="p-4 rounded-xl bg-primary/4 border border-primary/10">
+                <div className="flex justify-center">
+                  <Link
+                    href="/login"
+                    className="shine-button inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold rounded-lg text-white transition-all shadow-sm"
+                  >
+                    Create a free account to unlock AI generations
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                  </Link>
                 </div>
+              </div>
             )}
 
             <div className="pt-4 mt-2 border-t border-border/50">
@@ -344,7 +344,7 @@ export default function CreateListing() {
                 className={`relative w-full rounded-xl font-bold text-white transition-all duration-300 ${
                   !formData.title && !formData.price && !formData.description
                   ? "bg-primary/50 cursor-not-allowed"
-                  : "bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/30"
+                  : "shine-button"
                 }`}
               >
                 <div className="px-6 py-4 flex items-center justify-center gap-3">

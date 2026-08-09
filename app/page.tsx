@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import { useUsers } from "@/components/UsersContext";
 import PageHeader from "@/components/PageHeader";
+import StatusToast, { type StatusToastVariant } from "@/components/StatusToast";
 
 interface UsersResponse {
   users: string[];
@@ -24,6 +25,10 @@ export default function RegisterSellerPage() {
   const [showDeletePopup, setShowDeletePopup] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [notification, setNotification] = useState<{
+    message: string;
+    type: StatusToastVariant;
+  } | null>(null);
 
   // Tear down an in-flight OAuth attempt if the page unmounts.
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -34,7 +39,10 @@ export default function RegisterSellerPage() {
     const usersUri = process.env.NEXT_PUBLIC_USERS_URI;
 
     if (!apiBaseUrl || !usersUri) {
-      setAPIError("API base URL or Users URI env not defined");
+      setNotification({
+        message: "API base URL or Users URI env not defined",
+        type: "error",
+      });
       return;
     }
 
@@ -42,6 +50,7 @@ export default function RegisterSellerPage() {
 
     setIsDeleting(true);
     setAPIError(null);
+    setNotification(null);
     try {
       const response = await fetch(apiUrl, {
         method: "DELETE",
@@ -54,8 +63,11 @@ export default function RegisterSellerPage() {
       // Refresh users list from the shared context
       await refetchUsers();
       setNotification({ message: `Removed ${user}.`, type: "success" });
-    } catch (err: any) {
-      setAPIError(err.message);
+    } catch (err: unknown) {
+      setNotification({
+        message: err instanceof Error ? err.message : "Failed to delete seller",
+        type: "error",
+      });
     } finally {
       setIsDeleting(false);
       setShowDeletePopup(false);
@@ -78,8 +90,6 @@ export default function RegisterSellerPage() {
       deleteUser(userToDelete);
     }
   };
-
-  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // Auto-dismiss, giving errors longer since they now carry a reason to read.
   useEffect(() => {
@@ -163,7 +173,7 @@ export default function RegisterSellerPage() {
     };
     cleanupRef.current = cleanup;
 
-    const settle = (message: string, type: "success" | "error") => {
+    const settle = (message: string, type: StatusToastVariant) => {
       if (settled) return;
       settled = true;
       cleanup();
@@ -242,7 +252,7 @@ export default function RegisterSellerPage() {
               disabled={isLoading}
               className={`w-full flex justify-center items-center px-6 py-3 rounded-md text-white text-lg font-medium transition-all duration-200 transform ${isLoading
                 ? "bg-gray-300 cursor-not-allowed"
-                : "bg-btn-apply duration-300 hover:bg-btn-apply-hover hover:scale-101 shadow-md hover:shadow-lg focus:ring-4 focus:ring-secondary focus:outline-none"
+                : "shine-button duration-300 hover:scale-101 shadow-md hover:shadow-lg focus:ring-4 focus:ring-secondary focus:outline-none"
                 }`}
             >
               {isLoading ? (
@@ -275,25 +285,16 @@ export default function RegisterSellerPage() {
 
             {/* Notification Popup */}
             {notification && (
-              <div className={`fixed top-20 left-1/2 -translate-x-1/2 z-[var(--z-toast)] w-[calc(100vw-2rem)] max-w-md px-5 py-3 rounded-md shadow-xl border-l-4 transition-all duration-500 ${notification.type === 'success'
-                ? 'bg-success-bg border-success-border text-success-text'
-                : 'bg-error-bg border-error-border text-error-text'
-                }`}>
-                <div className="flex items-center space-x-3">
-                  {notification.type === 'success' ? (
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
-                  ) : (
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                  )}
-                  <span className="font-medium">{notification.message}</span>
-                </div>
-              </div>
+              <StatusToast
+                message={notification.message}
+                variant={notification.type}
+              />
             )}
 
             {/* Second card */}
             <div className="bg-surface rounded-lg border border-border shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl">
             <h2 className="text-2xl text-primary mb-6 text-center drop-shadow-sm font-heading">
-              registered sellers
+              added sellers
             </h2>
             {apiError && <p className="text-error-text text-lg">{apiError}</p>}
             {loading ? (

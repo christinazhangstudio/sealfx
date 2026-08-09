@@ -11,11 +11,11 @@ import {
   formatApiDate,
 } from "@/lib/ebay-data";
 import UserTableOfContents from "@/components/UserTableOfContents";
-import { Inconsolata } from "next/font/google";
 import { useUsers } from "@/components/UsersContext";
 import { formatCurrency } from "@/lib/format-utils";
 import { Line } from "react-chartjs-2";
 import PageHeader from "@/components/PageHeader";
+import PersonIcon from "@/components/PersonIcon";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -102,7 +102,10 @@ const renderUserChart = (user: string, chartData: any) => {
 
   return (
     <div className="seller-card">
-      <h2 className="seller-card-title">{user} ⟢</h2>
+      <h2 className="seller-card-title flex items-center gap-2">
+        <span>{user}</span>
+        <PersonIcon />
+      </h2>
       <div className="relative h-[350px] sm:h-[450px] md:h-[500px]">
         <Line
           data={chartData}
@@ -442,7 +445,7 @@ export default function ChartsPage() {
               <select
                 value={range}
                 onChange={(e) => setRange(e.target.value)}
-                className="p-2 rounded-lg border-none text-text-primary focus:outline-none focus:ring-0 bg-transparent cursor-pointer font-heading"
+                className="p-2 rounded-lg border-none text-text-primary focus:outline-none focus:ring-0 bg-transparent cursor-pointer font-mono"
               >
                 <option value="last-month" className="bg-surface text-text-primary">Last Month</option>
                 <option value="last-3-months" className="bg-surface text-text-primary">Last 3 Months</option>
@@ -453,7 +456,7 @@ export default function ChartsPage() {
               onClick={handleApply}
               className="px-6 py-2 bg-btn-apply text-white rounded-lg hover:bg-btn-apply-hover transition-all shadow-sm font-bold active:scale-95"
             >
-              Apply ✿
+              Apply
             </button>
           </div>
         </div>
@@ -477,7 +480,10 @@ export default function ChartsPage() {
                     <div key={user} id={`user-section-${user}`}>
                       {dataLoading[user] ? (
                         <div className="seller-card">
-                          <h2 className="seller-card-title">{user} ⟢</h2>
+                          <h2 className="seller-card-title flex items-center gap-2">
+                            <span>{user}</span>
+                            <PersonIcon />
+                          </h2>
                           <p className="text-primary text-lg">Loading Data... </p>
                         </div>
                       ) : userCharts[user] &&
@@ -489,7 +495,10 @@ export default function ChartsPage() {
                         renderUserChart(user, userCharts[user])
                       ) : (
                         <div className="seller-card">
-                          <h2 className="seller-card-title">{user} ⟢</h2>
+                          <h2 className="seller-card-title flex items-center gap-2">
+                            <span>{user}</span>
+                            <PersonIcon />
+                          </h2>
                           <p className="text-text-secondary text-lg">
                             No data for {user}.
                           </p>

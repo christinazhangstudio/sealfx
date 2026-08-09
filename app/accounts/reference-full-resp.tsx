@@ -1,13 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Inconsolata } from "next/font/google";
 import { formatCurrency } from "@/lib/format-utils";
-
-const inconsolata = Inconsolata({
-  weight: "500",
-  subsets: ["latin"],
-});
 
 interface Account {
   AccountEntries?: AccountEntriesType;
@@ -467,7 +461,7 @@ export default function Accounts() {
               </button>
               <span className="text-lg text-primary">
                 Showing {startIdx + 1} -{" "}
-                {/* {Math.min(startIdx + clientPageSize, total)} of {total} ✿ */}
+                {/* {Math.min(startIdx + clientPageSize, total)} of {total} */}
               </span>
               <button
                 onClick={() => {
@@ -490,7 +484,7 @@ export default function Accounts() {
   };
 
   return (
-    <div className={inconsolata.className}>
+    <div className="font-mono font-medium">
       <div className="min-h-screen bg-background p-8">
         <h1 className="text-4xl text-primary mb-8 drop-shadow-sm">Accounts</h1>
         {!error && Object.keys(userAccounts).length > 0 && (

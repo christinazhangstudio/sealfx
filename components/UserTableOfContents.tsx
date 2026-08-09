@@ -41,8 +41,8 @@ export default function UserTableOfContents({ users }: UserTableOfContentsProps)
             {/* Desktop jump bar stays above the cards so their edges align
                 with the rest of the page content. */}
             <aside className="hidden lg:block w-full sticky top-28 self-start z-10">
-                <div className="flex items-center gap-4 p-3 bg-surface rounded-xl border border-border shadow-sm">
-                    <h3 className="shrink-0 text-sm font-bold text-primary uppercase tracking-wider font-heading">
+                <div className="flex items-center gap-2 p-1.5 bg-surface rounded-xl border border-border shadow-sm font-mono">
+                    <h3 className="shrink-0 px-4 text-sm font-bold text-primary uppercase tracking-wider">
                         Users
                     </h3>
                     <nav className="flex min-w-0 flex-wrap gap-1">
@@ -50,7 +50,7 @@ export default function UserTableOfContents({ users }: UserTableOfContentsProps)
                             <button
                                 key={user}
                                 onClick={() => scrollToUser(user)}
-                                className="max-w-56 text-left px-3 py-1.5 text-sm rounded-lg text-text-secondary hover:bg-background-start hover:text-primary transition-all duration-200 truncate font-medium group flex items-center"
+                                className="max-w-56 text-left underline decoration-dotted underline-offset-4 px-3 py-1.5 text-sm rounded-lg hover:bg-background-start hover:text-primary transition-all duration-200 truncate font-mono group flex items-center"
                             >
                                 <span className="w-1.5 h-1.5 rounded-full bg-secondary mr-2 opacity-0 group-hover:opacity-100 transition-opacity"></span>
                                 {user}

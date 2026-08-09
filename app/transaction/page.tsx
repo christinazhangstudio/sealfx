@@ -7,6 +7,7 @@ import { trackedFetch as fetch } from "@/lib/api-tracker";
 import UserTableOfContents from "@/components/UserTableOfContents";
 import { formatCurrency } from "@/lib/format-utils";
 import PageHeader from "@/components/PageHeader";
+import PersonIcon from "@/components/PersonIcon";
 
 interface UserSummary {
   user: string;
@@ -116,7 +117,10 @@ export default function TransactionPage() {
                   id={`user-section-${s.user}`}
                   className="seller-card"
                 >
-                  <h2 className="seller-card-title">{s.user} ⟢</h2>
+                  <h2 className="seller-card-title flex items-center gap-2">
+                    <span>{s.user}</span>
+                    <PersonIcon />
+                  </h2>
                   <div className="overflow-x-auto -mx-2 px-2">
                     <table className="w-full text-base sm:text-2xl text-text-primary border-collapse">
                     <tbody>

@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
+import StatusAlert from "./StatusAlert";
 
 interface Source {
     source: string;
@@ -523,9 +524,12 @@ export default function AiHelpButton({
                     ))}
 
                     {error && (
-                        <div className="p-4 bg-[var(--color-error-bg)]/20 border border-[var(--color-error-border)]/50 rounded-2xl text-[var(--color-error-text)] text-xs font-semibold text-center italic">
-                            {error}
-                        </div>
+                        <StatusAlert
+                            className="text-center text-xs font-semibold italic"
+                            emphasis="subtle"
+                            message={error}
+                            variant="error"
+                        />
                     )}
 
                     {loading && (
