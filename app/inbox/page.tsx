@@ -81,8 +81,14 @@ export default function InboxPage() {
     useEffect(() => {
         if (pendingTests.length === 0) return;
 
+        // eBay's test API returns a base notification UUID, but the delivered
+        // webhook payload appends "_<deliveryUUID>" to that value. Match either
+        // the exact ID or the delivered form so the E2E wait can complete.
+        const matchesTestDelivery = (envelopeId: string, pendingId: string) =>
+            envelopeId === pendingId || envelopeId.startsWith(`${pendingId}_`);
+
         const allDelivered = pendingTests.every((test) =>
-            envelopes.some((envelope) => envelope.id === test.notificationId),
+            envelopes.some((envelope) => matchesTestDelivery(envelope.id, test.notificationId)),
         );
         if (!allDelivered) return;
 
