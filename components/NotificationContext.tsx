@@ -33,10 +33,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     const [envelopes, setEnvelopes] = useState<NotifEnvelope[]>([]);
 
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-    const webhookUrl = process.env.NEXT_PUBLIC_WEBHOOK_URL;
     const inboxUri = process.env.NEXT_PUBLIC_INBOX_URI;
     const trashUri = process.env.NEXT_PUBLIC_TRASH_URI;
-    const markReadUri = process.env.NEXT_PUBLIC_MARK_READ_URI;
+    const markReadUri = process.env.NEXT_PUBLIC_MARK_READ_URI || "mark_read";
 
     // Track EventSources so we can clean them up
     const eventSourcesRef = useRef<Map<string, EventSource>>(new Map());
@@ -45,7 +44,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     // Open one SSE connection per user
     useEffect(() => {
-        if (!webhookUrl || users.length === 0) return;
+        if (!apiBaseUrl || users.length === 0) return;
 
         const existing = eventSourcesRef.current;
 
@@ -97,6 +96,15 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                 }
             });
 
+            es.addEventListener("history", (e) => {
+                try {
+                    const data = JSON.parse(e.data);
+                    if (Array.isArray(data)) addNotifs(data);
+                } catch (err) {
+                    console.error("Failed to parse message history for", user, err);
+                }
+            });
+
             es.onerror = () => {
                 console.warn(`SSE disconnected for ${user}, will retry automatically`);
             };
@@ -108,28 +116,37 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             existing.forEach((es) => es.close());
             existing.clear();
         };
-    }, [users, webhookUrl]);
+    }, [apiBaseUrl, users]);
 
     const selectMessage = async (id: string, user: string) => {
-        let wasUnread = false;
+        const wasUnread = envelopes.some(
+            (envelope) => envelope.id === id && envelope.user === user && !envelope.read,
+        );
 
         setEnvelopes((prev) =>
-            prev.map((e) => {
-                if (e.id === id) {
-                    if (!e.read) wasUnread = true;
-                    return { ...e, read: true };
-                }
-                return e;
-            })
+            prev.map((e) =>
+                e.id === id && e.user === user ? { ...e, read: true } : e,
+            )
         );
 
         // Guest users should not make API calls
         if ((session?.user as any)?.isGuest || !wasUnread || !apiBaseUrl) return;
 
         try {
-            await fetch(`${apiBaseUrl}/${inboxUri}/${user}/${id}/${markReadUri}`, { method: "PUT" });
+            const response = await fetch(
+                `${apiBaseUrl}/${inboxUri}/${encodeURIComponent(user)}/${encodeURIComponent(id)}/${markReadUri}`,
+                { method: "PUT" },
+            );
+            if (!response.ok) {
+                throw new Error(`Failed to mark message as read (${response.status})`);
+            }
         } catch (err) {
             console.error(err);
+            setEnvelopes((prev) =>
+                prev.map((e) =>
+                    e.id === id && e.user === user ? { ...e, read: false } : e,
+                )
+            );
         }
     };
 
