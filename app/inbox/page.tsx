@@ -6,6 +6,7 @@ import { useNotifications } from "@/components/NotificationContext";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import PageHeader from "@/components/PageHeader";
 import StatusAlert from "@/components/StatusAlert";
+import InboxRuleSuggestions, { type InboxRuleSuggestion } from "./InboxRuleSuggestions";
 
 interface Subscription {
     subscriptionId: string;
@@ -31,6 +32,47 @@ type TestFeedback = {
     kind: "pending" | "success" | "error";
     message: string;
 };
+type InboxAnalysis = {
+    model: string;
+    suggestions: InboxRuleSuggestion[];
+};
+
+
+function parseInboxAnalysis(value: unknown): InboxAnalysis {
+    if (value === null
+        || typeof value !== "object"
+        || !("model" in value)
+        || typeof value.model !== "string"
+        || !("suggestions" in value)
+        || !Array.isArray(value.suggestions)) {
+        throw new Error("Qwen returned an invalid inbox analysis.");
+    }
+
+    const suggestions: InboxRuleSuggestion[] = [];
+    for (const candidate of value.suggestions) {
+        if (candidate === null || typeof candidate !== "object"
+            || typeof candidate.id !== "string"
+            || typeof candidate.title !== "string"
+            || typeof candidate.description !== "string"
+            || typeof candidate.destination !== "string"
+            || !Array.isArray(candidate.conditions)
+            || !candidate.conditions.every((condition: unknown) => typeof condition === "string")
+            || !Array.isArray(candidate.matchingIds)
+            || !candidate.matchingIds.every((id: unknown) => typeof id === "string")) {
+            throw new Error("Qwen returned an invalid rule suggestion.");
+        }
+        suggestions.push({
+            id: candidate.id,
+            title: candidate.title,
+            description: candidate.description,
+            destination: candidate.destination,
+            conditions: candidate.conditions,
+            matchingIds: candidate.matchingIds,
+        });
+    }
+    return { model: value.model, suggestions };
+}
+
 
 function BellIcon({ count }: { count: number }) {
     return (
@@ -64,19 +106,90 @@ function BellIcon({ count }: { count: number }) {
 export default function InboxPage() {
     const [mounted, setMounted] = useState(false);
     useEffect(() => setMounted(true), []);
-    const { users, envelopes, unreadCount, selectMessage: contextSelectMessage, trashMessage, deleteMessage, loadingUsers, error } = useNotifications();
+    const { users, envelopes, unreadCount, isSandbox, selectMessage: contextSelectMessage, trashMessage, deleteMessage, loadingUsers, error } = useNotifications();
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<"inbox" | "trash">("inbox");
     const [testingDelivery, setTestingDelivery] = useState(false);
     const [testFeedback, setTestFeedback] = useState<TestFeedback | null>(null);
     const [pendingTests, setPendingTests] = useState<PendingTest[]>([]);
 
+    const [activeRuleIds, setActiveRuleIds] = useState<string[]>([]);
+    const [ruleSuggestions, setRuleSuggestions] = useState<InboxRuleSuggestion[]>([]);
+    const [ruleAnalysisModel, setRuleAnalysisModel] = useState<string | null>(null);
+    const [ruleAnalysisLoading, setRuleAnalysisLoading] = useState(false);
+    const [ruleAnalysisError, setRuleAnalysisError] = useState<string | null>(null);
+    const [hasRequestedRuleAnalysis, setHasRequestedRuleAnalysis] = useState(false);
+    const [ruleFilter, setRuleFilter] = useState("all");
+
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
     const usersBaseUri = process.env.NEXT_PUBLIC_NOTIFICATIONS_USERS_BASE_URI;
     const subscriptionsUri = process.env.NEXT_PUBLIC_NOTIFICATIONS_SUBSCRIPTIONS_URI;
 
-    const displayedEnvelopes = envelopes.filter(e => activeTab === 'trash' ? e.trashed : !e.trashed);
-    const selectedEnvelope = envelopes.find((e) => e.id === selectedId) ?? null;
+    const activeRules = ruleSuggestions.filter((rule) => activeRuleIds.includes(rule.id));
+    const displayedEnvelopes = envelopes
+        .filter((envelope) => activeTab === "trash" ? envelope.trashed : !envelope.trashed)
+        .filter((envelope) => activeTab === "trash"
+            || ruleFilter === "all"
+            || activeRules.some((rule) => rule.destination === ruleFilter && rule.matchingIds.includes(envelope.id)));
+    const selectedEnvelope = envelopes.find((envelope) => envelope.id === selectedId) ?? null;
+
+    const toggleRule = (ruleId: string) => {
+        setActiveRuleIds((current) =>
+            current.includes(ruleId)
+                ? current.filter((id) => id !== ruleId)
+                : [...current, ruleId],
+        );
+        setRuleFilter("all");
+        setSelectedId(null);
+    };
+    const analyzeInboxRules = async () => {
+        if (ruleAnalysisLoading) return;
+        if (!apiBaseUrl || envelopes.length < 2) {
+            setHasRequestedRuleAnalysis(true);
+            setRuleAnalysisError("At least two inbox messages are required for Qwen analysis.");
+            return;
+        }
+
+        const messages = envelopes
+            .filter((envelope) => !envelope.trashed)
+            .map((envelope) => ({
+                id: envelope.id,
+                sender: envelope.notif?.notification?.data?.senderUserName ?? "",
+                subject: envelope.notif?.notification?.data?.subject ?? "",
+                body: String(envelope.notif?.notification?.data?.messageBody ?? "").slice(0, 12000),
+            }));
+
+        setHasRequestedRuleAnalysis(true);
+        setRuleAnalysisLoading(true);
+        setRuleAnalysisError(null);
+        setRuleAnalysisModel(null);
+        setRuleSuggestions([]);
+        setActiveRuleIds([]);
+        setRuleFilter("all");
+
+        try {
+            const response = await fetch(`${apiBaseUrl}/ai/inbox-rules`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ messages }),
+            });
+            if (!response.ok) {
+                const detail = (await response.text()).trim();
+                throw new Error(detail || `Qwen analysis failed (${response.status})`);
+            }
+            const analysis = parseInboxAnalysis(await response.json());
+            setRuleSuggestions(analysis.suggestions);
+            setRuleAnalysisModel(analysis.model || "Qwen");
+        } catch (analysisError: unknown) {
+            setRuleAnalysisError(analysisError instanceof Error
+                ? analysisError.message
+                : "Qwen inbox analysis failed.");
+        } finally {
+            setRuleAnalysisLoading(false);
+        }
+    };
+
+
 
     useEffect(() => {
         if (pendingTests.length === 0) return;
@@ -256,6 +369,7 @@ export default function InboxPage() {
                             >
                                 Manage Notifications
                             </Link>
+                            {!isSandbox && (
                             <span className="group relative inline-flex">
                                 <button
                                     type="button"
@@ -274,6 +388,7 @@ export default function InboxPage() {
                                     Sends one eBay test per seller, preferring the NEW_MESSAGE subscription. Sealift then waits up to 45 seconds for the exact test notification to arrive here.
                                 </span>
                             </span>
+                            )}
                         </div>
                     )}
                 >
@@ -317,6 +432,18 @@ export default function InboxPage() {
                         variant="error"
                     />
                 )}
+                    <InboxRuleSuggestions
+                        envelopes={envelopes}
+                        suggestions={ruleSuggestions}
+                        model={ruleAnalysisModel}
+                        loading={ruleAnalysisLoading}
+                        error={ruleAnalysisError}
+                        hasAnalyzed={hasRequestedRuleAnalysis}
+                        activeRuleIds={activeRuleIds}
+                        onToggleRule={toggleRule}
+                        onAnalyze={analyzeInboxRules}
+                    />
+
 
                 {/* Main layout */}
                 <div className="flex flex-col lg:flex-row gap-6 flex-grow min-h-[500px]">
@@ -343,6 +470,30 @@ export default function InboxPage() {
                                 <span className="text-xs text-text-muted font-mono">{displayedEnvelopes.length} total</span>
                             )}
                         </div>
+                        {activeTab === "inbox" && activeRules.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-2">
+                                <span className="px-1 text-[11px] font-bold uppercase tracking-wider text-text-muted">Show</span>
+                                <button
+                                    type="button"
+                                    onClick={() => { setRuleFilter("all"); setSelectedId(null); }}
+                                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${ruleFilter === "all" ? "bg-primary text-white" : "text-text-secondary hover:bg-hover hover:text-hover-content"}`}
+                                >
+                                    All
+                                </button>
+                                {activeRules.map((rule) => (
+                                    <button
+                                        key={rule.id}
+                                        type="button"
+                                        onClick={() => { setRuleFilter(rule.destination); setSelectedId(null); }}
+                                        className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${ruleFilter === rule.destination ? "bg-primary text-white" : "text-text-secondary hover:bg-hover hover:text-hover-content"}`}
+                                    >
+                                        {rule.destination}
+                                        <span className="ml-1 opacity-70">{rule.matchingIds.length}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
 
                         {loadingUsers ? (
                             <div className="animate-pulse flex flex-col gap-3">
@@ -432,6 +583,25 @@ export default function InboxPage() {
                                                     {env.user}
                                                 </span>
                                             </div>
+                                            {activeRules.some((rule) => rule.matchingIds.includes(env.id)) && (
+                                                <div className="mb-1 flex flex-wrap gap-1">
+                                                    {activeRules.map((rule) => {
+                                                            const ruleIndex = ruleSuggestions.findIndex((suggestion) => suggestion.id === rule.id);
+                                                            const amber = ruleIndex % 2 === 1;
+                                                            return (
+                                                                <span
+                                                                    key={rule.id}
+                                                                    className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${amber
+                                                                        ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                                                                        : "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300"
+                                                                        }`}
+                                                                >
+                                                                    {rule.destination}
+                                                                </span>
+                                                            );
+                                                        })}
+                                                </div>
+                                            )}
                                             <div className={`text-xs truncate ${isUnread ? "text-text-primary font-medium" : "text-text-secondary"}`}>
                                                 {topic === "NEW_MESSAGE" && env.notif?.notification?.data?.messageBody
                                                     ? env.notif.notification.data.messageBody

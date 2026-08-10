@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useRef, useState } from "r
 import { useSession } from "next-auth/react";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import { useUsers } from "@/components/UsersContext";
+import { SANDBOX_NOTIFICATIONS, SANDBOX_SELLER } from "@/app/inbox/sandbox-data";
 
 // Define the notification envelope structure
 export interface NotifEnvelope {
@@ -21,6 +22,7 @@ interface NotificationContextProps {
     trashMessage: (id: string, user: string) => Promise<void>;
     deleteMessage: (id: string, user: string) => Promise<void>;
     users: string[];
+    isSandbox: boolean;
     loadingUsers: boolean;
     error: string | null;
 }
@@ -30,21 +32,77 @@ const NotificationContext = createContext<NotificationContextProps | undefined>(
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
     const { data: session } = useSession();
     const { users, loadingUsers, usersError: error } = useUsers();
+    const isGuest = session?.user != null
+        && "isGuest" in session.user
+        && session.user.isGuest === true;
+    const [isSandbox, setIsSandbox] = useState(false);
+    const [sandboxResolved, setSandboxResolved] = useState(false);
+    const effectiveUsers = isSandbox ? [SANDBOX_SELLER] : users;
     const [envelopes, setEnvelopes] = useState<NotifEnvelope[]>([]);
 
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
     const inboxUri = process.env.NEXT_PUBLIC_INBOX_URI;
     const trashUri = process.env.NEXT_PUBLIC_TRASH_URI;
     const markReadUri = process.env.NEXT_PUBLIC_MARK_READ_URI || "mark_read";
+    useEffect(() => {
+        if (process.env.NEXT_PUBLIC_FORCE_SANDBOX_INBOX === "true") {
+            setIsSandbox(true);
+            setSandboxResolved(true);
+            return;
+        }
+        if (!session?.user || isGuest || !apiBaseUrl) {
+            setIsSandbox(false);
+            setSandboxResolved(true);
+            return;
+        }
+
+        let cancelled = false;
+        setSandboxResolved(false);
+        fetch(`${apiBaseUrl}/settings`)
+            .then(async (response) => {
+                if (!response.ok) throw new Error(`Could not determine eBay environment (${response.status})`);
+                const settings: unknown = await response.json();
+                const ebayConfig = settings && typeof settings === "object" && "ebayDeveloperConfig" in settings
+                    ? settings.ebayDeveloperConfig
+                    : null;
+                const sandbox = ebayConfig && typeof ebayConfig === "object" && "isSandbox" in ebayConfig
+                    ? ebayConfig.isSandbox === true
+                    : false;
+                if (!cancelled) setIsSandbox(sandbox);
+            })
+            .catch((settingsError: unknown) => {
+                console.warn("Failed to determine eBay environment", settingsError);
+                if (!cancelled) setIsSandbox(false);
+            })
+            .finally(() => {
+                if (!cancelled) setSandboxResolved(true);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [apiBaseUrl, isGuest, session?.user]);
+
 
     // Track EventSources so we can clean them up
     const eventSourcesRef = useRef<Map<string, EventSource>>(new Map());
 
     const unreadCount = envelopes.filter((e) => !e.read && !e.trashed).length;
+    useEffect(() => {
+        if (!isSandbox) return;
+        setEnvelopes(SANDBOX_NOTIFICATIONS.map((notif) => ({
+            notif,
+            user: SANDBOX_SELLER,
+            id: notif.notification.notificationId,
+            read: notif.sealift_read,
+            trashed: notif.sealift_trashed,
+        })));
+    }, [isSandbox]);
+
 
     // Open one SSE connection per user
     useEffect(() => {
-        if (!apiBaseUrl || users.length === 0) return;
+        if (!sandboxResolved || isSandbox || !apiBaseUrl || users.length === 0) return;
 
         const existing = eventSourcesRef.current;
 
@@ -116,7 +174,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             existing.forEach((es) => es.close());
             existing.clear();
         };
-    }, [apiBaseUrl, users]);
+    }, [apiBaseUrl, isSandbox, sandboxResolved, users]);
 
     const selectMessage = async (id: string, user: string) => {
         const wasUnread = envelopes.some(
@@ -129,8 +187,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             )
         );
 
-        // Guest users should not make API calls
-        if ((session?.user as any)?.isGuest || !wasUnread || !apiBaseUrl) return;
+        // Sandbox and guest messages are local-only and never write to the API.
+        if (isSandbox || isGuest || !wasUnread || !apiBaseUrl) return;
 
         try {
             const response = await fetch(
@@ -151,8 +209,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     };
 
     const trashMessage = async (id: string, user: string) => {
-        // Guest users should not perform write operations
-        if ((session?.user as any)?.isGuest) {
+        // Sandbox and guest messages are local-only and never write to the API.
+        if (isSandbox || isGuest) {
             setEnvelopes((prev) =>
                 prev.map((e) => (e.id === id ? { ...e, trashed: true } : e))
             );
@@ -176,8 +234,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     };
 
     const deleteMessage = async (id: string, user: string) => {
-        // Guest users should not perform write operations
-        if ((session?.user as any)?.isGuest) {
+        // Sandbox and guest messages are local-only and never write to the API.
+        if (isSandbox || isGuest) {
             setEnvelopes((prev) => prev.filter((e) => e.id !== id));
             return;
         }
@@ -201,7 +259,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             selectMessage,
             trashMessage,
             deleteMessage,
-            users,
+            isSandbox,
+            users: effectiveUsers,
             loadingUsers,
             error
         }}>

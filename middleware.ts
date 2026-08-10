@@ -27,7 +27,10 @@ export default auth((req) => {
     }
 
     // 2. If guest, rewrite to /guest view (unless already on login/guest or guest-allowed pages)
-    const guestAllowedPaths = ["/create-listing"];
+    const guestAllowedPaths = [
+        "/create-listing",
+        ...(process.env.NEXT_PUBLIC_FORCE_SANDBOX_INBOX === "true" ? ["/sandbox-inbox-preview"] : []),
+    ];
     if (isGuest && !guestAllowedPaths.includes(req.nextUrl.pathname) && req.nextUrl.pathname !== "/guest" && !isLoginPage) {
         const url = req.nextUrl.clone();
         url.pathname = "/guest";
