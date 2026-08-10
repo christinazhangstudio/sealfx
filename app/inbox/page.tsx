@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useNotifications } from "@/components/NotificationContext";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import PageHeader from "@/components/PageHeader";
 import StatusAlert from "@/components/StatusAlert";
-import InboxRuleSuggestions, { type InboxRuleSuggestion } from "./InboxRuleSuggestions";
+import InboxRuleSuggestions, { InboxRulesToggle, type InboxRuleSuggestion } from "./InboxRuleSuggestions";
 
 interface Subscription {
     subscriptionId: string;
@@ -35,6 +35,7 @@ type TestFeedback = {
 type InboxAnalysis = {
     model: string;
     suggestions: InboxRuleSuggestion[];
+    activeRuleIds: string[];
 };
 
 
@@ -44,7 +45,10 @@ function parseInboxAnalysis(value: unknown): InboxAnalysis {
         || !("model" in value)
         || typeof value.model !== "string"
         || !("suggestions" in value)
-        || !Array.isArray(value.suggestions)) {
+        || !Array.isArray(value.suggestions)
+        || !("activeRuleIds" in value)
+        || !Array.isArray(value.activeRuleIds)
+        || !value.activeRuleIds.every((id: unknown) => typeof id === "string")) {
         throw new Error("Qwen returned an invalid inbox analysis.");
     }
 
@@ -70,7 +74,19 @@ function parseInboxAnalysis(value: unknown): InboxAnalysis {
             matchingIds: candidate.matchingIds,
         });
     }
-    return { model: value.model, suggestions };
+    const knownRuleIds = new Set(suggestions.map((suggestion) => suggestion.id));
+    const activeRuleIds = [...new Set(value.activeRuleIds)].filter((id) => knownRuleIds.has(id));
+    return { model: value.model, suggestions, activeRuleIds };
+}
+
+function measureMessageScrollbar(element: HTMLDivElement) {
+    const { clientHeight, scrollHeight, scrollTop } = element;
+    const visible = scrollHeight > clientHeight + 1;
+    const height = visible ? Math.max(32, clientHeight * clientHeight / scrollHeight) : clientHeight;
+    const top = visible
+        ? scrollTop / (scrollHeight - clientHeight) * (clientHeight - height)
+        : 0;
+    return { visible, height, top };
 }
 
 
@@ -118,8 +134,15 @@ export default function InboxPage() {
     const [ruleAnalysisModel, setRuleAnalysisModel] = useState<string | null>(null);
     const [ruleAnalysisLoading, setRuleAnalysisLoading] = useState(false);
     const [ruleAnalysisError, setRuleAnalysisError] = useState<string | null>(null);
+    const [rulePreferenceError, setRulePreferenceError] = useState<string | null>(null);
+    const [savingRuleId, setSavingRuleId] = useState<string | null>(null);
     const [hasRequestedRuleAnalysis, setHasRequestedRuleAnalysis] = useState(false);
     const [ruleFilter, setRuleFilter] = useState("all");
+    const [showRuleConfigurator, setShowRuleConfigurator] = useState(false);
+    const messageListRef = useRef<HTMLDivElement>(null);
+    const [messageScrollbar, setMessageScrollbar] = useState({ visible: false, height: 0, top: 0 });
+    const savedRuleAnalysisRequest = useRef<AbortController | null>(null);
+    const rulePreferenceSaveRequest = useRef<AbortController | null>(null);
 
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
     const usersBaseUri = process.env.NEXT_PUBLIC_NOTIFICATIONS_USERS_BASE_URI;
@@ -133,17 +156,108 @@ export default function InboxPage() {
             || activeRules.some((rule) => rule.destination === ruleFilter && rule.matchingIds.includes(envelope.id)));
     const selectedEnvelope = envelopes.find((envelope) => envelope.id === selectedId) ?? null;
 
-    const toggleRule = (ruleId: string) => {
-        setActiveRuleIds((current) =>
-            current.includes(ruleId)
-                ? current.filter((id) => id !== ruleId)
-                : [...current, ruleId],
-        );
+    useEffect(() => {
+        const list = messageListRef.current;
+        if (!list) return;
+
+        const update = () => setMessageScrollbar(measureMessageScrollbar(list));
+        update();
+        const observer = new ResizeObserver(update);
+        observer.observe(list);
+        return () => observer.disconnect();
+    }, [activeTab, displayedEnvelopes.length, ruleFilter]);
+
+    useEffect(() => {
+        if (!apiBaseUrl) return;
+
+        const controller = new AbortController();
+        savedRuleAnalysisRequest.current = controller;
+        fetch(`${apiBaseUrl}/ai/inbox-rules`, {
+            method: "GET",
+            signal: controller.signal,
+        })
+            .then(async (response) => {
+                if (!response.ok) {
+                    throw new Error(`Could not load saved Qwen rules (${response.status})`);
+                }
+                return parseInboxAnalysis(await response.json());
+            })
+            .then((analysis) => {
+                setActiveRuleIds(analysis.activeRuleIds);
+                if (analysis.suggestions.length === 0) return;
+                setRuleSuggestions(analysis.suggestions);
+                setRuleAnalysisModel(analysis.model || "Qwen");
+                setHasRequestedRuleAnalysis(true);
+            })
+            .catch((loadError: unknown) => {
+                if (loadError instanceof DOMException && loadError.name === "AbortError") return;
+                console.error(loadError);
+            })
+            .finally(() => {
+                if (savedRuleAnalysisRequest.current === controller) {
+                    savedRuleAnalysisRequest.current = null;
+                }
+            });
+
+        return () => controller.abort();
+    }, [apiBaseUrl]);
+
+    useEffect(() => () => rulePreferenceSaveRequest.current?.abort(), []);
+
+    const toggleRule = async (ruleId: string) => {
+        if (rulePreferenceSaveRequest.current) return;
+        const wasApplied = activeRuleIds.includes(ruleId);
+        const nextRuleIds = wasApplied
+            ? activeRuleIds.filter((id) => id !== ruleId)
+            : [...activeRuleIds, ruleId];
+        setActiveRuleIds(nextRuleIds);
         setRuleFilter("all");
         setSelectedId(null);
+        setRulePreferenceError(null);
+
+        if (!apiBaseUrl) {
+            setActiveRuleIds(activeRuleIds);
+            setRulePreferenceError("Could not save the applied rule preference.");
+            return;
+        }
+
+        const controller = new AbortController();
+        rulePreferenceSaveRequest.current = controller;
+        setSavingRuleId(ruleId);
+        try {
+            const response = await fetch(`${apiBaseUrl}/ai/inbox-rules`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ruleId, applied: !wasApplied }),
+                signal: controller.signal,
+            });
+            if (!response.ok) {
+                const detail = (await response.text()).trim();
+                throw new Error(detail || `Could not save applied rule (${response.status})`);
+            }
+            const analysis = parseInboxAnalysis(await response.json());
+            setActiveRuleIds(analysis.activeRuleIds);
+        } catch (saveError: unknown) {
+            if (!(saveError instanceof DOMException && saveError.name === "AbortError")) {
+                setActiveRuleIds(activeRuleIds);
+                setRulePreferenceError(saveError instanceof Error
+                    ? saveError.message
+                    : "Could not save the applied rule preference.");
+            }
+        } finally {
+            if (rulePreferenceSaveRequest.current === controller) {
+                rulePreferenceSaveRequest.current = null;
+                setSavingRuleId(null);
+            }
+        }
     };
     const analyzeInboxRules = async () => {
         if (ruleAnalysisLoading) return;
+        savedRuleAnalysisRequest.current?.abort();
+        rulePreferenceSaveRequest.current?.abort();
+        rulePreferenceSaveRequest.current = null;
+        setSavingRuleId(null);
+        setRulePreferenceError(null);
         if (!apiBaseUrl || envelopes.length < 2) {
             setHasRequestedRuleAnalysis(true);
             setRuleAnalysisError("At least two inbox messages are required for Qwen analysis.");
@@ -178,6 +292,7 @@ export default function InboxPage() {
                 throw new Error(detail || `Qwen analysis failed (${response.status})`);
             }
             const analysis = parseInboxAnalysis(await response.json());
+            setActiveRuleIds(analysis.activeRuleIds);
             setRuleSuggestions(analysis.suggestions);
             setRuleAnalysisModel(analysis.model || "Qwen");
         } catch (analysisError: unknown) {
@@ -407,8 +522,14 @@ export default function InboxPage() {
                     )}
                 </PageHeader>
 
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-4">
                     <BellIcon count={unreadCount} />
+                    <InboxRulesToggle
+                        savedCount={ruleSuggestions.length}
+                        expanded={showRuleConfigurator}
+                        loading={ruleAnalysisLoading}
+                        onToggle={() => setShowRuleConfigurator((current) => !current)}
+                    />
                     {loadingUsers ? (
                         <div className="h-6 w-40 bg-surface rounded-full animate-pulse" />
                     ) : (
@@ -432,17 +553,21 @@ export default function InboxPage() {
                         variant="error"
                     />
                 )}
+                {showRuleConfigurator && (
                     <InboxRuleSuggestions
                         envelopes={envelopes}
                         suggestions={ruleSuggestions}
                         model={ruleAnalysisModel}
                         loading={ruleAnalysisLoading}
                         error={ruleAnalysisError}
+                        preferenceError={rulePreferenceError}
+                        savingRuleId={savingRuleId}
                         hasAnalyzed={hasRequestedRuleAnalysis}
                         activeRuleIds={activeRuleIds}
                         onToggleRule={toggleRule}
                         onAnalyze={analyzeInboxRules}
                     />
+                )}
 
 
                 {/* Main layout */}
@@ -476,7 +601,7 @@ export default function InboxPage() {
                                 <button
                                     type="button"
                                     onClick={() => { setRuleFilter("all"); setSelectedId(null); }}
-                                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${ruleFilter === "all" ? "bg-primary text-white" : "text-text-secondary hover:bg-hover hover:text-hover-content"}`}
+                                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${ruleFilter === "all" ? "bg-primary/60 text-white" : "text-text-secondary hover:bg-hover hover:text-hover-content"}`}
                                 >
                                     All
                                 </button>
@@ -485,7 +610,7 @@ export default function InboxPage() {
                                         key={rule.id}
                                         type="button"
                                         onClick={() => { setRuleFilter(rule.destination); setSelectedId(null); }}
-                                        className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${ruleFilter === rule.destination ? "bg-primary text-white" : "text-text-secondary hover:bg-hover hover:text-hover-content"}`}
+                                        className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${ruleFilter === rule.destination ? "bg-primary/60 text-white" : "text-text-secondary hover:bg-hover hover:text-hover-content"}`}
                                     >
                                         {rule.destination}
                                         <span className="ml-1 opacity-70">{rule.matchingIds.length}</span>
@@ -507,7 +632,12 @@ export default function InboxPage() {
                                 {activeTab === "inbox" ? "No messages yet — waiting for live notifications." : "Trash is empty."}
                             </div>
                         ) : (
-                            <div className="flex flex-col gap-3 overflow-y-auto pr-2" style={{ maxHeight: "70vh" }}>
+                            <div className="relative">
+                                <div
+                                    ref={messageListRef}
+                                    onScroll={(event) => setMessageScrollbar(measureMessageScrollbar(event.currentTarget))}
+                                    className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto pl-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                >
                                 {displayedEnvelopes.map((env) => {
                                     const topic = env.notif?.metadata?.topic || "UNKNOWN_TOPIC";
                                     const dateStr =
@@ -516,12 +646,13 @@ export default function InboxPage() {
                                     const date = dateStr ? new Date(dateStr) : null;
                                     const isSelected = env.id === selectedId;
                                     const isUnread = !env.read;
+                                    const matchingRules = activeRules.filter((rule) => rule.matchingIds.includes(env.id));
 
                                     return (
                                         <div
                                             key={env.id}
                                             onClick={() => selectMessage(env.id, env.user)}
-                                            className={`relative group text-left p-4 rounded-xl border transition-all duration-200 cursor-pointer overflow-hidden
+                                            className={`relative h-36 shrink-0 overflow-hidden rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer
                                                 ${isSelected
                                                     ? "bg-message-pill/6 border-border shadow-sm"
                                                     : isUnread
@@ -583,23 +714,23 @@ export default function InboxPage() {
                                                     {env.user}
                                                 </span>
                                             </div>
-                                            {activeRules.some((rule) => rule.matchingIds.includes(env.id)) && (
+                                            {matchingRules.length > 0 && (
                                                 <div className="mb-1 flex flex-wrap gap-1">
-                                                    {activeRules.map((rule) => {
-                                                            const ruleIndex = ruleSuggestions.findIndex((suggestion) => suggestion.id === rule.id);
-                                                            const amber = ruleIndex % 2 === 1;
-                                                            return (
-                                                                <span
-                                                                    key={rule.id}
-                                                                    className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${amber
-                                                                        ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                                                                        : "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300"
-                                                                        }`}
-                                                                >
-                                                                    {rule.destination}
-                                                                </span>
-                                                            );
-                                                        })}
+                                                    {matchingRules.map((rule) => {
+                                                        const ruleIndex = ruleSuggestions.findIndex((suggestion) => suggestion.id === rule.id);
+                                                        const amber = ruleIndex % 2 === 1;
+                                                        return (
+                                                            <span
+                                                                key={rule.id}
+                                                                className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${amber
+                                                                    ? "border-amber-500/50 bg-amber-500/10 text-amber-500 [[data-theme=dark]_&]:text-amber-200"
+                                                                    : "border-blue-500/50 bg-blue-500/10 text-blue-500 [[data-theme=dark]_&]:text-blue-200"
+                                                                    }`}
+                                                            >
+                                                                {rule.destination}
+                                                            </span>
+                                                        );
+                                                    })}
                                                 </div>
                                             )}
                                             <div className={`text-xs truncate ${isUnread ? "text-text-primary font-medium" : "text-text-secondary"}`}>
@@ -611,6 +742,21 @@ export default function InboxPage() {
                                     );
                                 })}
                             </div>
+                                {messageScrollbar.visible && (
+                                    <div
+                                        aria-hidden="true"
+                                        className="pointer-events-none absolute inset-y-0 left-1 w-1.5 rounded-full bg-border/40"
+                                    >
+                                        <div
+                                            className="absolute inset-x-0 rounded-full bg-text-muted/80"
+                                            style={{
+                                                height: `${messageScrollbar.height}px`,
+                                                transform: `translateY(${messageScrollbar.top}px)`,
+                                            }}
+                                        />
+                                    </div>
+                                )}
+                                </div>
                         )}
                     </div>
 

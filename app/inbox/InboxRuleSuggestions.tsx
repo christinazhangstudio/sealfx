@@ -18,11 +18,66 @@ type Props = {
     model: string | null;
     loading: boolean;
     error: string | null;
+    preferenceError: string | null;
+    savingRuleId: string | null;
     hasAnalyzed: boolean;
     activeRuleIds: string[];
     onToggleRule: (ruleId: string) => void;
     onAnalyze: () => void;
 };
+
+function SparklesIcon() {
+    return (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="m12 3-1.8 5.2L5 10l5.2 1.8L12 17l1.8-5.2L19 10l-5.2-1.8L12 3Z" />
+            <path d="m5 16-.7 2.3L2 19l2.3.7L5 22l.7-2.3L8 19l-2.3-.7L5 16Z" />
+        </svg>
+    );
+}
+
+export function InboxRulesToggle({
+    savedCount,
+    expanded,
+    loading,
+    onToggle,
+}: {
+    savedCount: number;
+    expanded: boolean;
+    loading: boolean;
+    onToggle: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onToggle}
+            aria-label={expanded ? "Collapse AI suggested rules" : "Expand AI suggested rules"}
+            aria-controls="ai-inbox-rules-configurator"
+            aria-expanded={expanded}
+            className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-primary/20 bg-surface px-2.5 py-1.5 shadow-sm transition-colors hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+        >
+            <span className={`shine-button inline-flex h-7 w-7 items-center justify-center rounded-md text-white ${loading ? "animate-pulse bg-primary/70" : "bg-primary"}`} aria-hidden="true">
+                <SparklesIcon />
+            </span>
+            <span className="inline-flex items-center whitespace-nowrap">
+                <span className="glass-caps !mb-0 text-[10px]">AI Suggested Rules&nbsp;({savedCount} saved)</span>
+            </span>
+            <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={`flex-shrink-0 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+                aria-hidden="true"
+            >
+                <path d="m6 9 6 6 6-6" />
+            </svg>
+        </button>
+    );
+}
 
 export default function InboxRuleSuggestions({
     envelopes,
@@ -30,52 +85,66 @@ export default function InboxRuleSuggestions({
     model,
     loading,
     error,
+    preferenceError,
+    savingRuleId,
     hasAnalyzed,
     activeRuleIds,
     onToggleRule,
     onAnalyze,
 }: Props) {
     const [expandedRuleId, setExpandedRuleId] = useState<string | null>(null);
+    const handleAnalyze = () => {
+        setExpandedRuleId(null);
+        onAnalyze();
+    };
+
 
     return (
-        <section className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/8 via-surface to-surface p-5 shadow-sm sm:p-6">
+        <section id="ai-inbox-rules-configurator" className="ai-rules-configurator rounded-xl border border-border bg-surface p-5 shadow-sm sm:p-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="max-w-2xl">
                     <div className="mb-2 flex items-center gap-2">
-                        <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-white shadow-sm" aria-hidden="true">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="m12 3-1.8 5.2L5 10l5.2 1.8L12 17l1.8-5.2L19 10l-5.2-1.8L12 3Z" />
-                                <path d="m5 16-.7 2.3L2 19l2.3.7L5 22l.7-2.3L8 19l-2.3-.7L5 16Z" />
-                            </svg>
-                        </span>
-                        <span className="text-xs font-bold uppercase tracking-[0.16em] text-primary">AI inbox analysis</span>
+                        <span className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Inbox rules</span>
                     </div>
-                    <h2 className="text-xl font-bold text-text-primary">
+                    <h2 className="glass-caps text-lg font-bold text-text-primary">
                         {loading
-                            ? "Qwen is analyzing this inbox"
+                            ? "AI is analyzing this inbox"
                             : hasAnalyzed
-                                ? `${suggestions.length} rule suggestion${suggestions.length === 1 ? "" : "s"} from Qwen`
-                                : "Have AI suggest inbox rules"}
+                                ? `${suggestions.length} rule suggestion${suggestions.length === 1 ? "" : "s"}`
+                                : "Organize your inbox with AI"}
                     </h2>
-                    <p className="mt-1 text-sm leading-relaxed text-text-secondary">
-                        Qwen will analyze recurring topics in these messages and propose rules for you to review. Nothing is applied automatically.
+                    <p className="text-xs leading-relaxed text-text-secondary">
+                        AI will analyze themes in your messages and propose rules for you to review. Nothing is applied automatically.
                     </p>
                 </div>
-                <span className="w-fit rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-text-muted">
-                    {model ? `Analyzed by ${model}` : "On-demand Qwen analysis"}
-                </span>
+                <div className="flex flex-wrap items-center gap-2 sm:max-w-xs sm:justify-end">
+                    <span className="w-fit rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-text-muted">
+                        {model ? `Analyzed by ${model}` : "On-demand AI analysis"}
+                    </span>
+                    {hasAnalyzed && !loading && !error && (
+                        <button
+                            type="button"
+                            onClick={handleAnalyze}
+                            className="min-h-10 whitespace-nowrap rounded-lg border border-primary/30 bg-surface px-4 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                        >
+                            Reanalyze inbox
+                        </button>
+                    )}
+                </div>
             </div>
+            {preferenceError && (
+                <p className="mt-4 rounded-lg border border-error-text/30 bg-error-bg p-3 text-xs text-error-text" role="alert">
+                    {preferenceError}
+                </p>
+            )}
             {!hasAnalyzed && !loading && (
-                <div className="mt-5 flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="max-w-2xl text-sm leading-relaxed text-text-secondary">
-                        Send the current inbox to Qwen to identify useful groups, labels, and priority rules.
-                    </p>
+                <div className="mt-3 flex justify-center bg-surface sm:justify-start">
                     <button
                         type="button"
-                        onClick={onAnalyze}
-                        className="min-h-11 whitespace-nowrap rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                        onClick={handleAnalyze}
+                        className="shine-button min-h-11 whitespace-nowrap rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                     >
-                        Have AI suggest rules
+                        Suggest new rules
                     </button>
                 </div>
             )}
@@ -98,7 +167,7 @@ export default function InboxRuleSuggestions({
                     <p className="text-sm text-error-text">{error}</p>
                     <button
                         type="button"
-                        onClick={onAnalyze}
+                        onClick={handleAnalyze}
                         className="min-h-10 rounded-lg border border-error-text/30 px-4 py-2 text-xs font-bold text-error-text transition-colors hover:bg-error-text/10"
                     >
                         Try analysis again
@@ -108,7 +177,7 @@ export default function InboxRuleSuggestions({
 
             {hasAnalyzed && !loading && !error && suggestions.length === 0 && (
                 <p className="mt-5 rounded-xl border border-border bg-surface p-4 text-sm text-text-secondary">
-                    Qwen did not find a recurring pattern strong enough to suggest a rule.
+                    AI did not find a recurring pattern strong enough to suggest a rule.
                 </p>
             )}
 
@@ -121,11 +190,11 @@ export default function InboxRuleSuggestions({
                     const matches = envelopes.filter((envelope) => rule.matchingIds.includes(envelope.id));
                     const accent = index % 2 === 1 ? "amber" : "blue";
                     const accentClasses = accent === "amber"
-                        ? "border-amber-500/30 bg-amber-500/8 text-amber-700 dark:text-amber-300"
-                        : "border-blue-500/30 bg-blue-500/8 text-blue-700 dark:text-blue-300";
+                        ? "border-amber-500/30 bg-amber-500/8 text-amber-900 dark:text-amber-500"
+                        : "border-blue-500/30 bg-blue-500/8 text-blue-700 dark:text-blue-500";
 
                     return (
-                        <article key={rule.id} className="rounded-xl border border-border bg-surface p-4 shadow-sm">
+                        <article key={rule.id} className="rounded-xl border border-border/40 bg-background/70 p-4 shadow-sm">
                             <div className="flex items-start justify-between gap-4">
                                 <div>
                                     <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-bold ${accentClasses}`}>
@@ -137,23 +206,29 @@ export default function InboxRuleSuggestions({
                                 <div className={`mt-1 h-3 w-3 flex-shrink-0 rounded-full ${accent === "amber" ? "bg-amber-500" : "bg-blue-500"}`} />
                             </div>
 
-                            <div className="mt-4 rounded-lg border border-border/80 bg-background/60 p-3 text-xs text-text-secondary">
-                                <div className="font-semibold text-text-primary">When</div>
-                                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                                    {rule.conditions.map((condition) => (
-                                        <span key={condition} className="rounded-md border border-border bg-surface px-2 py-1">{condition}</span>
+                            <div className="mt-4 rounded-lg border border-border/30 bg-background/10 p-3 text-xs">
+                                <div className="font-mono font-semibold text-text-primary decoration-dotted underline underline-offset-4">When</div>
+                                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                                    {rule.conditions.map((condition, conditionIndex) => (
+                                        <span key={condition} className="contents">
+                                            {conditionIndex > 0 && (
+                                                <span className="font-mono font-semibold text-text-muted decoration-dotted underline underline-offset-4">and</span>
+                                            )}
+                                            <span className="font-mono rounded-md border border-border bg-surface px-2 py-1">{condition}</span>
+                                        </span>
                                     ))}
                                 </div>
-                                <div className="mt-3 flex items-center gap-2">
-                                    <span className="font-semibold text-text-primary">Then</span>
-                                    <span aria-hidden="true">→</span>
-                                    <span>Label as <strong className="text-text-primary">{rule.destination}</strong></span>
+                                <div className="mt-3 flex flex-wrap items-baseline gap-1.5">
+                                    <span className="font-mono font-semibold text-text-primary decoration-dotted underline underline-offset-4">Then</span>
+                                    <span className="font-mono">
+                                        place matching messages in&nbsp;<strong className="font-mono decoration-dotted underline underline-offset-4 text-text-primary">{rule.destination}</strong>.
+                                    </span>
                                 </div>
                             </div>
 
                             {isExpanded && (
                                 <div className="mt-3 rounded-lg border border-border bg-background/40 p-3">
-                                    <div className="mb-2 text-[11px] font-bold uppercase tracking-wider text-text-muted">Historical preview</div>
+                                    <div className="mb-2 text-[11px] font-bold uppercase tracking-wider text-text-muted">Preview</div>
                                     <ul className="space-y-2">
                                         {matches.map((envelope) => (
                                             <li key={envelope.id} className="flex items-start gap-2 text-xs text-text-secondary">
@@ -169,20 +244,22 @@ export default function InboxRuleSuggestions({
                                 <button
                                     type="button"
                                     onClick={() => setExpandedRuleId(isExpanded ? null : rule.id)}
-                                    className="min-h-10 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-text-secondary transition-colors hover:bg-hover hover:text-hover-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                                    className="min-h-10 rounded-lg bg-btn-reset px-3 py-2 text-xs font-bold text-white shadow-sm transition-all hover:bg-btn-reset-hover active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                                     aria-expanded={isExpanded}
                                 >
-                                    {isExpanded ? "Hide preview" : "Preview matches"}
+                                    {isExpanded ? "Hide preview" : "Show preview"}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => onToggleRule(rule.id)}
-                                    className={`min-h-10 rounded-lg px-4 py-2 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${isActive
+                                    disabled={savingRuleId !== null}
+                                    aria-busy={savingRuleId === rule.id}
+                                    className={`min-h-10 rounded-lg px-4 py-2 text-xs font-bold transition-colors disabled:cursor-wait disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${isActive
                                         ? "border border-success-text/30 bg-success-bg text-success-text"
-                                        : "bg-primary text-white hover:opacity-90"
+                                        : "shine-button bg-primary text-white hover:opacity-90"
                                         }`}
                                 >
-                                    {isActive ? "Rule applied" : "Apply rule"}
+                                    {savingRuleId === rule.id ? "Saving..." : isActive ? "Rule applied" : "Apply rule"}
                                 </button>
                                 {isActive && <span className="text-xs text-text-muted">Select again to undo</span>}
                             </div>

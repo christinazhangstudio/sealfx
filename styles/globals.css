@@ -85,6 +85,36 @@
   --color-switcher-button-hover: var(--color-switcher-button-hover);
 }
 
+@keyframes ai-rules-fan-open {
+  0% {
+    opacity: 0;
+    clip-path: polygon(0 0, 0 0, 0 0, 0 0);
+    transform: scale(0.94);
+  }
+
+  45% {
+    opacity: 0.9;
+    clip-path: polygon(0 0, 100% 0, 38% 46%, 0 100%);
+  }
+
+  100% {
+    opacity: 1;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+    transform: scale(1);
+  }
+}
+
+.ai-rules-configurator {
+  transform-origin: top left;
+  animation: ai-rules-fan-open 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-rules-configurator {
+    animation: none;
+  }
+}
+
 /* Dark mode is handled by next-themes [data-theme] attribute now */
 
 /* Status surfaces use one accent for the outline, icon, and text. Their fill
