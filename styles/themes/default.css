@@ -20,9 +20,9 @@
     --color-message-pill: #c9bb71;
 
     /* Chart Colors */
-    --color-chart-1: #e94f8f;
-    --color-chart-2: #2673efc1;
-    --color-chart-axis-text: #be185d;
+    --color-chart-1: #e1709f;
+    --color-chart-2: #5d5d5d;
+    --color-chart-axis-text: #d45187;
     --color-chart-axis-grid: #e5afce40;
 
     /* Status Colors */
@@ -43,9 +43,8 @@
     --nav-bg: linear-gradient(to bottom, #faf5f1, #f7eeee);
 
     /* Theme Switcher */
-    --color-switcher-bg: #fdfeff;
-    --color-switcher-border: #9eb3d6;
-    --color-switcher-text: #61799e;
-    --color-switcher-button-text: #61799e;
-    --color-switcher-button-hover: #1e293b;
+    --color-switcher-bg: #ebe6e4;
+    --color-switcher-text: #928b8f;
+    --color-switcher-button-text: #999797;
+    --color-switcher-button-hover: #6c6569;
 }

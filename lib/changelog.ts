@@ -7,6 +7,16 @@ export interface ChangelogEntry {
 const changelogEntriesNewestFirst: ChangelogEntry[] = [
   {
     version: "v1",
+    date: "August 2026",
+    updates: [
+      "Use AI-suggested inbox rules to organize recurring messages and preview matches before applying them.",
+      "Applied inbox rules are saved to your account and restored when you return.",
+      "Inbox analysis now reviews up to 100 messages, cleans HTML email content, and clearly notes when long messages are truncated.",
+      "Select multiple inbox messages to move them to Trash, or permanently delete multiple trashed messages at once.",
+    ],
+  },
+  {
+    version: "v1",
     date: "July 2026",
     updates: [
       "Reset passwords and manage account details more easily.",
@@ -28,7 +38,7 @@ const changelogEntriesNewestFirst: ChangelogEntry[] = [
     version: "beta",
     date: "February 2026",
     updates: [
-      "Switch between light and dark themes.",
+      "Switch between themes.",
       "Track API usage without digging through settings.",
       "Get notifications faster with live updates.",
     ],
@@ -37,13 +47,6 @@ const changelogEntriesNewestFirst: ChangelogEntry[] = [
     version: "beta",
     date: "August 12 2025",
     updates: ["Remove user accounts when needed."],
-  },
-  {
-    version: "pre-release",
-    date: "May 31 2025",
-    updates: [
-      "Released more reliable Docker images and clearer error handling.",
-    ],
   },
   {
     version: "pre-release",

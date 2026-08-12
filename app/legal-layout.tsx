@@ -36,9 +36,9 @@ export default function LegalLayout({
     );
 }
 
-export function Section({ heading, children }: { heading: string; children: React.ReactNode }) {
+export function Section({ heading, id, children }: { heading: string; id?: string; children: React.ReactNode }) {
     return (
-        <section className="space-y-3">
+        <section id={id} className="space-y-3">
             <h2 className="text-xl font-bold text-[var(--color-text-primary)]">{heading}</h2>
             <div className="space-y-3 text-[var(--color-text-secondary)]">{children}</div>
         </section>

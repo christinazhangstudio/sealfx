@@ -1,5 +1,6 @@
 export const SANDBOX_SELLER = "czhang19";
 
+import { SECOND_HTML_FIXTURE } from "./sandbox-second-fixture";
 const ebayMessage = ({
     id,
     date,
@@ -48,7 +49,73 @@ Your opinion matters. Rate this email.
 eBay Inc., 2025 Hamilton Avenue, San Jose, CA 95125, United States
 © 1995–2025 eBay Inc. or its affiliates`;
 
+const payoutNotificationHtml = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>Your payout is on its way</title>
+<style>
+  .device-width { width: 100% !important; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body style="margin:0; padding:0; background-color:#ffffff;">
+<!-- tracking and layout markup from the original eBay email -->
+<img src="https://www.ebay.com/marketingtracking/v1/impression" width="1" height="1" alt="">
+<table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0">
+  <tr>
+    <td align="center">
+      <table role="presentation" class="device-width" width="600" border="0" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="font-family:Market Sans,Helvetica,Arial,sans-serif; padding:24px;">
+            <h1 style="font-size:30px; line-height:39px; color:#111820; margin:0 0 20px;">$1.94 was sent to your bank account</h1>
+            <p style="font-size:15px; line-height:22px; color:#111820;">See details</p>
+            <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0">
+              <tr><td><strong>Total payout</strong></td><td>$1.94</td></tr>
+              <tr><td><strong>Sent to</strong></td><td>Discover Bank ending in 4349</td></tr>
+              <tr><td><strong>Payout type</strong></td><td>Scheduled</td></tr>
+              <tr><td><strong>Date</strong></td><td>Aug 07, 2026</td></tr>
+              <tr><td><strong>Payout ID</strong></td><td>7661631814</td></tr>
+              <tr><td><strong>Est. arrival</strong></td><td>1–3 business days</td></tr>
+            </table>
+            <h2 style="font-size:20px; line-height:26px;">FAQs</h2>
+            <p><strong>When will my funds be available?</strong></p>
+            <p>Your bank determines when your funds are available for payouts within 1–3 business days.</p>
+            <p><strong>How do I change my payout method?</strong></p>
+            <p>You may choose payouts to a debit card instead of your linked bank account.</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<table id="footer" role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0">
+  <tr>
+    <td style="font-family:Market Sans,Helvetica,Arial,sans-serif; color:#767676; font-size:12px; padding:16px 60px;">
+      <p>Update your email preferences</p>
+      <p>Email reference id: [#bef47b257e234f93a16eee3dd0ce62a3#]</p>
+      <p>eBay Commerce Inc., 2025 Hamilton Avenue, San Jose, CA 95125, United States.</p>
+      <p>Copyright © 2026 eBay Inc. All rights reserved.</p>
+    </td>
+  </tr>
+</table>
+</body>
+</html>`;
+
 export const SANDBOX_NOTIFICATIONS = [
+    ebayMessage({
+        id: "ebay-message-210976065843",
+        date: "2026-08-10T19:18:04.000Z",
+        subject: "3 of your listings could use a boost 🚀",
+        body: SECOND_HTML_FIXTURE,
+    }),
+    ebayMessage({
+        id: "ebay-message-202608077661",
+        date: "2026-08-07T13:24:18Z",
+        subject: "Your payout is on its way",
+        body: payoutNotificationHtml,
+    }),
     ebayMessage({
         id: "ebay-message-202607288597",
         date: "2025-11-07T18:06:57Z",

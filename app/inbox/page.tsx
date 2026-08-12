@@ -1,5 +1,6 @@
 "use client";
 
+import DOMPurify from "dompurify";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useNotifications } from "@/components/NotificationContext";
@@ -7,6 +8,7 @@ import { trackedFetch as fetch } from "@/lib/api-tracker";
 import PageHeader from "@/components/PageHeader";
 import StatusAlert from "@/components/StatusAlert";
 import InboxRuleSuggestions, { InboxRulesToggle, type InboxRuleSuggestion } from "./InboxRuleSuggestions";
+import { messageBodyHasHtml, messageBodyToPlainText } from "./message-text";
 
 interface Subscription {
     subscriptionId: string;
@@ -89,6 +91,99 @@ function measureMessageScrollbar(element: HTMLDivElement) {
     return { visible, height, top };
 }
 
+function generateEmailFrameHead(cspImgSrc: string) {
+    const styleBlock = "html,body{max-width:100%;overflow-wrap:anywhere}body{margin:0;padding:16px}img{max-width:100%;height:auto}table{max-width:100%}";
+    return `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src ${cspImgSrc}; font-src data:; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base target="_blank">
+<style>${styleBlock}</style>`;
+}
+
+function HtmlMessageBody({ html }: { html: string }) {
+    const [sanitizedHtml, setSanitizedHtml] = useState("");
+    const [showImages, setShowImages] = useState(false);
+    const [hasImages, setHasImages] = useState(false);
+
+    useEffect(() => {
+        setHasImages(/<img[^>]+src=/i.test(html));
+
+        const purifier = DOMPurify(window);
+        const sanitized = purifier.sanitize(html, {
+            WHOLE_DOCUMENT: true,
+            USE_PROFILES: { html: true },
+            FORBID_TAGS: ["script", "iframe", "object", "embed", "form", "input", "button", "textarea", "select", "link", "meta", "base"],
+            FORBID_ATTR: ["action", "formaction", "ping", ...(showImages ? [] : ["src", "srcset"])],
+        });
+
+        const frameHead = generateEmailFrameHead(showImages ? "https: data: cid:" : "data: cid:");
+        const documentHtml = /<head(?:\s[^>]*)?>/i.test(sanitized)
+            ? sanitized.replace(/<head(?:\s[^>]*)?>/i, (head) => `${head}${frameHead}`)
+            : `<!doctype html><html><head>${frameHead}</head><body>${sanitized}</body></html>`;
+        setSanitizedHtml(documentHtml);
+    }, [html, showImages]);
+
+    if (sanitizedHtml === "") {
+        return (
+            <div className="bg-message-pill/4 rounded-lg p-8 border border-border/80 shadow-inner text-text-secondary leading-relaxed whitespace-pre-wrap">
+                {messageBodyToPlainText(html)}
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex h-full flex-col gap-3">
+            {hasImages && !showImages && (
+                <div className="flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-2.5 shadow-sm">
+                    <span className="text-sm italic text-text-secondary">
+                        Images have been hidden to{" "}
+                        <Link
+                            href="/privacy#tracking-pixels"
+                            className="underline decoration-text-muted decoration-dotted underline-offset-4 hover:text-primary hover:decoration-primary/50"
+                        >
+                            protect your privacy
+                        </Link>
+                        .
+                    </span>
+                    <button
+                        type="button"
+                        onClick={() => setShowImages(true)}
+                        className="rounded-md bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20"
+                    >
+                        Load Images
+                    </button>
+                </div>
+            )}
+            <iframe
+                title="Rendered email message"
+                sandbox="allow-popups allow-popups-to-escape-sandbox"
+                referrerPolicy="no-referrer"
+                srcDoc={sanitizedHtml}
+                className="min-h-[420px] flex-grow w-full rounded-t-lg border-x border-t border-border/80 bg-white shadow-inner"
+            />
+        </div>
+    );
+}
+
+function MessageBody({ body }: { body: unknown }) {
+    const content = String(body ?? "");
+    if (content === "") {
+        return (
+            <div className="bg-message-pill/4 rounded-lg p-8 border border-border/80 shadow-inner text-text-secondary leading-relaxed">
+                No message content.
+            </div>
+        );
+    }
+    if (messageBodyHasHtml(content)) {
+        return <HtmlMessageBody html={content} />;
+    }
+    return (
+        <div className="bg-message-pill/4 rounded-lg p-8 border border-border/80 shadow-inner text-text-secondary leading-relaxed whitespace-pre-wrap">
+            {content}
+        </div>
+    );
+}
+
 
 function BellIcon({ count }: { count: number }) {
     return (
@@ -119,6 +214,10 @@ function BellIcon({ count }: { count: number }) {
     );
 }
 
+function messageSelectionKey(message: { id: string; user: string }): string {
+    return `${message.user}\u0000${message.id}`;
+}
+
 export default function InboxPage() {
     const [mounted, setMounted] = useState(false);
     useEffect(() => setMounted(true), []);
@@ -128,6 +227,8 @@ export default function InboxPage() {
     const [testingDelivery, setTestingDelivery] = useState(false);
     const [testFeedback, setTestFeedback] = useState<TestFeedback | null>(null);
     const [pendingTests, setPendingTests] = useState<PendingTest[]>([]);
+    const [selectedMessageKeys, setSelectedMessageKeys] = useState<Set<string>>(() => new Set());
+    const [bulkMessageActionLoading, setBulkMessageActionLoading] = useState(false);
 
     const [activeRuleIds, setActiveRuleIds] = useState<string[]>([]);
     const [ruleSuggestions, setRuleSuggestions] = useState<InboxRuleSuggestion[]>([]);
@@ -149,12 +250,19 @@ export default function InboxPage() {
     const subscriptionsUri = process.env.NEXT_PUBLIC_NOTIFICATIONS_SUBSCRIPTIONS_URI;
 
     const activeRules = ruleSuggestions.filter((rule) => activeRuleIds.includes(rule.id));
+    const uniqueDestinations = [...new Set(activeRules.map((r) => r.destination))];
+    const inboxMessageIds = new Set(envelopes.filter((envelope) => !envelope.trashed).map((envelope) => envelope.id));
     const displayedEnvelopes = envelopes
         .filter((envelope) => activeTab === "trash" ? envelope.trashed : !envelope.trashed)
         .filter((envelope) => activeTab === "trash"
             || ruleFilter === "all"
             || activeRules.some((rule) => rule.destination === ruleFilter && rule.matchingIds.includes(envelope.id)));
     const selectedEnvelope = envelopes.find((envelope) => envelope.id === selectedId) ?? null;
+    const selectedDisplayedEnvelopes = displayedEnvelopes.filter((envelope) =>
+        selectedMessageKeys.has(messageSelectionKey(envelope)),
+    );
+    const allDisplayedMessagesSelected = displayedEnvelopes.length > 0
+        && selectedDisplayedEnvelopes.length === displayedEnvelopes.length;
 
     useEffect(() => {
         const list = messageListRef.current;
@@ -162,10 +270,11 @@ export default function InboxPage() {
 
         const update = () => setMessageScrollbar(measureMessageScrollbar(list));
         update();
+        
         const observer = new ResizeObserver(update);
         observer.observe(list);
         return () => observer.disconnect();
-    }, [activeTab, displayedEnvelopes.length, ruleFilter]);
+    }, [activeTab, displayedEnvelopes.length, ruleFilter, mounted, loadingUsers]);
 
     useEffect(() => {
         if (!apiBaseUrl) return;
@@ -203,6 +312,66 @@ export default function InboxPage() {
     }, [apiBaseUrl]);
 
     useEffect(() => () => rulePreferenceSaveRequest.current?.abort(), []);
+
+    useEffect(() => {
+        const availableKeys = new Set(envelopes.map(messageSelectionKey));
+        setSelectedMessageKeys((current) => {
+            const next = new Set([...current].filter((key) => availableKeys.has(key)));
+            return next.size === current.size ? current : next;
+        });
+    }, [envelopes]);
+
+    useEffect(() => {
+        setSelectedMessageKeys(new Set());
+    }, [activeTab, ruleFilter]);
+
+    const toggleMessageSelection = (message: { id: string; user: string }) => {
+        const key = messageSelectionKey(message);
+        setSelectedMessageKeys((current) => {
+            const next = new Set(current);
+            if (next.has(key)) {
+                next.delete(key);
+            } else {
+                next.add(key);
+            }
+            return next;
+        });
+    };
+
+
+    const toggleAllDisplayedMessages = () => {
+        setSelectedMessageKeys(allDisplayedMessagesSelected
+            ? new Set()
+            : new Set(displayedEnvelopes.map(messageSelectionKey)));
+    };
+
+    const finishBulkMessageAction = () => {
+        setSelectedMessageKeys(new Set());
+        setSelectedId(null);
+        setBulkMessageActionLoading(false);
+    };
+
+    const handleBulkTrash = async () => {
+        if (selectedDisplayedEnvelopes.length === 0 || bulkMessageActionLoading) return;
+        setBulkMessageActionLoading(true);
+        try {
+            await Promise.all(selectedDisplayedEnvelopes.map((message) => trashMessage(message.id, message.user)));
+        } finally {
+            finishBulkMessageAction();
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        const count = selectedDisplayedEnvelopes.length;
+        if (count === 0 || bulkMessageActionLoading) return;
+        if (!confirm(`Permanently delete ${count} selected message${count === 1 ? "" : "s"}? This cannot be undone.`)) return;
+        setBulkMessageActionLoading(true);
+        try {
+            await Promise.all(selectedDisplayedEnvelopes.map((message) => deleteMessage(message.id, message.user)));
+        } finally {
+            finishBulkMessageAction();
+        }
+    };
 
     const toggleRule = async (ruleId: string) => {
         if (rulePreferenceSaveRequest.current) return;
@@ -258,20 +427,43 @@ export default function InboxPage() {
         rulePreferenceSaveRequest.current = null;
         setSavingRuleId(null);
         setRulePreferenceError(null);
-        if (!apiBaseUrl || envelopes.length < 2) {
+        if (!apiBaseUrl) {
+            setHasRequestedRuleAnalysis(true);
+            setRuleAnalysisError("Inbox analysis is unavailable.");
+            return;
+        }
+
+        const maxMessages = 100;
+        const maxRequestBytes = 192 * 1024;
+        const encoder = new TextEncoder();
+        const messages: Array<{ id: string; sender: string; subject: string; body: string }> = [];
+        let requestBytes = encoder.encode('{"messages":[]}').byteLength;
+        for (const envelope of envelopes) {
+            if (envelope.trashed) continue;
+            if (messages.length === maxMessages) break;
+            const base = {
+                id: envelope.id,
+                sender: String(envelope.notif?.notification?.data?.senderUserName ?? "").slice(0, 256),
+                subject: String(envelope.notif?.notification?.data?.subject ?? "").slice(0, 512),
+            };
+            let message = {
+                ...base,
+                body: messageBodyToPlainText(envelope.notif?.notification?.data?.messageBody).slice(0, 1000),
+            };
+            let messageBytes = encoder.encode(JSON.stringify(message)).byteLength + (messages.length === 0 ? 0 : 1);
+            if (requestBytes + messageBytes > maxRequestBytes) {
+                message = { ...base, body: "" };
+                messageBytes = encoder.encode(JSON.stringify(message)).byteLength + (messages.length === 0 ? 0 : 1);
+            }
+            if (requestBytes + messageBytes > maxRequestBytes) break;
+            messages.push(message);
+            requestBytes += messageBytes;
+        }
+        if (messages.length < 2) {
             setHasRequestedRuleAnalysis(true);
             setRuleAnalysisError("At least two inbox messages are required for Qwen analysis.");
             return;
         }
-
-        const messages = envelopes
-            .filter((envelope) => !envelope.trashed)
-            .map((envelope) => ({
-                id: envelope.id,
-                sender: envelope.notif?.notification?.data?.senderUserName ?? "",
-                subject: envelope.notif?.notification?.data?.subject ?? "",
-                body: String(envelope.notif?.notification?.data?.messageBody ?? "").slice(0, 12000),
-            }));
 
         setHasRequestedRuleAnalysis(true);
         setRuleAnalysisLoading(true);
@@ -288,8 +480,12 @@ export default function InboxPage() {
                 body: JSON.stringify({ messages }),
             });
             if (!response.ok) {
-                const detail = (await response.text()).trim();
-                throw new Error(detail || `Qwen analysis failed (${response.status})`);
+                const rawDetail = (await response.text()).trim();
+                const detail = rawDetail.startsWith("<") ? "" : rawDetail;
+                if (response.status === 413) {
+                    throw new Error("The inbox analysis request exceeded the server size limit.");
+                }
+                throw new Error(detail || `AI analysis failed (${response.status})`);
             }
             const analysis = parseInboxAnalysis(await response.json());
             setActiveRuleIds(analysis.activeRuleIds);
@@ -566,6 +762,7 @@ export default function InboxPage() {
                         activeRuleIds={activeRuleIds}
                         onToggleRule={toggleRule}
                         onAnalyze={analyzeInboxRules}
+                        onCollapse={() => setShowRuleConfigurator(false)}
                     />
                 )}
 
@@ -592,7 +789,7 @@ export default function InboxPage() {
                                 </button>
                             </div>
                             {displayedEnvelopes.length > 0 && (
-                                <span className="text-xs text-text-muted font-mono">{displayedEnvelopes.length} total</span>
+                                <span className="text-sm text-text-muted font-mono">{displayedEnvelopes.length} total</span>
                             )}
                         </div>
                         {activeTab === "inbox" && activeRules.length > 0 && (
@@ -605,17 +802,64 @@ export default function InboxPage() {
                                 >
                                     All
                                 </button>
-                                {activeRules.map((rule) => (
-                                    <button
-                                        key={rule.id}
-                                        type="button"
-                                        onClick={() => { setRuleFilter(rule.destination); setSelectedId(null); }}
-                                        className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${ruleFilter === rule.destination ? "bg-primary/60 text-white" : "text-text-secondary hover:bg-hover hover:text-hover-content"}`}
-                                    >
-                                        {rule.destination}
-                                        <span className="ml-1 opacity-70">{rule.matchingIds.length}</span>
-                                    </button>
-                                ))}
+                                {uniqueDestinations.map((destination) => {
+                                    const count = activeRules
+                                        .filter((r) => r.destination === destination)
+                                        .flatMap((r) => r.matchingIds)
+                                        .filter((id) => inboxMessageIds.has(id))
+                                        .length;
+                                    return (
+                                        <button
+                                            key={destination}
+                                            type="button"
+                                            onClick={() => { setRuleFilter(destination); setSelectedId(null); }}
+                                            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${ruleFilter === destination ? "bg-primary/60 text-white" : "text-text-secondary hover:bg-hover hover:text-hover-content"}`}
+                                        >
+                                            {destination}
+                                            <span className="ml-1 opacity-70">{count}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                        {displayedEnvelopes.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/25 bg-primary/5 p-2">
+                                <button
+                                    type="button"
+                                    onClick={toggleAllDisplayedMessages}
+                                    className="rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:border-primary/40 hover:text-primary"
+                                >
+                                    {allDisplayedMessagesSelected ? "Clear all" : "Select all"}
+                                </button>
+                                <span className="mr-auto text-xs font-medium text-text-secondary">
+                                    {selectedDisplayedEnvelopes.length} selected
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={activeTab === "inbox" ? handleBulkTrash : handleBulkDelete}
+                                    disabled={selectedDisplayedEnvelopes.length === 0 || bulkMessageActionLoading}
+                                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-opacity disabled:cursor-not-allowed disabled:opacity-40 ${activeTab === "inbox"
+                                        ? "bg-primary/20 hover:opacity-90"
+                                        : "bg-error-text/20 hover:opacity-90"
+                                        }`}
+                                >
+                                    {activeTab === "inbox" ? (
+                                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" />
+                                        </svg>
+                                    ) : (
+                                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
+                                        </svg>
+                                    )}
+                                    {/* <span>
+                                        {bulkMessageActionLoading
+                                            ? "Working..."
+                                            : activeTab === "inbox"
+                                                ? "" // move to trash
+                                                : "Delete forever"}
+                                    </span> */}
+                                </button>
                             </div>
                         )}
 
@@ -633,10 +877,12 @@ export default function InboxPage() {
                             </div>
                         ) : (
                             <div className="relative">
+                                <div className="pointer-events-none absolute bottom-0 left-4 right-0 z-10 h-8 bg-gradient-to-t from-background to-transparent" />
+                                
                                 <div
                                     ref={messageListRef}
                                     onScroll={(event) => setMessageScrollbar(measureMessageScrollbar(event.currentTarget))}
-                                    className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto pl-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                    className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto pl-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                                 >
                                 {displayedEnvelopes.map((env) => {
                                     const topic = env.notif?.metadata?.topic || "UNKNOWN_TOPIC";
@@ -645,19 +891,22 @@ export default function InboxPage() {
                                         env.notif?.notification?.publishDate;
                                     const date = dateStr ? new Date(dateStr) : null;
                                     const isSelected = env.id === selectedId;
+                                    const isBulkSelected = selectedMessageKeys.has(messageSelectionKey(env));
                                     const isUnread = !env.read;
-                                    const matchingRules = activeRules.filter((rule) => rule.matchingIds.includes(env.id));
+                                        const matchingRules = activeRules.filter((rule) => rule.matchingIds.includes(env.id));
 
-                                    return (
+                                        return (
                                         <div
                                             key={env.id}
                                             onClick={() => selectMessage(env.id, env.user)}
                                             className={`relative h-36 shrink-0 overflow-hidden rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer
-                                                ${isSelected
-                                                    ? "bg-message-pill/6 border-border shadow-sm"
-                                                    : isUnread
-                                                        ? "bg-blue-500/4 border-blue-500/20 hover:border-blue-500/70"
-                                                        : "bg-surface border-border hover:border-primary/50"
+                                                ${isBulkSelected
+                                                    ? "border-primary/70 bg-primary/10 ring-2 ring-primary/30"
+                                                    : isSelected
+                                                        ? "bg-message-pill/6 border-border shadow-sm"
+                                                        : isUnread
+                                                            ? "bg-blue-500/4 border-blue-500/20 hover:border-blue-500/70"
+                                                            : "bg-surface border-border hover:border-primary/50"
                                                 }`}
                                         >
                                             {!env.trashed ? (
@@ -693,6 +942,14 @@ export default function InboxPage() {
                                             )}
                                             <div className="flex justify-between items-start mb-1">
                                                 <div className="flex items-center gap-2 overflow-hidden pr-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isBulkSelected}
+                                                        onChange={() => toggleMessageSelection(env)}
+                                                        onClick={(event) => event.stopPropagation()}
+                                                        aria-label={`Select ${topic} message`}
+                                                        className="h-4 w-4 flex-shrink-0 cursor-pointer accent-primary"
+                                                    />
                                                     {isUnread && (
                                                         <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 shadow-[0_0_6px_rgba(59,130,246,0.6)]" />
                                                     )}
@@ -739,24 +996,25 @@ export default function InboxPage() {
                                                     : env.notif?.notification?.notificationId || "No ID"}
                                             </div>
                                         </div>
-                                    );
-                                })}
-                            </div>
-                                {messageScrollbar.visible && (
-                                    <div
-                                        aria-hidden="true"
-                                        className="pointer-events-none absolute inset-y-0 left-1 w-1.5 rounded-full bg-border/40"
-                                    >
-                                        <div
-                                            className="absolute inset-x-0 rounded-full bg-text-muted/80"
-                                            style={{
-                                                height: `${messageScrollbar.height}px`,
-                                                transform: `translateY(${messageScrollbar.top}px)`,
-                                            }}
-                                        />
-                                    </div>
-                                )}
+                                        );
+                                    })}
                                 </div>
+                                <div
+                                    aria-hidden="true"
+                                    className="pointer-events-none absolute inset-y-0 left-1 w-1.5 rounded-full bg-border/40"
+                                    style={{
+                                        visibility: messageScrollbar.visible ? "visible" : "hidden"
+                                    }}
+                                >
+                                    <div
+                                        className="absolute inset-x-0 rounded-full bg-text-muted/80"
+                                        style={{
+                                            height: `${messageScrollbar.height}px`,
+                                            transform: `translateY(${messageScrollbar.top}px)`,
+                                        }}
+                                    />
+                                </div>
+                            </div>
                         )}
                     </div>
 
@@ -820,14 +1078,11 @@ export default function InboxPage() {
                                 </div>
 
                                 <div
-                                    className="p-4 sm:p-6 text-text-primary overflow-auto flex-grow"
-                                    style={{ maxHeight: "calc(70vh - 80px)" }}
+                                    className="px-4 pb-0 pt-4 sm:px-6 sm:pb-0 sm:pt-6 text-text-primary flex-grow flex flex-col"
                                 >
                                     {selectedEnvelope.notif?.metadata?.topic === "NEW_MESSAGE" ? (
-                                        <div className="space-y-6">
-                                            <div className="bg-message-pill/4 rounded-lg p-8 border border-border/80 shadow-inner text-text-secondary leading-relaxed whitespace-pre-wrap">
-                                                {selectedEnvelope.notif.notification?.data?.messageBody || "No message content."}
-                                            </div>
+                                        <div className="flex-grow flex flex-col space-y-6">
+                                            <MessageBody body={selectedEnvelope.notif.notification?.data?.messageBody} />
 
                                             {selectedEnvelope.notif.notification?.data?.messageMedia?.some((m: any) => m.mediaUrl) && (
                                                 <div className="border-t border-border pt-4">

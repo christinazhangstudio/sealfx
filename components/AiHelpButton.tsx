@@ -589,7 +589,7 @@ export default function AiHelpButton({
                 <button
                     onClick={() => setIsOpen(!isOpen)}
                     title="AI Documentation Assistant"
-                    className={`fixed top-[10rem] right-0 z-[var(--z-launcher)] w-12 h-14 bg-[var(--color-surface)] border-y border-l border-[var(--color-border)] shadow-xl flex items-center justify-center transition-all duration-300 hover:bg-[var(--color-primary)] hover:text-white rounded-l-xl opacity-90 hover:opacity-100 ${isOpen ? "translate-x-full opacity-0 pointer-events-none" : "translate-x-0 text-[var(--color-primary)]"
+                    className={`fixed top-[10rem] right-0 z-[var(--z-launcher)] w-12 h-14 bg-[var(--color-surface)] border-y border-l border-[var(--color-border)] shadow-xl flex items-center justify-center transition-all duration-300 hover:bg-[var(--color-primary)] hover:text-white rounded-l-xl opacity-90 hover:opacity-90 ${isOpen ? "translate-x-full opacity-0 pointer-events-none" : "translate-x-0 text-[var(--color-primary)]"
                         }`}
                 >
                     <div className="flex flex-col items-center justify-center gap-0.5">

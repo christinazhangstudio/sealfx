@@ -65,6 +65,7 @@ export default function PrivacyPage() {
                 </p>
             </Section>
 
+
             <Section heading="What we read but do not keep">
                 <p>
                     Your listings, payouts, transaction summaries and account balances are fetched
@@ -163,6 +164,20 @@ export default function PrivacyPage() {
                     can do yourself from Settings and Admin. For anything else — including a copy of
                     your data in portable form — contact <strong>[PRIVACY CONTACT EMAIL]</strong> and
                     we will respond within 30 days.
+                </p>
+            </Section>
+            <Section heading="Tracking pixels and HTML emails" id="tracking-pixels">
+                <p>
+                    HTML-formatted communications transmitted by eBay or other marketplace services
+                    may embed web beacons, tracking pixels, or similar technologies. When these embedded
+                    resources are fetched, the originating server may log network request data, including
+                    timestamp, user-agent details, and IP address (which may correlate to a general
+                    geographic location), thereby confirming the communication was viewed.
+                </p>
+                <p>
+                    As a privacy-preserving measure, Sealift prevents the automatic loading of external
+                    images and embedded resources within these communications. Such resources are fetched
+                    only upon your explicit consent via the provided "Load Images" control.
                 </p>
             </Section>
 

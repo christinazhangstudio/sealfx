@@ -59,6 +59,7 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
     { name: "Inbox", href: "/inbox" },
     { name: "Create Listing", href: "/create-listing" },
     { name: "Gallery", href: "/gallery" },
+    { name: "Tracking", href: "/tracking" },
   ];
 
   const analyticsLinks = [
@@ -185,7 +186,7 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
                   }
                 }}
                 title="Logout"
-                className="p-2 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all duration-200"
+                className="p-2 rounded-xl bg-primary/10 text-primary hover:bg-primary/60 hover:text-white transition-all duration-200"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

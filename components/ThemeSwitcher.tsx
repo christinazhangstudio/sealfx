@@ -17,7 +17,7 @@ export default function ThemeSwitcher() {
 
     return (
         <div
-            className={`flex items-center bg-switcher-bg rounded-full p-1 border border-switcher-border transition-all duration-300 overflow-hidden relative ${isExpanded ? 'w-auto' : 'w-18'}`}
+            className={`flex items-center bg-switcher-bg rounded-full p-1 transition-all duration-300 overflow-hidden relative ${isExpanded ? 'w-auto' : 'w-18'}`}
             onMouseEnter={() => setIsExpanded(true)}
             onMouseLeave={() => setIsExpanded(false)}
             // Touch devices have no hover: without this the control could never
