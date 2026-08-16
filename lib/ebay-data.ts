@@ -18,6 +18,7 @@
 
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import { formatApiDate, getDateChunks } from "@/lib/date-range";
+import { MOCK_LISTINGS } from "./mock-listings";
 
 export { formatApiDate, getDateChunks, MAX_DAYS_PER_CHUNK } from "@/lib/date-range";
 
@@ -39,6 +40,35 @@ export interface PictureDetails {
     PictureURLs?: string[] | null;
     GalleryURL?: string;
 }
+
+/** eBay's $_1 / $_12 thumbs often 404; $_57 is the stable full-size variant. */
+export function rewriteEbayImageUrl(url: string): string {
+    return url.replace(/\$\_\d+\./, "$_57.");
+}
+
+export function listingImageCandidates(details?: PictureDetails | null): string[] {
+    const primary = details?.PictureURLs?.find((u) => Boolean(u && u.trim()));
+    const raw = [primary, details?.GalleryURL].filter(
+        (u): u is string => Boolean(u && u.trim()),
+    );
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const url of raw) {
+        const rewritten = rewriteEbayImageUrl(url);
+        for (const candidate of [rewritten, url]) {
+            if (seen.has(candidate)) continue;
+            seen.add(candidate);
+            out.push(candidate);
+        }
+    }
+    return out;
+}
+
+
+export function firstListingImage(details?: PictureDetails | null): string {
+    return listingImageCandidates(details)[0] ?? "";
+}
+
 
 export interface PrimaryCategory {
     CategoryID?: string;
@@ -196,6 +226,15 @@ export async function fetchAllListings(
     to: Date,
     opts: FetchOptions = {},
 ): Promise<ListingsResult> {
+    if (MOCK_LISTINGS[user]) {
+        const items = (MOCK_LISTINGS[user].ItemArray?.Items || []) as Item[];
+        return {
+            items,
+            total: items.length,
+            truncated: false,
+        };
+    }
+
     const byItemId = new Map<string, Item>();
     let truncated = false;
 

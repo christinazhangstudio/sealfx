@@ -4,11 +4,12 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import LoginCtaBanner from "@/components/LoginCtaBanner";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
+import { useEbayListings } from "@/lib/useEbayListings";
 import {
-  fetchAllListings,
   ReauthRequiredError,
   MAX_DAYS_PER_CHUNK,
   formatApiDate,
+  firstListingImage,
   type Item,
   type Listings,
 } from "@/lib/ebay-data";
@@ -50,6 +51,7 @@ export default function ListingsPage() {
     new Date(new Date().setDate(new Date().getDate() - 120))
   );
   const [startTo, setStartTo] = useState<Date>(new Date());
+  const [appliedDates, setAppliedDates] = useState({ start: startFrom, end: startTo });
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [userLoading, setUserLoading] = useState<{ [user: string]: boolean }>(
     {}
@@ -75,6 +77,39 @@ export default function ListingsPage() {
     big: 6,
   };
   const clientPageSize = pageSizeMap[displaySize];
+  const { listingsByUser, errorsByUser } = useEbayListings(users, appliedDates.start, appliedDates.end);
+
+
+  useEffect(() => {
+    const newUserListings: { [user: string]: Listings } = {};
+    const newTotalPages: { [user: string]: number } = {};
+    const newPages: { [user: string]: number } = {};
+
+    Object.entries(listingsByUser).forEach(([user, items]) => {
+      newUserListings[user] = {
+        PaginationResult: {
+          TotalNumberOfEntries: items.length,
+          TotalNumberOfPages: Math.ceil(items.length / clientPageSize) || 1,
+        },
+        HasMoreItems: false,
+        ItemArray: { Items: items },
+        ItemsPerPage: apiPageSize,
+        PageNumber: 1,
+        ReturnedItemCountActual: items.length,
+      };
+      newTotalPages[user] = Math.ceil(items.length / clientPageSize) || 1;
+      newPages[user] = 1;
+    });
+
+    setUserListings(newUserListings);
+    setUserTotalPages(newTotalPages);
+    setUserPages(newPages);
+    setUserLoading(prev => {
+      const resetLoading = { ...prev };
+      users.forEach(u => { resetLoading[u] = false });
+      return resetLoading;
+    });
+  }, [listingsByUser, clientPageSize, users]);
 
   const fetchUsers = async () => {
     try {
@@ -123,66 +158,16 @@ export default function ListingsPage() {
       setUserLoading((prev) => ({ ...prev, global: false }));
     }
   };
-
-  const fetchListingsForUser = async (user: string, signal?: AbortSignal) => {
-    try {
-      setUserLoading((prev) => ({ ...prev, [user]: true }));
-
-      const { items, truncated } = await fetchAllListings(user, startFrom, startTo, { signal });
-      if (signal?.aborted) return;
-
-      setUserListings((prev) => ({
-        ...prev,
-        [user]: {
-          PaginationResult: {
-            TotalNumberOfEntries: items.length,
-            TotalNumberOfPages: Math.ceil(items.length / clientPageSize),
-          },
-          HasMoreItems: false,
-          ItemArray: { Items: items },
-          ItemsPerPage: apiPageSize,
-          PageNumber: 1,
-          ReturnedItemCountActual: items.length,
-        },
-      }));
-
-      setUserTotalPages((prev) => ({
-        ...prev,
-        [user]: Math.ceil(items.length / clientPageSize) || 1,
-      }));
-
-      if (truncated) {
-        setError(`${user} has more listings than can be shown at once; narrow the date range to see the rest.`);
-      }
-    } catch (err) {
-      if ((err as Error)?.name === "AbortError") return;
-      if (err instanceof ReauthRequiredError) {
-        setError(`${err.user}: ${err.message}`);
-      } else {
-        setError(err instanceof Error ? err.message : `Error fetching listings for ${user}`);
-      }
-    } finally {
-      if (!signal?.aborted) {
-        setUserLoading((prev) => ({ ...prev, [user]: false }));
-      }
-    }
-  };
-
-
   const handleApply = useCallback(() => {
-    fetchAbortRef.current?.abort();
-    const controller = new AbortController();
-    fetchAbortRef.current = controller;
-
     if (startFrom > startTo) {
       setDateError("Start date cannot be after end date");
       return;
     }
     setDateError(null);
     setError(null);
-    users.forEach((user) => {
-      setUserPages((prev) => ({ ...prev, [user]: 1 }));
-      fetchListingsForUser(user, controller.signal);
+    setAppliedDates({ start: startFrom, end: startTo });
+    users.forEach(user => {
+      setUserLoading(prev => ({ ...prev, [user]: true }));
     });
   }, [startFrom, startTo, users]);
 
@@ -191,23 +176,13 @@ export default function ListingsPage() {
     const newStartTo = new Date();
     setStartFrom(newStartFrom);
     setStartTo(newStartTo);
+    setAppliedDates({ start: newStartFrom, end: newStartTo });
     setStatusFilter("ALL");
     setDateError(null);
     setError(null);
-    setUserListings({});
-    setUserTotalPages(
-      users.reduce((acc, user) => {
-        acc[user] = 1;
-        return acc;
-      }, {} as { [user: string]: number })
-    );
-    setUserPages(
-      users.reduce((acc, user) => {
-        acc[user] = 1;
-        return acc;
-      }, {} as { [user: string]: number })
-    );
-    setResetTriggered(true); // Signal that a reset has occurred
+    users.forEach(user => {
+      setUserLoading(prev => ({ ...prev, [user]: true }));
+    });
   };
 
   // Effect to handle initial fetch of users
@@ -215,14 +190,15 @@ export default function ListingsPage() {
     fetchUsers();
   }, []);
 
-  // Effect to handle initial data fetch and reset
+  // Effect to handle initial data fetch
   useEffect(() => {
-    if (users.length > 0 && (isInitialLoad || resetTriggered)) {
-      handleApply();
-      setIsInitialLoad(false); // Prevent re-fetching on subsequent user changes
-      setResetTriggered(false); // Reset the trigger
+    if (users.length > 0 && isInitialLoad) {
+      setIsInitialLoad(false);
+      users.forEach(user => {
+        setUserLoading(prev => ({ ...prev, [user]: true }));
+      });
     }
-  }, [users, isInitialLoad, resetTriggered, handleApply]);
+  }, [users, isInitialLoad]);
 
   // Effect to handle pagination adjustments when displaySize changes
   useEffect(() => {
@@ -258,19 +234,22 @@ export default function ListingsPage() {
       grid: "grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-10",
       imageHeight: "h-[160px]",
       captionSize: "text-sm",
-      placeholder: "https://via.placeholder.com/150x112?text=No+Image",
+      placeholder: "",
+
     },
     medium: {
       grid: "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6",
       imageHeight: "h-[180px]",
       captionSize: "text-s",
-      placeholder: "https://via.placeholder.com/300x225?text=No+Image",
+      placeholder: "",
+
     },
     big: {
       grid: "grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
       imageHeight: "h-[300px]",
       captionSize: "text-lg",
-      placeholder: "https://via.placeholder.com/450x337?text=No+Image",
+      placeholder: "",
+
     },
   };
 
@@ -286,17 +265,19 @@ export default function ListingsPage() {
     }, [src]);
 
     const handleError = () => {
-      if (!hasError) {
-        setImgSrc(placeholder);
-        setHasError(true);
-      }
+      if (hasError) return;
+      setHasError(true);
+      if (placeholder) setImgSrc(placeholder);
     };
+
+    if (hasError && !placeholder) return null;
 
     return (
       <img
         src={imgSrc}
         alt={alt}
         className={className}
+        referrerPolicy="no-referrer"
         onError={handleError}
       />
     );
@@ -338,11 +319,9 @@ export default function ListingsPage() {
         {paginatedItems.length > 0 ? (
           <div className={`grid ${sizeStyles[displaySize].grid} gap-6`}>
             {paginatedItems.map((item) => {
-              const pictureURLs = item.PictureDetails?.PictureURLs || [];
               const imageUrl =
-                pictureURLs.length > 0
-                  ? pictureURLs[0]
-                  : sizeStyles[displaySize].placeholder;
+                firstListingImage(item.PictureDetails) ||
+                sizeStyles[displaySize].placeholder;
               return (
                 <div key={item.ItemID} className="relative group">
                   <a
@@ -488,6 +467,16 @@ export default function ListingsPage() {
                       </h2>
                       <p className="text-primary text-lg">
                         Loading Listings...
+                      </p>
+                    </div>
+                  ) : errorsByUser[user] ? (
+                    <div className="seller-card border-l-4 border-l-red-500">
+                      <h2 className="seller-card-title flex items-center gap-2 text-red-500">
+                        <span>{user}</span>
+                        <PersonIcon />
+                      </h2>
+                      <p className="text-red-500 font-medium">
+                        Request failed: {errorsByUser[user]}
                       </p>
                     </div>
                   ) : userListings[user]?.ReturnedItemCountActual > 0 ? (
