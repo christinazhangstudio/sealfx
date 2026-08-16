@@ -21,6 +21,12 @@ export function formatApiDate(date: Date): string {
     return `${y}-${m}-${d}`;
 }
 
+/** Inverse of formatApiDate. `new Date("YYYY-MM-DD")` is UTC midnight — don't use it. */
+export function parseLocalDate(ymd: string): Date {
+    const [y, m, d] = ymd.split("-").map(Number);
+    return new Date(y, m - 1, d);
+}
+
 export function startOfDay(date: Date): Date {
     return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }

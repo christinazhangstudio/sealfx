@@ -5,6 +5,7 @@ import Link from "next/link";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
 import ApiUsageIndicator from "@/components/ApiUsageIndicator";
 import { useSession, signOut } from "next-auth/react";
+import { clearListingsSession } from "@/lib/useEbayListings";
 import { usePathname } from "next/navigation";
 import { useNotifications } from "@/components/NotificationContext";
 
@@ -182,6 +183,7 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
               <button
                 onClick={() => {
                   if (window.confirm('Are you sure you want to logout?')) {
+                    clearListingsSession();
                     signOut({ callbackUrl: "/login" });
                   }
                 }}
@@ -334,7 +336,10 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
                 <button
                   onClick={() => {
                     setIsMobileMenuOpen(false);
-                    if (confirm('Are you sure you want to logout?')) signOut({ callbackUrl: "/login" });
+                    if (confirm('Are you sure you want to logout?')) {
+                      clearListingsSession();
+                      signOut({ callbackUrl: "/login" });
+                    }
                   }}
                   className="p-2 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-colors"
                   title="Logout"

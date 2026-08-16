@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import LoginCtaBanner from "@/components/LoginCtaBanner";
 import { signOut } from "next-auth/react";
+import { clearListingsSession } from "@/lib/useEbayListings";
 import PageHeader from "@/components/PageHeader";
 import StatusAlert from "@/components/StatusAlert";
 
@@ -41,6 +42,7 @@ export default function AdminPage() {
 
       // Sign out after successful deletion (account no longer exists)
       setTimeout(() => {
+        clearListingsSession();
         signOut({ callbackUrl: "/login" });
       }, 3000);
     } catch (err: any) {
