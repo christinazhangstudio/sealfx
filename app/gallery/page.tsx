@@ -13,6 +13,7 @@ import {
   type Item,
   type Listings,
 } from "@/lib/ebay-data";
+import { defaultListingsRange, formatFetchedAt } from "@/lib/date-range";
 import UserTableOfContents from "@/components/UserTableOfContents";
 import PageHeader from "@/components/PageHeader";
 import PersonIcon from "@/components/PersonIcon";
@@ -47,11 +48,9 @@ export default function ListingsPage() {
   const [userTotalPages, setUserTotalPages] = useState<{
     [user: string]: number;
   }>({});
-  const [startFrom, setStartFrom] = useState<Date>(
-    new Date(new Date().setDate(new Date().getDate() - 120))
-  );
-  const [startTo, setStartTo] = useState<Date>(new Date());
-  const [appliedDates, setAppliedDates] = useState({ start: startFrom, end: startTo });
+  const [startFrom, setStartFrom] = useState<Date>(() => defaultListingsRange().start);
+  const [startTo, setStartTo] = useState<Date>(() => defaultListingsRange().end);
+  const [appliedDates, setAppliedDates] = useState(() => defaultListingsRange());
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [userLoading, setUserLoading] = useState<{ [user: string]: boolean }>(
     {}
@@ -170,28 +169,11 @@ export default function ListingsPage() {
     refresh();
   }, [refresh]);
 
-  const formatFetchedAt = (d: Date) => {
-    const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-    const today = new Date();
-    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const startOfThatDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    const dayDiff = Math.round((startOfToday.getTime() - startOfThatDay.getTime()) / 86_400_000);
-    if (dayDiff === 0) return time;
-    if (dayDiff === 1) return `Yesterday, ${time}`;
-    const date = d.toLocaleDateString([], {
-      month: "short",
-      day: "numeric",
-      ...(d.getFullYear() !== today.getFullYear() ? { year: "numeric" as const } : {}),
-    });
-    return `${date}, ${time}`;
-  };
-
   const resetDateRange = () => {
-    const newStartFrom = new Date(new Date().setDate(new Date().getDate() - 120));
-    const newStartTo = new Date();
-    setStartFrom(newStartFrom);
-    setStartTo(newStartTo);
-    setAppliedDates({ start: newStartFrom, end: newStartTo });
+    const { start, end } = defaultListingsRange();
+    setStartFrom(start);
+    setStartTo(end);
+    setAppliedDates({ start, end });
     setStatusFilter("ALL");
     setDateError(null);
     setError(null);

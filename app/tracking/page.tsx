@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import PageHeader from "@/components/PageHeader";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import { useEbayListings } from "@/lib/useEbayListings";
 import { listingImageCandidates, rewriteEbayImageUrl } from "@/lib/ebay-data";
+import { defaultListingsRange, formatFetchedAt } from "@/lib/date-range";
 
 import {
   SANDBOX_SELLERS,
@@ -194,17 +195,93 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
 
 export default function TrackingPage() {
   const [userGroups, setUserGroups] = useState<UserOrders[]>([]);
+  const [listingUsers, setListingUsers] = useState<string[]>([]);
   const [usingSandboxOrders, setUsingSandboxOrders] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeStep, setActiveStep] = useState<StepId | "all">("all");
   const [showRefunded, setShowRefunded] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const [ordersRefreshing, setOrdersRefreshing] = useState(false);
 
-  const uniqueUsersArray = Array.from(new Set(userGroups.map((g) => g.user)));
-  const now = new Date();
-  const past = new Date(now.getTime() - 120 * 24 * 60 * 60 * 1000);
-  const { listingsByUser, errorsByUser } = useEbayListings(uniqueUsersArray, past, now);
+  // Same users + same local 120-day window as Gallery → one SWR cache entry.
+  const listingRange = useMemo(() => defaultListingsRange(), []);
+  const { listingsByUser, errorsByUser, fetchedAt, isValidating, refresh } = useEbayListings(
+    listingUsers,
+    listingRange.start,
+    listingRange.end,
+  );
+  const lastRefreshed = fetchedAt ? new Date(fetchedAt) : null;
+
+  const loadTracking = useCallback(async (signal: AbortSignal) => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+      const usersUri = process.env.NEXT_PUBLIC_USERS_URI;
+
+      const [res, usersRes] = await Promise.all([
+        fetch(`${apiUrl}/tracking`, {
+          credentials: "include",
+          signal,
+        }),
+        usersUri
+          ? fetch(`${apiUrl}/${usersUri}?`, { signal })
+          : Promise.resolve(null),
+      ]);
+      if (!res.ok) throw new Error("Failed to fetch tracking data");
+
+      const data = await res.json();
+      let groups: UserOrders[] = [];
+
+      if (Array.isArray(data)) {
+        groups = data
+          .filter(
+            (g: { user?: string; orders?: unknown[] }) =>
+              g.user && Array.isArray(g.orders)
+          )
+          .map((g: { user: string; orders: Order[] }) => ({
+            user: g.user,
+            orders: g.orders,
+          }));
+      }
+
+      const hasAnyOrders = groups.some((g) => g.orders.length > 0);
+      if (!hasAnyOrders) {
+        groups = SANDBOX_SELLERS.map((seller) => ({
+          user: seller,
+          orders: (SANDBOX_ORDERS[seller] || []) as Order[],
+        }));
+      }
+      if (signal.aborted) return;
+      setUsingSandboxOrders(!hasAnyOrders);
+      setUserGroups(groups.filter((g) => g.orders.length > 0));
+      setError("");
+
+      let users: string[] = [];
+      if (usersRes?.ok) {
+        const usersData = await usersRes.json();
+        users = usersData.users || [];
+      }
+      if (users.length === 0) {
+        users = [...new Set(groups.map((g) => g.user))];
+      }
+      if (!signal.aborted) setListingUsers(users);
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      if (!signal.aborted) setLoading(false);
+    }
+  }, []);
+
+  const handleRefresh = useCallback(() => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setOrdersRefreshing(true);
+    Promise.all([refresh(), loadTracking(controller.signal)]).finally(() => {
+      if (!controller.signal.aborted) setOrdersRefreshing(false);
+    });
+  }, [refresh, loadTracking]);
 
   const listingImages: Record<string, string[]> = {};
   if (usingSandboxOrders) {
@@ -223,56 +300,9 @@ export default function TrackingPage() {
   useEffect(() => {
     const controller = new AbortController();
     abortRef.current = controller;
-
-    async function fetchAllData() {
-      try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
-
-        const res = await fetch(`${apiUrl}/tracking`, {
-          credentials: "include",
-          signal: controller.signal,
-        });
-        if (!res.ok) throw new Error("Failed to fetch tracking data");
-
-        const data = await res.json();
-        let groups: UserOrders[] = [];
-
-        if (Array.isArray(data)) {
-          groups = data
-            .filter(
-              (g: { user?: string; orders?: unknown[] }) =>
-                g.user && Array.isArray(g.orders)
-            )
-            .map((g: { user: string; orders: Order[] }) => ({
-              user: g.user,
-              orders: g.orders,
-            }));
-        }
-
-        const hasAnyOrders = groups.some((g) => g.orders.length > 0);
-        if (!hasAnyOrders) {
-          groups = SANDBOX_SELLERS.map((seller) => ({
-            user: seller,
-            orders: (SANDBOX_ORDERS[seller] || []) as Order[],
-          }));
-        }
-        setUsingSandboxOrders(!hasAnyOrders);
-        groups = groups.filter((g) => g.orders.length > 0);
-        if (controller.signal.aborted) return;
-        setUserGroups(groups);
-      } catch (err: unknown) {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-        setError(err instanceof Error ? err.message : "An error occurred");
-      } finally {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    fetchAllData();
+    loadTracking(controller.signal);
     return () => controller.abort();
-  }, []);
+  }, [loadTracking]);
 
   const getProgressState = (order: Order): StepId => {
     const isPaid =
@@ -356,6 +386,10 @@ export default function TrackingPage() {
     return stats;
   }, [userGroups, showRefunded]);
 
+  const uniqueUsersArray = useMemo(
+    () => Array.from(new Set(userGroups.map((g) => g.user))),
+    [userGroups],
+  );
   const userToneIndex = (user: string) => {
     const idx = uniqueUsersArray.indexOf(user);
     return (idx >= 0 ? idx : 0) % USER_TONES.length;
@@ -419,8 +453,7 @@ export default function TrackingPage() {
         </div>
       ) : (
         <>
-          {/* Show-refunded toggle: off by default so refunded orders stay out of the pipeline. */}
-          <div className="mb-4 flex items-center justify-end">
+          <div className="mb-4 flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:justify-between">
             <label className="flex cursor-pointer select-none items-center gap-2.5 text-sm text-text-secondary">
               <span>Show refunded</span>
               <button
@@ -439,6 +472,20 @@ export default function TrackingPage() {
                 />
               </button>
             </label>
+            {lastRefreshed ? (
+              <p className="text-center text-sm text-text-secondary sm:text-right">
+                Last updated at {formatFetchedAt(lastRefreshed)}.{" "}
+                <button
+                  onClick={handleRefresh}
+                  disabled={isValidating || ordersRefreshing}
+                  className="rounded-sm underline decoration-dotted underline-offset-4 transition-colors hover:text-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isValidating || ordersRefreshing ? "Refreshing…" : "Refresh"}
+                </button>
+              </p>
+            ) : (
+              <span className="hidden sm:block" aria-hidden="true" />
+            )}
           </div>
           <div className="mb-6 overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
             <div className="grid grid-cols-4 divide-x divide-border/70">

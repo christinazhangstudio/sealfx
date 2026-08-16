@@ -57,3 +57,25 @@ export function getDateChunks(from: Date, to: Date): { start: Date; end: Date }[
     }
     return chunks;
 }
+
+/** Default listings window: today and the 119 local days before it (120 inclusive). */
+export function defaultListingsRange(now: Date = new Date()): { start: Date; end: Date } {
+    const end = startOfDay(now);
+    return { start: addDays(end, -(MAX_DAYS_PER_CHUNK - 1)), end };
+}
+
+/** Clock only if today; otherwise include a date so a days-old session cache isn't misleading. */
+export function formatFetchedAt(d: Date, now: Date = new Date()): string {
+    const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    const startOfToday = startOfDay(now);
+    const startOfThatDay = startOfDay(d);
+    const dayDiff = Math.round((startOfToday.getTime() - startOfThatDay.getTime()) / 86_400_000);
+    if (dayDiff === 0) return time;
+    if (dayDiff === 1) return `Yesterday, ${time}`;
+    const date = d.toLocaleDateString([], {
+        month: "short",
+        day: "numeric",
+        ...(d.getFullYear() !== now.getFullYear() ? { year: "numeric" as const } : {}),
+    });
+    return `${date}, ${time}`;
+}
