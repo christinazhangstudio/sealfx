@@ -85,3 +85,12 @@ export function formatFetchedAt(d: Date, now: Date = new Date()): string {
     });
     return `${date}, ${time}`;
 }
+
+/** True if `iso` falls on one of the last `days` local calendar days (inclusive of today). Missing date keeps the row. */
+export function isWithinLocalDays(iso: string | undefined, days: number, now: Date = new Date()): boolean {
+    if (!iso) return true;
+    const when = startOfDay(new Date(iso));
+    if (Number.isNaN(when.getTime())) return true;
+    const cutoff = addDays(startOfDay(now), -(days - 1));
+    return when >= cutoff;
+}

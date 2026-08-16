@@ -47,6 +47,7 @@ The “Last updated at …” stamp is `fetchedAt` on the SWR payload — time o
 | Listing items + images | Interval store + SWR |
 | Fulfillment / orders | One-shot `/tracking` fetch (Tracking remount or Refresh) |
 | Users list | One-shot users API on mount |
+| Order photos outside the 120-day StartTime window | Per-item `GetItem` (see `specs/tracking-order-photos.md`) |
 
 ## RAM
 

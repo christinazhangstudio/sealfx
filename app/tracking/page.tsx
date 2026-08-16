@@ -4,8 +4,9 @@ import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import PageHeader from "@/components/PageHeader";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import { useEbayListings } from "@/lib/useEbayListings";
-import { listingImageCandidates, rewriteEbayImageUrl } from "@/lib/ebay-data";
-import { defaultListingsRange, formatFetchedAt } from "@/lib/date-range";
+import { listingImageCandidates, rewriteEbayImageUrl, fetchListingItem } from "@/lib/ebay-data";
+import { defaultListingsRange, formatFetchedAt, isWithinLocalDays } from "@/lib/date-range";
+import { getCachedListingItem, rememberListingItem } from "@/lib/listings-interval-cache";
 
 import {
   SANDBOX_SELLERS,
@@ -201,12 +202,15 @@ export default function TrackingPage() {
   const [error, setError] = useState("");
   const [activeStep, setActiveStep] = useState<StepId | "all">("all");
   const [showRefunded, setShowRefunded] = useState(false);
+  const [orderWindowDays, setOrderWindowDays] = useState<30 | 90>(30);
   const abortRef = useRef<AbortController | null>(null);
   const [ordersRefreshing, setOrdersRefreshing] = useState(false);
+  const [extraImages, setExtraImages] = useState<Record<string, string[]>>({});
+  const extraTriedRef = useRef<Set<string>>(new Set());
 
   // Same users + same local 120-day window as Gallery → one SWR cache entry.
   const listingRange = useMemo(() => defaultListingsRange(), []);
-  const { listingsByUser, errorsByUser, fetchedAt, isValidating, refresh } = useEbayListings(
+  const { listingsByUser, errorsByUser, fetchedAt, isLoading: listingsLoading, isValidating, refresh } = useEbayListings(
     listingUsers,
     listingRange.start,
     listingRange.end,
@@ -296,6 +300,64 @@ export default function TrackingPage() {
       if (candidates.length > 0) listingImages[item.ItemID] = candidates;
     });
   });
+  for (const [id, urls] of Object.entries(extraImages)) {
+    if (!listingImages[id] && urls.length > 0) listingImages[id] = urls;
+  }
+
+  useEffect(() => {
+    // Only ids on the current board (30 or 90). Expanding to 90 fetches the
+    // extra misses; extraTriedRef skips anything already looked up.
+    if (usingSandboxOrders || listingsLoading || listingUsers.length === 0) return;
+    const missing: { user: string; id: string }[] = [];
+    const cachedHits: Record<string, string[]> = {};
+    for (const group of userGroups) {
+      for (const order of group.orders) {
+        if (!isWithinLocalDays(order.creationDate, orderWindowDays)) continue;
+        for (const line of order.lineItems ?? []) {
+          const id = line.legacyItemId;
+          if (!id) continue;
+          const key = `${group.user}:${id}`;
+          if (listingImages[id]?.length || extraImages[id] || extraTriedRef.current.has(key)) continue;
+          const cached = getCachedListingItem(group.user, id);
+          if (cached) {
+            extraTriedRef.current.add(key);
+            const urls = listingImageCandidates(cached.PictureDetails);
+            if (urls.length > 0) cachedHits[id] = urls;
+            continue;
+          }
+          extraTriedRef.current.add(key);
+          missing.push({ user: group.user, id });
+        }
+      }
+    }
+    if (Object.keys(cachedHits).length > 0) {
+      setExtraImages((prev) => ({ ...prev, ...cachedHits }));
+    }
+    if (missing.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const found: Record<string, string[]> = {};
+      await Promise.all(
+        missing.map(async ({ user, id }) => {
+          try {
+            const item = await fetchListingItem(user, id);
+            if (!item) return;
+            rememberListingItem(user, item);
+            const urls = listingImageCandidates(item.PictureDetails);
+            if (urls.length > 0) found[id] = urls;
+          } catch (err) {
+            console.error(`GetItem failed for ${user} ${id}:`, err);
+          }
+        }),
+      );
+      if (!cancelled && Object.keys(found).length > 0) {
+        setExtraImages((prev) => ({ ...prev, ...found }));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [orderWindowDays, userGroups, listingsByUser, listingsLoading, usingSandboxOrders, listingUsers, extraImages]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -323,6 +385,7 @@ export default function TrackingPage() {
     const cards: BoardCard[] = [];
     for (const group of userGroups) {
       for (const order of group.orders) {
+        if (!isWithinLocalDays(order.creationDate, orderWindowDays)) continue;
         if (!showRefunded && order.orderPaymentStatus === "FULLY_REFUNDED") continue;
         const step = getProgressState(order);
         const items =
@@ -349,7 +412,7 @@ export default function TrackingPage() {
       }
     }
     return cards;
-  }, [userGroups, showRefunded]);
+  }, [userGroups, showRefunded, orderWindowDays]);
 
   const visibleCards =
     activeStep === "all" ? boardCards : boardCards.filter((c) => c.step === activeStep);
@@ -360,9 +423,11 @@ export default function TrackingPage() {
       { orders: number; shipped: number; processing: number; total: string | null }
     > = {};
     for (const group of userGroups) {
-      const orders = showRefunded
-        ? group.orders
-        : group.orders.filter((o) => o.orderPaymentStatus !== "FULLY_REFUNDED");
+      const orders = group.orders.filter((o) => {
+        if (!isWithinLocalDays(o.creationDate, orderWindowDays)) return false;
+        if (!showRefunded && o.orderPaymentStatus === "FULLY_REFUNDED") return false;
+        return true;
+      });
       let orderTotal = 0;
       let hasTotal = false;
       for (const order of orders) {
@@ -384,7 +449,7 @@ export default function TrackingPage() {
       };
     }
     return stats;
-  }, [userGroups, showRefunded]);
+  }, [userGroups, showRefunded, orderWindowDays]);
 
   const uniqueUsersArray = useMemo(
     () => Array.from(new Set(userGroups.map((g) => g.user))),
@@ -425,8 +490,7 @@ export default function TrackingPage() {
         title="Tracking"
         description={
           <>
-            Orders from the last 90 days. eBay&apos;s Get Orders API defaults to
-            that window unless a wider date filter is requested.
+            Showing the last {orderWindowDays} days.
           </>
         }
       />
@@ -454,24 +518,50 @@ export default function TrackingPage() {
       ) : (
         <>
           <div className="mb-4 flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <label className="flex cursor-pointer select-none items-center gap-2.5 text-sm text-text-secondary">
-              <span>Show refunded</span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={showRefunded}
-                onClick={() => setShowRefunded((v) => !v)}
-                className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
-                  showRefunded ? "bg-emerald-400 dark:bg-emerald-500" : "bg-border/50"
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${
-                    showRefunded ? "left-[18px]" : "left-0.5"
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <div className="flex items-center overflow-hidden rounded-lg border border-border shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setOrderWindowDays(30)}
+                  className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                    orderWindowDays === 30
+                      ? "bg-primary text-white"
+                      : "bg-surface text-text-secondary hover:bg-hover"
                   }`}
-                />
-              </button>
-            </label>
+                >
+                  Last 30 days
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOrderWindowDays(90)}
+                  className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                    orderWindowDays === 90
+                      ? "bg-primary text-white"
+                      : "bg-surface text-text-secondary hover:bg-hover"
+                  }`}
+                >
+                  Last 90 days
+                </button>
+              </div>
+              <label className="flex cursor-pointer select-none items-center gap-2.5 text-sm text-text-secondary">
+                <span>Show refunded</span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={showRefunded}
+                  onClick={() => setShowRefunded((v) => !v)}
+                  className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
+                    showRefunded ? "bg-emerald-400 dark:bg-emerald-500" : "bg-border/50"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${
+                      showRefunded ? "left-[18px]" : "left-0.5"
+                    }`}
+                  />
+                </button>
+              </label>
+            </div>
             {lastRefreshed ? (
               <p className="text-center text-sm text-text-secondary sm:text-right">
                 Last updated at {formatFetchedAt(lastRefreshed)}.{" "}

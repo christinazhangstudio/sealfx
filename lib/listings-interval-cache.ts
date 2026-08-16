@@ -121,6 +121,16 @@ export async function loadListingsForRange(
     );
 }
 
+export function getCachedListingItem(user: string, itemId: string): Item | undefined {
+    return sellers.get(user)?.items.get(itemId);
+}
+
+/** Store one item without marking any day span covered. Used for order-photo lookups outside the 120-day crawl. */
+export function rememberListingItem(user: string, item: Item): void {
+    if (!item?.ItemID) return;
+    getSeller(user).items.set(item.ItemID, item);
+}
+
 /** Drop covered days in [from, to] so the next load recrawls them. Items in that window are removed. */
 export function invalidateListingsRange(user: string, from: Date, to: Date): void {
     const fromStr = formatApiDate(from);

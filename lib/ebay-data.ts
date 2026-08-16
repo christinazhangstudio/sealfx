@@ -208,6 +208,22 @@ async function fetchListingsPage(
     return (data?.listings as Listings) ?? null;
 }
 
+/** One listing by ItemID. For Tracking photos whose StartTime is outside the 120-day crawl. */
+export async function fetchListingItem(
+    user: string,
+    itemId: string,
+    opts: FetchOptions = {},
+): Promise<Item | null> {
+    const base = requireEnv("NEXT_PUBLIC_API_URL", process.env.NEXT_PUBLIC_API_URL);
+    const uri = requireEnv("NEXT_PUBLIC_LISTINGS_URI", process.env.NEXT_PUBLIC_LISTINGS_URI);
+    const response = await fetch(`${base}/${uri}/${user}/items/${encodeURIComponent(itemId)}`, {
+        signal: opts.signal,
+        credentials: "include",
+    });
+    if (!response.ok) await readError(response, user);
+    return (await response.json()) as Item;
+}
+
 export interface ListingsResult {
     items: Item[];
     /** Distinct items actually retrieved. */
