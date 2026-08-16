@@ -62,8 +62,6 @@ export default function ListingsPage() {
     "medium"
   );
 
-  // initial page load  
-  const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
 
   // needed to make sure that handleApply is deferred after
   // setVariables in "Reset" have actually been set.
@@ -77,7 +75,8 @@ export default function ListingsPage() {
     big: 6,
   };
   const clientPageSize = pageSizeMap[displaySize];
-  const { listingsByUser, errorsByUser } = useEbayListings(users, appliedDates.start, appliedDates.end);
+  const { listingsByUser, errorsByUser, isLoading, isValidating, fetchedAt, refresh } = useEbayListings(users, appliedDates.start, appliedDates.end);
+  const lastRefreshed = fetchedAt ? new Date(fetchedAt) : null;
 
 
   useEffect(() => {
@@ -104,12 +103,8 @@ export default function ListingsPage() {
     setUserListings(newUserListings);
     setUserTotalPages(newTotalPages);
     setUserPages(newPages);
-    setUserLoading(prev => {
-      const resetLoading = { ...prev };
-      users.forEach(u => { resetLoading[u] = false });
-      return resetLoading;
-    });
   }, [listingsByUser, clientPageSize, users]);
+
 
   const fetchUsers = async () => {
     try {
@@ -166,10 +161,30 @@ export default function ListingsPage() {
     setDateError(null);
     setError(null);
     setAppliedDates({ start: startFrom, end: startTo });
-    users.forEach(user => {
-      setUserLoading(prev => ({ ...prev, [user]: true }));
+  }, [startFrom, startTo]);
+  // Manual refresh: bypass the SWR cache and force a fresh crawl from eBay.
+  // The cached view is shown instantly on load; this is how the user opts into
+  // newer data when they suspect listings have changed since then.
+  const handleRefresh = useCallback(() => {
+    setError(null);
+    refresh();
+  }, [refresh]);
+
+  const formatFetchedAt = (d: Date) => {
+    const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    const today = new Date();
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const startOfThatDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const dayDiff = Math.round((startOfToday.getTime() - startOfThatDay.getTime()) / 86_400_000);
+    if (dayDiff === 0) return time;
+    if (dayDiff === 1) return `Yesterday, ${time}`;
+    const date = d.toLocaleDateString([], {
+      month: "short",
+      day: "numeric",
+      ...(d.getFullYear() !== today.getFullYear() ? { year: "numeric" as const } : {}),
     });
-  }, [startFrom, startTo, users]);
+    return `${date}, ${time}`;
+  };
 
   const resetDateRange = () => {
     const newStartFrom = new Date(new Date().setDate(new Date().getDate() - 120));
@@ -180,9 +195,6 @@ export default function ListingsPage() {
     setStatusFilter("ALL");
     setDateError(null);
     setError(null);
-    users.forEach(user => {
-      setUserLoading(prev => ({ ...prev, [user]: true }));
-    });
   };
 
   // Effect to handle initial fetch of users
@@ -190,15 +202,6 @@ export default function ListingsPage() {
     fetchUsers();
   }, []);
 
-  // Effect to handle initial data fetch
-  useEffect(() => {
-    if (users.length > 0 && isInitialLoad) {
-      setIsInitialLoad(false);
-      users.forEach(user => {
-        setUserLoading(prev => ({ ...prev, [user]: true }));
-      });
-    }
-  }, [users, isInitialLoad]);
 
   // Effect to handle pagination adjustments when displaySize changes
   useEffect(() => {
@@ -365,7 +368,8 @@ export default function ListingsPage() {
     <>
           <div className="page-content-shell bg-background">
         <PageHeader title="Listing Gallery" />
-        <div className="mb-8 flex flex-col lg:flex-row gap-6 items-center lg:items-center lg:flex-wrap">
+        <div className="mb-8 flex flex-col items-center gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col items-center gap-4 lg:flex-row lg:flex-wrap lg:justify-start">
           <div className="flex flex-wrap justify-center lg:justify-start gap-4">
             <div className="flex items-center rounded-lg shadow-sm border border-border overflow-hidden focus-within:ring-2 focus-within:ring-primary transition-all">
               <label className="bg-surface text-primary font-bold text-sm uppercase tracking-wider px-3 py-2 border-r border-border flex items-center h-full">From</label>
@@ -446,6 +450,21 @@ export default function ListingsPage() {
               </div>
             </div>
           </div>
+          </div>
+          {lastRefreshed ? (
+            <p className="text-center text-sm text-text-secondary lg:text-right">
+              Last updated at {formatFetchedAt(lastRefreshed)}.{" "}
+              <button
+                onClick={handleRefresh}
+                disabled={isValidating}
+                className="rounded-sm underline decoration-dotted underline-offset-4 transition-colors hover:text-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isValidating ? "Refreshing…" : "Refresh"}
+              </button>
+            </p>
+          ) : (
+            <span className="hidden lg:block" aria-hidden="true" />
+          )}
         </div>
         {dateError && <p className="text-error-text text-lg mb-4">{dateError}</p>}
         {error && <p className="text-error-text text-lg mb-4">{error}</p>}
@@ -459,7 +478,7 @@ export default function ListingsPage() {
             <div className="w-full min-w-0 space-y-8">
               {users.map((user) => (
                 <div key={user} id={`user-section-${user}`}>
-                  {userLoading[user] ? (
+                  {isLoading ? (
                     <div className="seller-card">
                       <h2 className="seller-card-title flex items-center gap-2">
                         <span>{user}</span>
