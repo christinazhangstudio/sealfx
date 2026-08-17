@@ -27,11 +27,38 @@ interface LineItem {
   };
 }
 
+interface UspsTrackingEvent {
+  eventType?: string;
+  eventTimestamp?: string;
+  eventCity?: string;
+  eventState?: string;
+  eventZIP?: string;
+  eventCode?: string;
+}
+
+interface UspsTracking {
+  trackingNumber?: string;
+  status?: string;
+  statusCategory?: string;
+  statusSummary?: string;
+  mailClass?: string;
+  services?: string[];
+  originCity?: string;
+  originState?: string;
+  originZIP?: string;
+  destinationCity?: string;
+  destinationState?: string;
+  destinationZIP?: string;
+  expectedDeliveryDate?: string;
+  trackingEvents?: UspsTrackingEvent[];
+}
+
 interface ShippingFulfillment {
   fulfillmentId?: string;
   shipmentTrackingNumber?: string;
   shippingCarrierCode?: string;
   shippedDate?: string;
+  uspsTracking?: UspsTracking;
 }
 
 interface Order {
@@ -139,6 +166,38 @@ function formatDate(value?: string) {
   return d.toLocaleDateString();
 }
 
+function formatDateTime(value?: string) {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function stripUspsMarkup(value?: string) {
+  if (!value) return "";
+  return value
+    .replace(/<[^>]+>/g, "")
+    .replace(/&reg;/gi, "®")
+    .replace(/&#174;/g, "®")
+    .trim();
+}
+
+function eventLocation(event: UspsTrackingEvent) {
+  return [event.eventCity, event.eventState, event.eventZIP]
+    .filter(Boolean)
+    .join(", ");
+}
+
+function isUspsCarrier(code?: string) {
+  const c = (code || "").trim().toUpperCase();
+  return c === "USPS" || c.startsWith("USPS") || c.includes("US POSTAL");
+}
+
 function StepIcon({ step, filled }: { step: number; filled: boolean }) {
   const path =
     step === 3
@@ -207,6 +266,10 @@ export default function TrackingPage() {
   const [ordersRefreshing, setOrdersRefreshing] = useState(false);
   const [extraImages, setExtraImages] = useState<Record<string, string[]>>({});
   const extraTriedRef = useRef<Set<string>>(new Set());
+  const [uspsByNumber, setUspsByNumber] = useState<Record<string, UspsTracking>>({});
+  const [uspsPending, setUspsPending] = useState<Set<string>>(new Set());
+  const [uspsFailed, setUspsFailed] = useState<Set<string>>(new Set());
+  const uspsTriedRef = useRef<Set<string>>(new Set());
 
   // Same users + same local 120-day window as Gallery → one SWR cache entry.
   const listingRange = useMemo(() => defaultListingsRange(), []);
@@ -257,6 +320,10 @@ export default function TrackingPage() {
       }
       if (signal.aborted) return;
       setUsingSandboxOrders(!hasAnyOrders);
+      uspsTriedRef.current = new Set();
+      setUspsByNumber({});
+      setUspsPending(new Set());
+      setUspsFailed(new Set());
       setUserGroups(groups.filter((g) => g.orders.length > 0));
       setError("");
 
@@ -358,6 +425,86 @@ export default function TrackingPage() {
       cancelled = true;
     };
   }, [orderWindowDays, userGroups, listingsByUser, listingsLoading, usingSandboxOrders, listingUsers, extraImages]);
+
+  useEffect(() => {
+    if (usingSandboxOrders) return;
+    type Job = { number: string; mailingDate?: string; destinationZIPCode?: string };
+    const missing: Job[] = [];
+    for (const group of userGroups) {
+      for (const order of group.orders) {
+        if (!isWithinLocalDays(order.creationDate, orderWindowDays)) continue;
+        const destZIP =
+          order.fulfillmentStartInstructions?.[0]?.shippingStep?.shipTo?.postalCode;
+        for (const f of order.shippingFulfillments ?? []) {
+          if (!isUspsCarrier(f.shippingCarrierCode)) continue;
+          const number = f.shipmentTrackingNumber?.trim();
+          if (!number || uspsByNumber[number] || f.uspsTracking) continue;
+          if (uspsTriedRef.current.has(number)) continue;
+          uspsTriedRef.current.add(number);
+          missing.push({
+            number,
+            mailingDate: f.shippedDate,
+            destinationZIPCode: destZIP,
+          });
+        }
+      }
+    }
+    if (missing.length === 0) return;
+
+    setUspsPending((prev) => {
+      const next = new Set(prev);
+      for (const job of missing) next.add(job.number);
+      return next;
+    });
+
+    let cancelled = false;
+    (async () => {
+      const found: Record<string, UspsTracking> = {};
+      const failed: string[] = [];
+      await Promise.all(
+        missing.map(async ({ number, mailingDate, destinationZIPCode }) => {
+          try {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+            const params = new URLSearchParams();
+            if (mailingDate) params.set("mailingDate", mailingDate);
+            if (destinationZIPCode) params.set("destinationZIPCode", destinationZIPCode);
+            const qs = params.toString();
+            const res = await fetch(
+              `${apiUrl}/tracking/${encodeURIComponent(number)}${qs ? `?${qs}` : ""}`,
+              { credentials: "include" },
+            );
+            if (!res.ok) throw new Error(`USPS ${res.status}`);
+            found[number] = (await res.json()) as UspsTracking;
+          } catch (err) {
+            console.error(`USPS lookup failed for ${number}:`, err);
+            failed.push(number);
+          }
+        }),
+      );
+      if (cancelled) {
+        for (const job of missing) uspsTriedRef.current.delete(job.number);
+      } else {
+        if (Object.keys(found).length > 0) {
+          setUspsByNumber((prev) => ({ ...prev, ...found }));
+        }
+        if (failed.length > 0) {
+          setUspsFailed((prev) => {
+            const next = new Set(prev);
+            for (const n of failed) next.add(n);
+            return next;
+          });
+        }
+      }
+      setUspsPending((prev) => {
+        const next = new Set(prev);
+        for (const job of missing) next.delete(job.number);
+        return next;
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [orderWindowDays, userGroups, usingSandboxOrders, uspsByNumber]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -846,27 +993,121 @@ export default function TrackingPage() {
                           {estMax ? `–${estMax}` : ""}
                         </DetailRow>
                       )}
-                      {(order.shippingFulfillments ?? []).map((f, i) => (
-                        <div key={f.fulfillmentId || f.shipmentTrackingNumber || i}>
-                          {f.shippingCarrierCode && (
-                            <DetailRow label="Carrier">
-                              {f.shippingCarrierCode}
-                            </DetailRow>
-                          )}
-                          {f.shipmentTrackingNumber && (
-                            <DetailRow label="Tracking">
-                              <span className="break-all font-mono">
-                                {f.shipmentTrackingNumber}
-                              </span>
-                            </DetailRow>
-                          )}
-                          {formatDate(f.shippedDate) && (
-                            <DetailRow label="Shipped">
-                              {formatDate(f.shippedDate)}
-                            </DetailRow>
-                          )}
-                        </div>
-                      ))}
+                      {(order.shippingFulfillments ?? []).map((f, i) => {
+                        const number = f.shipmentTrackingNumber?.trim();
+                        const usps =
+                          (number && uspsByNumber[number]) || f.uspsTracking;
+                        const uspsLoading =
+                          !!number &&
+                          isUspsCarrier(f.shippingCarrierCode) &&
+                          !usps &&
+                          !usingSandboxOrders &&
+                          (uspsPending.has(number) || !uspsTriedRef.current.has(number));
+                        const events = usps?.trackingEvents ?? [];
+                        const uspsExpected = formatDate(usps?.expectedDeliveryDate);
+                        const trackingHref =
+                          number && isUspsCarrier(f.shippingCarrierCode)
+                            ? `https://tools.usps.com/go/TrackConfirmAction?tLabels=${encodeURIComponent(number)}`
+                            : null;
+                        return (
+                          <div
+                            key={f.fulfillmentId || number || i}
+                            className="space-y-1.5"
+                          >
+                            {f.shippingCarrierCode && (
+                              <DetailRow label="Carrier">
+                                {f.shippingCarrierCode}
+                              </DetailRow>
+                            )}
+                            {number && (
+                              <DetailRow label="Tracking">
+                                {trackingHref ? (
+                                  <a
+                                    href={trackingHref}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="break-all font-mono text-hover hover:underline"
+                                  >
+                                    {number}
+                                  </a>
+                                ) : (
+                                  <span className="break-all font-mono">
+                                    {number}
+                                  </span>
+                                )}
+                              </DetailRow>
+                            )}
+                            {formatDate(f.shippedDate) && (
+                              <DetailRow label="Shipped">
+                                {formatDate(f.shippedDate)}
+                              </DetailRow>
+                            )}
+                            {uspsLoading && (
+                              <DetailRow label="USPS">
+                                <span className="animate-pulse text-text-secondary">
+                                  Loading…
+                                </span>
+                              </DetailRow>
+                            )}
+                            {!uspsLoading &&
+                              number &&
+                              isUspsCarrier(f.shippingCarrierCode) &&
+                              uspsFailed.has(number) &&
+                              !usps && (
+                                <DetailRow label="USPS">
+                                  <span className="text-text-secondary">
+                                    Unavailable
+                                  </span>
+                                </DetailRow>
+                              )}
+                            {usps?.status && (
+                              <DetailRow label="USPS">
+                                {stripUspsMarkup(usps.status)}
+                              </DetailRow>
+                            )}
+                            {stripUspsMarkup(usps?.mailClass) && (
+                              <DetailRow label="Mail class">
+                                {stripUspsMarkup(usps?.mailClass)}
+                              </DetailRow>
+                            )}
+                            {uspsExpected && (
+                              <DetailRow label="USPS delivery">
+                                {uspsExpected}
+                              </DetailRow>
+                            )}
+                            {usps?.statusSummary && (
+                              <p className="text-[11px] leading-snug text-text-secondary">
+                                {stripUspsMarkup(usps.statusSummary)}
+                              </p>
+                            )}
+                            {events.length > 0 && (
+                              <ol className="space-y-1 border-l border-border/50 pl-2.5">
+                                {events.slice(0, 5).map((event, ei) => (
+                                  <li
+                                    key={`${event.eventTimestamp || ei}-${event.eventCode || event.eventType || ei}`}
+                                    className="text-[11px] leading-snug"
+                                  >
+                                    <span className="font-medium text-text-primary">
+                                      {stripUspsMarkup(event.eventType) || "Scan"}
+                                    </span>
+                                    {(formatDateTime(event.eventTimestamp) ||
+                                      eventLocation(event)) && (
+                                      <span className="block text-text-secondary">
+                                        {[
+                                          formatDateTime(event.eventTimestamp),
+                                          eventLocation(event),
+                                        ]
+                                          .filter(Boolean)
+                                          .join(" · ")}
+                                      </span>
+                                    )}
+                                  </li>
+                                ))}
+                              </ol>
+                            )}
+                          </div>
+                        );
+                      })}
                     </dl>
 
                     {/* Footer */}

@@ -41,6 +41,29 @@ export interface SandboxOrder {
     shipmentTrackingNumber: string;
     shippingCarrierCode: string;
     shippedDate: string;
+    uspsTracking?: {
+      trackingNumber?: string;
+      status?: string;
+      statusCategory?: string;
+      statusSummary?: string;
+      mailClass?: string;
+      services?: string[];
+      originCity?: string;
+      originState?: string;
+      originZIP?: string;
+      destinationCity?: string;
+      destinationState?: string;
+      destinationZIP?: string;
+      expectedDeliveryDate?: string;
+      trackingEvents?: {
+        eventType?: string;
+        eventTimestamp?: string;
+        eventCity?: string;
+        eventState?: string;
+        eventZIP?: string;
+        eventCode?: string;
+      }[];
+    };
   }[];
 }
 
@@ -101,6 +124,64 @@ export const SANDBOX_ORDERS: Record<string, SandboxOrder[]> = {
           shipmentTrackingNumber: "9400111899562537875111",
           shippingCarrierCode: "USPS",
           shippedDate: "2026-06-23T16:00:00.000Z",
+          uspsTracking: {
+            trackingNumber: "9400111899562537875111",
+            status: "Delivered, In/At Mailbox",
+            statusCategory: "Delivered",
+            statusSummary:
+              "Your item was delivered in or at the mailbox at 2:14 pm on June 26, 2026 in AUSTIN, TX 78704.",
+            mailClass: "Priority Mail",
+            services: ["USPS Tracking"],
+            originCity: "RICHMOND",
+            originState: "VA",
+            originZIP: "23227",
+            destinationCity: "AUSTIN",
+            destinationState: "TX",
+            destinationZIP: "78704",
+            expectedDeliveryDate: "2026-06-26",
+            trackingEvents: [
+              {
+                eventType: "Delivered, In/At Mailbox",
+                eventTimestamp: "2026-06-26T19:14:00.000Z",
+                eventCity: "AUSTIN",
+                eventState: "TX",
+                eventZIP: "78704",
+                eventCode: "01",
+              },
+              {
+                eventType: "Out for Delivery",
+                eventTimestamp: "2026-06-26T13:02:00.000Z",
+                eventCity: "AUSTIN",
+                eventState: "TX",
+                eventZIP: "78704",
+                eventCode: "OF",
+              },
+              {
+                eventType: "Arrived at Post Office",
+                eventTimestamp: "2026-06-26T08:41:00.000Z",
+                eventCity: "AUSTIN",
+                eventState: "TX",
+                eventZIP: "78704",
+                eventCode: "07",
+              },
+              {
+                eventType: "Departed USPS Regional Facility",
+                eventTimestamp: "2026-06-25T21:18:00.000Z",
+                eventCity: "AUSTIN",
+                eventState: "TX",
+                eventZIP: "78710",
+                eventCode: "10",
+              },
+              {
+                eventType: "USPS in possession of item",
+                eventTimestamp: "2026-06-23T16:00:00.000Z",
+                eventCity: "RICHMOND",
+                eventState: "VA",
+                eventZIP: "23227",
+                eventCode: "03",
+              },
+            ],
+          },
         },
       ],
     },
@@ -327,6 +408,48 @@ export const SANDBOX_ORDERS: Record<string, SandboxOrder[]> = {
           shipmentTrackingNumber: "9400111899562537875222",
           shippingCarrierCode: "USPS",
           shippedDate: "2026-07-10T14:22:00.000Z",
+          uspsTracking: {
+            trackingNumber: "9400111899562537875222",
+            status: "In Transit, Arriving Late",
+            statusCategory: "In Transit",
+            statusSummary:
+              "Your item is moving through the USPS network and is on the way to SUGAR LAND, TX 77479.",
+            mailClass: "USPS Ground Advantage",
+            services: ["USPS Tracking"],
+            originCity: "RICHMOND",
+            originState: "VA",
+            originZIP: "23227",
+            destinationCity: "SUGAR LAND",
+            destinationState: "TX",
+            destinationZIP: "77479",
+            expectedDeliveryDate: "2026-07-14",
+            trackingEvents: [
+              {
+                eventType: "Arrived at USPS Regional Destination Facility",
+                eventTimestamp: "2026-07-13T04:11:00.000Z",
+                eventCity: "HOUSTON",
+                eventState: "TX",
+                eventZIP: "77201",
+                eventCode: "10",
+              },
+              {
+                eventType: "Departed USPS Regional Origin Facility",
+                eventTimestamp: "2026-07-11T18:40:00.000Z",
+                eventCity: "RICHMOND",
+                eventState: "VA",
+                eventZIP: "23232",
+                eventCode: "10",
+              },
+              {
+                eventType: "USPS in possession of item",
+                eventTimestamp: "2026-07-10T14:22:00.000Z",
+                eventCity: "RICHMOND",
+                eventState: "VA",
+                eventZIP: "23227",
+                eventCode: "03",
+              },
+            ],
+          },
         },
       ],
     },
