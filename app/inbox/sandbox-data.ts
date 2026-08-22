@@ -1,4 +1,5 @@
-export const SANDBOX_SELLER = "czhang19";
+export const SANDBOX_SELLERS = ["czhang19", "zha_5764"] as const;
+export const SANDBOX_SELLER = SANDBOX_SELLERS[0];
 
 import { SECOND_HTML_FIXTURE } from "./sandbox-second-fixture";
 const ebayMessage = ({
@@ -7,12 +8,14 @@ const ebayMessage = ({
     subject,
     body,
     read = false,
+    user = SANDBOX_SELLER,
 }: {
     id: string;
     date: string;
     subject: string;
     body: string;
     read?: boolean;
+    user?: string;
 }) => ({
     metadata: {
         deprecated: false,
@@ -29,7 +32,7 @@ const ebayMessage = ({
             messageId: id.replace("ebay-message-", ""),
             messageMedia: null,
             readStatus: read,
-            recipientUserName: SANDBOX_SELLER,
+            recipientUserName: user,
             senderUserName: "eBay",
             subject,
         },
@@ -234,6 +237,51 @@ Operating system: Android
 If you didn’t make this request, please contact us. If this payment method was your preferred option for charges or payouts, you’ll need to select a new one.
 
 Manage payment options`,
+    }),
+    ebayMessage({
+        id: "ebay-message-zha-210980112001",
+        date: "2026-08-12T16:04:11.000Z",
+        user: "zha_5764",
+        subject: "Question about Vintage Minolta X-700",
+        body: `Hi,
+
+Is the light meter still accurate? I would like to use this as a daily shooter. Also, does it come with a battery?
+
+Thanks,
+Jordan`,
+    }),
+    ebayMessage({
+        id: "ebay-message-zha-210980112044",
+        date: "2026-08-11T21:12:40.000Z",
+        user: "zha_5764",
+        subject: "You sold Vintage Minolta X-700",
+        body: `Good news — you sold Vintage Minolta X-700.
+
+Order number: 18-12948-33021
+Buyer: jordan_k
+Ship by: Aug 14, 2026
+
+Print shipping label`,
+    }),
+    ebayMessage({
+        id: "ebay-message-zha-202608097700",
+        date: "2026-08-09T14:02:09Z",
+        user: "zha_5764",
+        subject: "Your payout is on its way",
+        body: payoutNotificationHtml,
+        read: true,
+    }),
+    ebayMessage({
+        id: "ebay-message-zha-200200881100",
+        date: "2026-07-22T11:41:03Z",
+        user: "zha_5764",
+        subject: "Buyer opened a return: Nikon 50mm f/1.8",
+        body: `A buyer opened a return for Nikon 50mm f/1.8.
+
+Reason: Item not as described
+Order number: 17-88421-01933
+
+Respond by Jul 25, 2026 to keep this from escalating.`,
     }),
 ] as const;
 

@@ -524,6 +524,12 @@ export const SANDBOX_LISTING_IMAGES: Record<string, string> = {
     "https://i.ebayimg.com/00/s/MTYwMFgxNjAw/z/yd0AAeSwGNVqPb4E/$_1.JPG?set_id=8800005007",
   "307029461243":
     "https://i.ebayimg.com/00/s/MTIwNFgxNjAw/z/uMkAAeSwbtlqQHmU/$_1.JPG?set_id=8800005007",
+  "376392857969":
+    "https://i.ebayimg.com/00/s/MTIwMFgxNjAw/z/g~IAAeSwbVZqQHmU/$_1.JPG?set_id=8800005007",
+  "376392857985":
+    "https://i.ebayimg.com/00/s/MTYwMFgxMjAw/z/kO0AAeSwc5dqQHl~/$_1.JPG?set_id=8800005007",
+  "377110889023":
+    "https://i.ebayimg.com/00/s/MTIwMFgxNjAw/z/uMkAAeSwbtlqQHnW/$_1.JPG?set_id=8800005007",
   "377304261071":
     "https://i.ebayimg.com/00/s/MTA5NFgxMzY0/z/D44AAeSwezVqQnN0/$_57.PNG?set_id=880000500F",
 };

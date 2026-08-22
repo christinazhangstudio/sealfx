@@ -240,7 +240,7 @@ export default function SettingsPage() {
                                             className={field} spellCheck={false}
                                             placeholder={ebay.certIdHint ? `Currently ${ebay.certIdHint} - leave blank to keep it` : "Enter your Cert ID"} />
                                         <p className="text-xs text-secondary mt-2">
-                                            For your security this is never shown. Leave it blank unless you're replacing it.
+                                            For your security this is never shown. Leave it blank unless you’re replacing it.
                                         </p>
                                     </div>
                                     <div>

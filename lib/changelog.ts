@@ -13,6 +13,8 @@ const changelogEntriesNewestFirst: ChangelogEntry[] = [
       "Applied inbox rules are saved to your account and restored when you return.",
       "Inbox analysis now reviews up to 100 messages, cleans HTML email content, and clearly notes when long messages are truncated.",
       "Select multiple inbox messages to move them to Trash, or permanently delete multiple trashed messages at once.",
+      "Launched Tracking page: 30/90-day shipping fulfillment view, refunded-order filter, richer shipment cards.",
+      "Filter inbox messages by seller.",
     ],
   },
   {

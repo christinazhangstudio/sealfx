@@ -102,7 +102,8 @@ export default function InboxRuleSuggestions({
 
 
     return (
-        <section id="ai-inbox-rules-configurator" className="ai-rules-configurator relative rounded-xl border border-border bg-surface p-5 shadow-sm sm:p-6 mb-12" style={{ zIndex: 10 }}>
+        <section id="ai-inbox-rules-configurator" className="ai-rules-configurator relative z-10 mb-8">
+            <div className="rounded-xl border border-border bg-surface p-5 shadow-sm sm:p-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="max-w-2xl">
                     <div className="mb-2 flex items-center gap-2">
@@ -119,7 +120,7 @@ export default function InboxRuleSuggestions({
                         AI will analyze themes in your messages and propose rules for you to review. Nothing is applied automatically.
                     </p>
                     <p className="mt-1 text-[10px] leading-relaxed text-text-muted">
-                        Analysis includes up to 100 messages and truncates long message bodies.
+                        Analysis includes up to 100 messages and truncates long message bodies. The pool is made up of messages across all sellers.
                     </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 sm:max-w-xs sm:justify-end">
@@ -273,20 +274,22 @@ export default function InboxRuleSuggestions({
                 })}
             </div>
             )}
-            {/* Bottom dogear collapse tab */}
-            <div className="absolute -bottom-[34px] left-1/2 -translate-x-1/2 z-10">
-                <button
-                    type="button"
-                    onClick={onCollapse}
-                    className="flex h-[34px] items-center justify-center gap-2 rounded-b-xl border border-t-0 border-border bg-surface px-6 text-xs font-bold text-text-secondary shadow-sm transition-colors hover:bg-hover hover:text-text-primary"
-                    aria-label="Collapse suggestions"
-                >
-                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="m18 15-6-6-6 6" />
-                    </svg>
-                    Collapse
-                </button>
             </div>
+            {onCollapse && (
+                <div className="flex justify-center">
+                    <button
+                        type="button"
+                        onClick={onCollapse}
+                        className="-mt-px flex h-[34px] items-center justify-center gap-2 rounded-b-xl border border-t-0 border-border bg-surface px-6 text-xs font-bold text-text-secondary shadow-sm transition-colors hover:bg-hover hover:text-text-primary"
+                        aria-label="Collapse suggestions"
+                    >
+                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="m18 15-6-6-6 6" />
+                        </svg>
+                        Collapse
+                    </button>
+                </div>
+            )}
         </section>
     );
 }

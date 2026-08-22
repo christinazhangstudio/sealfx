@@ -83,8 +83,8 @@ export default function AdminPage() {
                   </p>
                   <br />
                   <p className="text-text-secondary text-sm mt-1">
-                    Your eBay Developer account won't be deleted, so you can recreate a new Sealift account anytime.
-                    (Your eBay accounts also won't be deleted.)
+                    Your eBay Developer account won’t be deleted, so you can recreate a new Sealift account anytime.
+                    (Your eBay accounts also won’t be deleted.)
                   </p>
                 </div>
                 <button

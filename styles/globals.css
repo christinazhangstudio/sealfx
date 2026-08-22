@@ -325,6 +325,7 @@ a {
   }
 }
 
+
 /* One shared page frame: 64rem of content plus responsive outer padding. */
 .page-content-shell {
   width: 100%;
@@ -434,6 +435,7 @@ a {
 html,
 body {
   overflow-x: hidden;
+  scrollbar-gutter: stable;
 }
 
 /*

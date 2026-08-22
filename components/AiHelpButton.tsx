@@ -53,9 +53,14 @@ function ThinkingBlock({ thinking, isActive }: { thinking: string; isActive: boo
     const [expanded, setExpanded] = useState(true);
     const traceRef = useRef<HTMLDivElement>(null);
     const traceStickRef = useRef(true);
-    useEffect(() => {
-        if (!isActive) setExpanded(false);
-    }, [isActive]);
+    // Auto-collapse when the answer starts streaming. Adjusting state during
+    // render (the React-recommended alternative to an effect) resets on the
+    // isActive transition without a cascading extra commit.
+    const [prevIsActive, setPrevIsActive] = useState(isActive);
+    if (prevIsActive !== isActive) {
+        setPrevIsActive(isActive);
+        if (!isActive && expanded) setExpanded(false);
+    }
     // The trace pane is height-capped, so without this the newest reasoning
     // streams in below the fold and the trace looks frozen. Follow the bottom
     // while streaming, unless the user scrolled up to read.
@@ -98,10 +103,14 @@ function ThinkingBlock({ thinking, isActive }: { thinking: string; isActive: boo
 // space for whichever form this panel takes, and a mismatch left a dead zone
 // (roughly tablet widths) padded for a bottom sheet while showing a side panel.
 function useIsMobile(breakpoint = 1024) {
-    const [isMobile, setIsMobile] = useState(false);
+    // Lazy init reads matchMedia during first client render (this tree only
+    // mounts in the browser), so the effect below is a pure subscription.
+    const [isMobile, setIsMobile] = useState(() =>
+        typeof window !== "undefined" &&
+        window.matchMedia(`(max-width: ${breakpoint}px)`).matches,
+    );
     useEffect(() => {
         const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);
-        setIsMobile(mql.matches);
         const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
         mql.addEventListener("change", handler);
         return () => mql.removeEventListener("change", handler);

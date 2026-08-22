@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useRef, useState } from "r
 import { useSession } from "next-auth/react";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import { useUsers } from "@/components/UsersContext";
-import { SANDBOX_NOTIFICATIONS, SANDBOX_SELLER } from "@/app/inbox/sandbox-data";
+import { SANDBOX_NOTIFICATIONS, SANDBOX_SELLERS } from "@/app/inbox/sandbox-data";
 
 // Define the notification envelope structure
 export interface NotifEnvelope {
@@ -37,7 +37,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         && session.user.isGuest === true;
     const [isSandbox, setIsSandbox] = useState(false);
     const [sandboxResolved, setSandboxResolved] = useState(false);
-    const effectiveUsers = isSandbox ? [SANDBOX_SELLER] : users;
+    const effectiveUsers = isSandbox ? [...SANDBOX_SELLERS] : users;
     const [envelopes, setEnvelopes] = useState<NotifEnvelope[]>([]);
 
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -92,7 +92,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         if (!isSandbox) return;
         setEnvelopes(SANDBOX_NOTIFICATIONS.map((notif) => ({
             notif,
-            user: SANDBOX_SELLER,
+            user: notif.notification.data.recipientUserName,
             id: notif.notification.notificationId,
             read: notif.sealift_read,
             trashed: notif.sealift_trashed,

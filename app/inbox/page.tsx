@@ -81,6 +81,34 @@ function parseInboxAnalysis(value: unknown): InboxAnalysis {
     return { model: value.model, suggestions, activeRuleIds };
 }
 
+
+function envelopeEventTime(envelope: { notif: { notification?: { eventDate?: string; publishDate?: string; data?: { createdDate?: string } } } }) {
+    return envelope.notif?.notification?.eventDate
+        ?? envelope.notif?.notification?.publishDate
+        ?? envelope.notif?.notification?.data?.createdDate
+        ?? "";
+}
+
+function messageListPreview(envelope: {
+    notif: {
+        metadata?: { topic?: string };
+        notification?: {
+            notificationId?: string;
+            data?: { messageBody?: unknown; subject?: unknown };
+        };
+    };
+}): string {
+    const topic = envelope.notif?.metadata?.topic;
+    if (topic === "NEW_MESSAGE") {
+        const plain = messageBodyToPlainText(envelope.notif?.notification?.data?.messageBody)
+            .replace(/\s+/g, " ")
+            .trim();
+        if (plain) return plain;
+        const subject = String(envelope.notif?.notification?.data?.subject ?? "").trim();
+        if (subject) return subject;
+    }
+    return envelope.notif?.notification?.notificationId || "No ID";
+}
 function measureMessageScrollbar(element: HTMLDivElement) {
     const { clientHeight, scrollHeight, scrollTop } = element;
     const visible = scrollHeight > clientHeight + 1;
@@ -100,32 +128,41 @@ function generateEmailFrameHead(cspImgSrc: string) {
 <style>${styleBlock}</style>`;
 }
 
+function sanitizeEmailHtml(html: string, showImages: boolean): string {
+    const purifier = DOMPurify(window);
+    const sanitized = purifier.sanitize(html, {
+        WHOLE_DOCUMENT: true,
+        USE_PROFILES: { html: true },
+        FORBID_TAGS: ["script", "iframe", "object", "embed", "form", "input", "button", "textarea", "select", "link", "meta", "base"],
+        FORBID_ATTR: ["action", "formaction", "ping", ...(showImages ? [] : ["src", "srcset"])],
+    });
+
+    const frameHead = generateEmailFrameHead(showImages ? "https: data: cid:" : "data: cid:");
+    return /<head(?:\s[^>]*)?>/i.test(sanitized)
+        ? sanitized.replace(/<head(?:\s[^>]*)?>/i, (head) => `${head}${frameHead}`)
+        : `<!doctype html><html><head>${frameHead}</head><body>${sanitized}</body></html>`;
+}
+
 function HtmlMessageBody({ html }: { html: string }) {
-    const [sanitizedHtml, setSanitizedHtml] = useState("");
     const [showImages, setShowImages] = useState(false);
-    const [hasImages, setHasImages] = useState(false);
-
-    useEffect(() => {
-        setHasImages(/<img[^>]+src=/i.test(html));
-
-        const purifier = DOMPurify(window);
-        const sanitized = purifier.sanitize(html, {
-            WHOLE_DOCUMENT: true,
-            USE_PROFILES: { html: true },
-            FORBID_TAGS: ["script", "iframe", "object", "embed", "form", "input", "button", "textarea", "select", "link", "meta", "base"],
-            FORBID_ATTR: ["action", "formaction", "ping", ...(showImages ? [] : ["src", "srcset"])],
-        });
-
-        const frameHead = generateEmailFrameHead(showImages ? "https: data: cid:" : "data: cid:");
-        const documentHtml = /<head(?:\s[^>]*)?>/i.test(sanitized)
-            ? sanitized.replace(/<head(?:\s[^>]*)?>/i, (head) => `${head}${frameHead}`)
-            : `<!doctype html><html><head>${frameHead}</head><body>${sanitized}</body></html>`;
-        setSanitizedHtml(documentHtml);
-    }, [html, showImages]);
+    // Sanitization is pure and synchronous, so compute it during render keyed
+    // to its inputs instead of round-tripping through an effect. The empty
+    // string can never be a real result (the frame always has <head>), so it
+    // still means "not ready" for the plain-text fallback below.
+    const [prevKey, setPrevKey] = useState<string | null>(null);
+    const [sanitizedHtml, setSanitizedHtml] = useState("");
+    const key = `${showImages}`;
+    if (prevKey !== key || sanitizedHtml === "") {
+        if (typeof window !== "undefined") {
+            setPrevKey(key);
+            const next = sanitizeEmailHtml(html, showImages);
+            if (next !== sanitizedHtml) setSanitizedHtml(next);
+        }
+    }
 
     if (sanitizedHtml === "") {
         return (
-            <div className="bg-message-pill/4 rounded-lg p-8 border border-border/80 shadow-inner text-text-secondary leading-relaxed whitespace-pre-wrap">
+            <div className="bg-message-pill/4 rounded-lg p-8 border border-primary/20 shadow-inner text-text-secondary leading-relaxed whitespace-pre-wrap">
                 {messageBodyToPlainText(html)}
             </div>
         );
@@ -133,7 +170,7 @@ function HtmlMessageBody({ html }: { html: string }) {
 
     return (
         <div className="flex h-full flex-col gap-3">
-            {hasImages && !showImages && (
+            {/<img[^>]+src=/i.test(html) && !showImages && (
                 <div className="flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-2.5 shadow-sm">
                     <span className="text-sm italic text-text-secondary">
                         Images have been hidden to{" "}
@@ -159,7 +196,7 @@ function HtmlMessageBody({ html }: { html: string }) {
                 sandbox="allow-popups allow-popups-to-escape-sandbox"
                 referrerPolicy="no-referrer"
                 srcDoc={sanitizedHtml}
-                className="min-h-[420px] flex-grow w-full rounded-t-lg border-x border-t border-border/80 bg-white shadow-inner"
+                className="min-h-[420px] flex-grow w-full rounded-t-lg border-x border-t border-primary/20 bg-white shadow-inner"
             />
         </div>
     );
@@ -169,7 +206,7 @@ function MessageBody({ body }: { body: unknown }) {
     const content = String(body ?? "");
     if (content === "") {
         return (
-            <div className="bg-message-pill/4 rounded-lg p-8 border border-border/80 shadow-inner text-text-secondary leading-relaxed">
+            <div className="bg-message-pill/4 rounded-lg p-8 border border-primary/20 shadow-inner text-text-secondary leading-relaxed">
                 No message content.
             </div>
         );
@@ -178,7 +215,7 @@ function MessageBody({ body }: { body: unknown }) {
         return <HtmlMessageBody html={content} />;
     }
     return (
-        <div className="bg-message-pill/4 rounded-lg p-8 border border-border/80 shadow-inner text-text-secondary leading-relaxed whitespace-pre-wrap">
+        <div className="bg-message-pill/4 rounded-lg p-8 border border-primary/20 shadow-inner text-text-secondary leading-relaxed whitespace-pre-wrap">
             {content}
         </div>
     );
@@ -228,6 +265,7 @@ export default function InboxPage() {
     const [testFeedback, setTestFeedback] = useState<TestFeedback | null>(null);
     const [pendingTests, setPendingTests] = useState<PendingTest[]>([]);
     const [selectedMessageKeys, setSelectedMessageKeys] = useState<Set<string>>(() => new Set());
+    const [hiddenUsers, setHiddenUsers] = useState<Set<string>>(() => new Set());
     const [bulkMessageActionLoading, setBulkMessageActionLoading] = useState(false);
 
     const [activeRuleIds, setActiveRuleIds] = useState<string[]>([]);
@@ -251,12 +289,23 @@ export default function InboxPage() {
 
     const activeRules = ruleSuggestions.filter((rule) => activeRuleIds.includes(rule.id));
     const uniqueDestinations = [...new Set(activeRules.map((r) => r.destination))];
-    const inboxMessageIds = new Set(envelopes.filter((envelope) => !envelope.trashed).map((envelope) => envelope.id));
+    const inboxMessageIds = new Set(
+        envelopes
+            .filter((envelope) => !envelope.trashed && !hiddenUsers.has(envelope.user))
+            .map((envelope) => envelope.id),
+    );
     const displayedEnvelopes = envelopes
         .filter((envelope) => activeTab === "trash" ? envelope.trashed : !envelope.trashed)
         .filter((envelope) => activeTab === "trash"
             || ruleFilter === "all"
-            || activeRules.some((rule) => rule.destination === ruleFilter && rule.matchingIds.includes(envelope.id)));
+            || activeRules.some((rule) => rule.destination === ruleFilter && rule.matchingIds.includes(envelope.id)))
+        .filter((envelope) => !hiddenUsers.has(envelope.user))
+        .sort((a, b) => envelopeEventTime(b).localeCompare(envelopeEventTime(a)));
+    const tabHasMessages = envelopes.some((envelope) =>
+        (activeTab === "trash" ? envelope.trashed : !envelope.trashed)
+        && (activeTab === "trash"
+            || ruleFilter === "all"
+            || activeRules.some((rule) => rule.destination === ruleFilter && rule.matchingIds.includes(envelope.id))));
     const selectedEnvelope = envelopes.find((envelope) => envelope.id === selectedId) ?? null;
     const selectedDisplayedEnvelopes = displayedEnvelopes.filter((envelope) =>
         selectedMessageKeys.has(messageSelectionKey(envelope)),
@@ -274,7 +323,7 @@ export default function InboxPage() {
         const observer = new ResizeObserver(update);
         observer.observe(list);
         return () => observer.disconnect();
-    }, [activeTab, displayedEnvelopes.length, ruleFilter, mounted, loadingUsers]);
+    }, [activeTab, displayedEnvelopes.length, ruleFilter, hiddenUsers, mounted, loadingUsers]);
 
     useEffect(() => {
         if (!apiBaseUrl) return;
@@ -323,7 +372,20 @@ export default function InboxPage() {
 
     useEffect(() => {
         setSelectedMessageKeys(new Set());
-    }, [activeTab, ruleFilter]);
+    }, [activeTab, ruleFilter, hiddenUsers]);
+
+    const toggleUserFilter = (user: string) => {
+        const hiding = !hiddenUsers.has(user);
+        setHiddenUsers((current) => {
+            const next = new Set(current);
+            if (hiding) next.add(user);
+            else next.delete(user);
+            return next;
+        });
+        if (hiding && selectedEnvelope?.user === user) {
+            setSelectedId(null);
+        }
+    };
 
     const toggleMessageSelection = (message: { id: string; user: string }) => {
         const key = messageSelectionKey(message);
@@ -730,14 +792,28 @@ export default function InboxPage() {
                         <div className="h-6 w-40 bg-surface rounded-full animate-pulse" />
                     ) : (
                         <div className="flex flex-wrap gap-2">
-                            {users.map((u) => (
-                                <span
-                                    key={u}
-                                    className="text-xs font-mono bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded-full"
-                                >
-                                    {u}
-                                </span>
-                            ))}
+                            {users.map((u) => {
+                                const visible = !hiddenUsers.has(u);
+                                return (
+                                    <label
+                                        key={u}
+                                        className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-mono ${
+                                            visible
+                                                ? "border-primary/20 bg-primary/10 text-primary"
+                                                : "border-border bg-surface text-text-muted"
+                                        }`}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={visible}
+                                            onChange={() => toggleUserFilter(u)}
+                                            aria-label={`Show messages for ${u}`}
+                                            className="h-3.5 w-3.5 cursor-pointer accent-primary"
+                                        />
+                                        {u}
+                                    </label>
+                                );
+                            })}
                         </div>
                     )}
                 </div>
@@ -751,7 +827,7 @@ export default function InboxPage() {
                 )}
                 {showRuleConfigurator && (
                     <InboxRuleSuggestions
-                        envelopes={envelopes}
+                        envelopes={envelopes.filter((envelope) => !hiddenUsers.has(envelope.user))}
                         suggestions={ruleSuggestions}
                         model={ruleAnalysisModel}
                         loading={ruleAnalysisLoading}
@@ -768,11 +844,11 @@ export default function InboxPage() {
 
 
                 {/* Main layout */}
-                <div className="flex flex-col lg:flex-row gap-6 flex-grow min-h-[500px]">
+                <div className="grid min-h-[500px] flex-grow grid-cols-1 gap-6 lg:grid-cols-3">
 
                     {/* Sidebar – message list. Hidden on mobile once a message
                         is open, so the phone shows a single pane at a time. */}
-                    <div className={`lg:w-1/3 flex-col gap-4 ${selectedId ? "hidden lg:flex" : "flex"}`}>
+                    <div className={`min-w-0 flex-col gap-4 ${selectedId ? "hidden lg:flex" : "flex"}`}>
                         <div className="flex items-center justify-between">
                             <div className="flex bg-surface rounded-lg p-1 border border-border">
                                 <button
@@ -788,9 +864,7 @@ export default function InboxPage() {
                                     Trash
                                 </button>
                             </div>
-                            {displayedEnvelopes.length > 0 && (
-                                <span className="text-sm text-text-muted font-mono">{displayedEnvelopes.length} total</span>
-                            )}
+                            <span className="text-sm text-text-muted font-mono">{displayedEnvelopes.length} total</span>
                         </div>
                         {activeTab === "inbox" && activeRules.length > 0 && (
                             <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-2">
@@ -870,21 +944,26 @@ export default function InboxPage() {
                                     <div key={i} className="bg-surface h-24 rounded-xl shadow-sm border border-border" />
                                 ))}
                             </div>
-                        ) : displayedEnvelopes.length === 0 ? (
-                            <div className="text-secondary p-4 bg-surface rounded-xl border border-border text-center flex flex-col items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-muted"><path d="M22 13V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h8" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /><path d="m16 19 2 2 4-4" /></svg>
-                                {activeTab === "inbox" ? "No messages yet — waiting for live notifications." : "Trash is empty."}
-                            </div>
                         ) : (
                             <div className="relative">
                                 <div className="pointer-events-none absolute bottom-0 left-4 right-0 z-10 h-8 bg-gradient-to-t from-background to-transparent" />
-                                
                                 <div
                                     ref={messageListRef}
                                     onScroll={(event) => setMessageScrollbar(measureMessageScrollbar(event.currentTarget))}
                                     className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto pl-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                                 >
-                                {displayedEnvelopes.map((env) => {
+                                {displayedEnvelopes.length === 0 ? (
+                                    <div className="text-secondary p-4 bg-surface rounded-xl border border-border text-center flex flex-col items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-muted"><path d="M22 13V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h8" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /><path d="m16 19 2 2 4-4" /></svg>
+                                        {activeTab === "inbox"
+                                            ? (tabHasMessages
+                                                ? "No messages for the selected sellers."
+                                                : "No messages yet — waiting for live notifications.")
+                                            : (tabHasMessages
+                                                ? "No trashed messages for the selected sellers."
+                                                : "Trash is empty.")}
+                                    </div>
+                                ) : displayedEnvelopes.map((env) => {
                                     const topic = env.notif?.metadata?.topic || "UNKNOWN_TOPIC";
                                     const dateStr =
                                         env.notif?.notification?.eventDate ??
@@ -893,20 +972,20 @@ export default function InboxPage() {
                                     const isSelected = env.id === selectedId;
                                     const isBulkSelected = selectedMessageKeys.has(messageSelectionKey(env));
                                     const isUnread = !env.read;
-                                        const matchingRules = activeRules.filter((rule) => rule.matchingIds.includes(env.id));
+                                    const matchingRules = activeRules.filter((rule) => rule.matchingIds.includes(env.id));
 
-                                        return (
+                                    return (
                                         <div
                                             key={env.id}
                                             onClick={() => selectMessage(env.id, env.user)}
                                             className={`relative h-36 shrink-0 overflow-hidden rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer
                                                 ${isBulkSelected
-                                                    ? "border-primary/70 bg-primary/10 ring-2 ring-primary/30"
+                                                    ? "border-primary/60 bg-message-pill/10 shadow-sm ring-primary/30"
                                                     : isSelected
-                                                        ? "bg-message-pill/6 border-border shadow-sm"
+                                                        ? "bg-message-pill/10 border-primary/50 shadow-sm"
                                                         : isUnread
-                                                            ? "bg-blue-500/4 border-blue-500/20 hover:border-blue-500/70"
-                                                            : "bg-surface border-border hover:border-primary/50"
+                                                            ? "bg-blue-500/4 border-primary/20 hover:border-primary/40"
+                                                            : "bg-surface border-primary/20 hover:border-primary/40"
                                                 }`}
                                         >
                                             {!env.trashed ? (
@@ -965,7 +1044,6 @@ export default function InboxPage() {
                                                     </span>
                                                 )}
                                             </div>
-                                            {/* User badge */}
                                             <div className="flex items-center gap-2 mb-1">
                                                 <span className="text-[10px] font-mono bg-surface border border-border text-text-muted px-2 py-0.5 rounded-full">
                                                     {env.user}
@@ -991,13 +1069,11 @@ export default function InboxPage() {
                                                 </div>
                                             )}
                                             <div className={`text-xs truncate ${isUnread ? "text-text-primary font-medium" : "text-text-secondary"}`}>
-                                                {topic === "NEW_MESSAGE" && env.notif?.notification?.data?.messageBody
-                                                    ? env.notif.notification.data.messageBody
-                                                    : env.notif?.notification?.notificationId || "No ID"}
+                                                {messageListPreview(env)}
                                             </div>
                                         </div>
-                                        );
-                                    })}
+                                    );
+                                })}
                                 </div>
                                 <div
                                     aria-hidden="true"
@@ -1018,12 +1094,13 @@ export default function InboxPage() {
                         )}
                     </div>
 
+
                     {/* Main message panel. On mobile it replaces the list. */}
-                    <div className={`lg:w-2/3 flex-col bg-surface rounded-2xl shadow-sm border border-border overflow-hidden ${selectedId ? "flex" : "hidden lg:flex"}`}>
+                    <div className={`min-w-0 flex-col bg-surface rounded-2xl shadow-sm border border-border overflow-hidden lg:col-span-2 ${selectedId ? "flex" : "hidden lg:flex"}`}>
                         {selectedEnvelope && (
                             <button
                                 onClick={() => setSelectedId(null)}
-                                className="lg:hidden flex items-center gap-2 px-4 py-3 text-sm font-semibold text-primary border-b border-border min-h-[44px]"
+                                className="lg:hidden flex items-center gap-2 px-4 py-3 text-sm font-semibold text-primary border-b border-border/30 min-h-[44px]"
                             >
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="m15 18-6-6 6-6" />
@@ -1033,7 +1110,7 @@ export default function InboxPage() {
                         )}
                         {selectedEnvelope ? (
                             <>
-                                <div className="bg-background/50 border-b border-border p-4 sm:p-6 relative group">
+                                <div className="bg-background/50 border-b border-border/30 p-4 sm:p-6 relative group">
                                     {selectedEnvelope.notif?.metadata?.topic === "NEW_MESSAGE" ? (
                                         <div className="space-y-4">
                                             <div className="flex justify-between items-center w-full gap-3">
@@ -1047,13 +1124,13 @@ export default function InboxPage() {
                                             <div className="flex flex-col sm:flex-row gap-2 sm:gap-6 text-sm text-text-secondary">
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-semibold text-text-primary">From:</span>
-                                                    <span className="bg-surface border border-border px-2 py-0.5 rounded-md">
+                                                    <span className="bg-surface border border-border/20 px-2 py-0.5 rounded-md">
                                                         {selectedEnvelope.notif.notification?.data?.senderUserName}
                                                     </span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-semibold text-text-primary">To:</span>
-                                                    <span className="bg-surface border border-border px-2 py-0.5 rounded-md">
+                                                    <span className="bg-surface border border-border/20 px-2 py-0.5 rounded-md">
                                                         {selectedEnvelope.notif.notification?.data?.recipientUserName}
                                                     </span>
                                                 </div>

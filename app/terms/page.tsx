@@ -21,7 +21,7 @@ export default function TermsPage() {
 
             <Section heading="Who you are agreeing with">
                 <p>
-                    Sealift is operated by <strong>[LEGAL ENTITY NAME]</strong> ("Sealift", "we").
+                    Sealift is operated by <strong>[LEGAL ENTITY NAME]</strong> (“Sealift”, “we”).
                     These terms are governed by the laws of <strong>[JURISDICTION]</strong>. Questions
                     about them go to <strong>[SUPPORT EMAIL]</strong>.
                 </p>
@@ -60,7 +60,7 @@ export default function TermsPage() {
                     accounts you connect, and that doing so does not breach your agreements with eBay.
                 </p>
                 <p>
-                    Your use of eBay remains subject to eBay's terms. Sealift's access is limited to
+                    Your use of eBay remains subject to eBay’s terms. Sealift’s access is limited to
                     what you grant and what eBay permits, and API usage against your keys counts
                     against your own eBay limits. You can revoke access at any time by removing the
                     seller in Sealift or withdrawing consent in eBay.
@@ -71,10 +71,10 @@ export default function TermsPage() {
                 <p>You agree not to:</p>
                 <ul className="list-disc pl-6 space-y-1">
                     <li>connect eBay accounts you are not authorized to access</li>
-                    <li>attempt to access another Sealift customer's data</li>
+                    <li>attempt to access another Sealift customer’s data</li>
                     <li>probe, scan, or interfere with the service or the infrastructure behind it</li>
-                    <li>resell or redistribute Sealift's output as your own competing service</li>
-                    <li>use it for anything unlawful, or to violate eBay's rules</li>
+                    <li>resell or redistribute Sealift’s output as your own competing service</li>
+                    <li>use it for anything unlawful, or to violate eBay’s rules</li>
                     <li>automate abusive request volumes against Sealift or, through it, eBay</li>
                 </ul>
                 <p>
@@ -112,7 +112,7 @@ export default function TermsPage() {
                     Paid plans, when offered, are billed in advance for the period shown at checkout
                     and renew automatically until cancelled. You can cancel at any time and keep
                     access until the end of the period you have paid for. We will give at least 30
-                    days' notice before changing the price of an existing subscription.
+                    days’ notice before changing the price of an existing subscription.
                 </p>
                 <p>
                     Sealift is currently provided free of charge. If that changes we will tell you
@@ -123,16 +123,16 @@ export default function TermsPage() {
             <Section heading="Availability, and what we do not promise">
                 <p>
                     We work to keep Sealift available and correct, but we do not guarantee
-                    uninterrupted service. Sealift depends on eBay's APIs: when eBay is slow, down,
+                    uninterrupted service. Sealift depends on eBay’s APIs: when eBay is slow, down,
                     rate-limits your keys, or changes its interfaces, parts of Sealift will not work,
                     and that is outside our control.
                 </p>
                 <p>
                     <strong>Sealift is a reporting tool, not a system of record.</strong> Figures shown
-                    are derived from eBay's data and may be delayed, incomplete, or wrong. Do not rely
+                    are derived from eBay’s data and may be delayed, incomplete, or wrong. Do not rely
                     on Sealift alone for accounting, tax filing, or any financial or legal decision —
-                    verify against eBay's own reports. To the extent the law allows, the service is
-                    provided "as is" without warranties.
+                    verify against eBay’s own reports. To the extent the law allows, the service is
+                    provided “as is” without warranties.
                 </p>
             </Section>
 

@@ -39,17 +39,27 @@ const DEFAULT_SLIDES: Slide[] = [
 export default function TutorialSlideshow({ fabOnly = false, isVisible = true }: { fabOnly?: boolean, isVisible?: boolean }) {
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [currentSplash, setCurrentSplash] = useState("");
+    // Splash is picked alongside the slide change (in the event handlers /
+    // timer below), not derived from it during render — Math.random is impure
+    // and can't run in a render pass.
+    const [currentSplash, setCurrentSplash] = useState(() => {
+        const pool = DEFAULT_SLIDES[0].splashPool;
+        return pool[Math.floor(Math.random() * pool.length)];
+    });
 
-    useEffect(() => {
-        // Pick a random splash from the CURRENT slide's specific pool
-        const pool = DEFAULT_SLIDES[currentSlide].splashPool;
-        const randomSplash = pool[Math.floor(Math.random() * pool.length)];
-        setCurrentSplash(randomSplash);
-    }, [currentSlide]);
+    const goToSlide = (updater: (prev: number) => number) => {
+        setCurrentSlide((prev) => {
+            const next = updater(prev);
+            if (next !== prev) {
+                const pool = DEFAULT_SLIDES[next].splashPool;
+                setCurrentSplash(pool[Math.floor(Math.random() * pool.length)]);
+            }
+            return next;
+        });
+    };
 
-    const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % DEFAULT_SLIDES.length);
-    const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + DEFAULT_SLIDES.length) % DEFAULT_SLIDES.length);
+    const nextSlide = () => goToSlide((prev) => (prev + 1) % DEFAULT_SLIDES.length);
+    const prevSlide = () => goToSlide((prev) => (prev - 1 + DEFAULT_SLIDES.length) % DEFAULT_SLIDES.length);
 
     useEffect(() => {
         const timer = setInterval(nextSlide, 10000);

@@ -11,10 +11,14 @@ import AiHelpButton from "@/components/AiHelpButton";
 import { footerLinks, isFooterPath, rememberReturnPath } from "@/lib/footer-links";
 
 function useIsMobile(breakpoint = 1024) {
-    const [isMobile, setIsMobile] = useState(false);
+    // Lazy init reads matchMedia during first client render (this tree only
+    // mounts in the browser), so the effect below is a pure subscription.
+    const [isMobile, setIsMobile] = useState(() =>
+        typeof window !== "undefined" &&
+        window.matchMedia(`(max-width: ${breakpoint}px)`).matches,
+    );
     useEffect(() => {
         const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);
-        setIsMobile(mql.matches);
         const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
         mql.addEventListener("change", handler);
         return () => mql.removeEventListener("change", handler);
@@ -38,9 +42,13 @@ export default function ClientLayoutWrapper({
     const [isAiResizing, setIsAiResizing] = useState(false);
     const isMobile = useIsMobile();
 
-    useEffect(() => {
-        if (usesMinimalLayout) setIsAiOpen(false);
-    }, [usesMinimalLayout]);
+    // Close the AI panel on minimal layouts (login/register/footer pages).
+    // Adjust-during-render instead of an effect: no cascading extra commit.
+    const [prevUsesMinimal, setPrevUsesMinimal] = useState(usesMinimalLayout);
+    if (prevUsesMinimal !== usesMinimalLayout) {
+        setPrevUsesMinimal(usesMinimalLayout);
+        if (usesMinimalLayout && isAiOpen) setIsAiOpen(false);
+    }
 
     const paddingStyle = isAiOpen && !usesMinimalLayout
         ? isMobile

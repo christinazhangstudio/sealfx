@@ -7,6 +7,15 @@ interface UserTableOfContentsProps {
 export default function UserTableOfContents({ users }: UserTableOfContentsProps) {
     const [isOpen, setIsOpen] = useState(false);
 
+    // Close on escape key
+    useEffect(() => {
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === "Escape") setIsOpen(false);
+        };
+        window.addEventListener("keydown", handleEsc);
+        return () => window.removeEventListener("keydown", handleEsc);
+    }, []);
+
     if (users.length === 0) return null;
 
     const scrollToUser = (user: string) => {
@@ -26,15 +35,6 @@ export default function UserTableOfContents({ users }: UserTableOfContentsProps)
             setIsOpen(false); // Close mobile menu if open
         }
     };
-
-    // Close on escape key
-    useEffect(() => {
-        const handleEsc = (e: KeyboardEvent) => {
-            if (e.key === "Escape") setIsOpen(false);
-        };
-        window.addEventListener("keydown", handleEsc);
-        return () => window.removeEventListener("keydown", handleEsc);
-    }, []);
 
     return (
         <>

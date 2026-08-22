@@ -5,7 +5,7 @@ import PageHeader from "@/components/PageHeader";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import { useEbayListings } from "@/lib/useEbayListings";
 import { listingImageCandidates, rewriteEbayImageUrl, fetchListingItem } from "@/lib/ebay-data";
-import { defaultListingsRange, formatFetchedAt, isWithinLocalDays } from "@/lib/date-range";
+import { defaultListingsRange, formatFetchedAt, isWithinLocalDays, parseLocalDate } from "@/lib/date-range";
 import { getCachedListingItem, rememberListingItem } from "@/lib/listings-interval-cache";
 
 import {
@@ -161,7 +161,11 @@ function formatMoney(amount?: { value: string; currency: string }) {
 
 function formatDate(value?: string) {
   if (!value) return null;
-  const d = new Date(value);
+  // eBay date-only values ("2026-06-30") parse as UTC midnight; new Date()
+  // would render them a day early west of UTC. parseLocalDate keeps the day.
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? parseLocalDate(value.slice(0, 10))
+    : new Date(value);
   if (Number.isNaN(d.getTime())) return null;
   return d.toLocaleDateString();
 }
@@ -354,22 +358,25 @@ export default function TrackingPage() {
     });
   }, [refresh, loadTracking]);
 
-  const listingImages: Record<string, string[]> = {};
-  if (usingSandboxOrders) {
-    for (const [id, url] of Object.entries(SANDBOX_LISTING_IMAGES)) {
-      listingImages[id] = [rewriteEbayImageUrl(url), url];
+  const listingImages: Record<string, string[]> = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    if (usingSandboxOrders) {
+      for (const [id, url] of Object.entries(SANDBOX_LISTING_IMAGES)) {
+        map[id] = [rewriteEbayImageUrl(url), url];
+      }
     }
-  }
-  Object.values(listingsByUser).forEach((items) => {
-    items.forEach((item) => {
-      if (!item.ItemID) return;
-      const candidates = listingImageCandidates(item.PictureDetails);
-      if (candidates.length > 0) listingImages[item.ItemID] = candidates;
+    Object.values(listingsByUser).forEach((items) => {
+      items.forEach((item) => {
+        if (!item.ItemID) return;
+        const candidates = listingImageCandidates(item.PictureDetails);
+        if (candidates.length > 0) map[item.ItemID] = candidates;
+      });
     });
-  });
-  for (const [id, urls] of Object.entries(extraImages)) {
-    if (!listingImages[id] && urls.length > 0) listingImages[id] = urls;
-  }
+    for (const [id, urls] of Object.entries(extraImages)) {
+      if (!map[id] && urls.length > 0) map[id] = urls;
+    }
+    return map;
+  }, [usingSandboxOrders, listingsByUser, extraImages]);
 
   useEffect(() => {
     // Only ids on the current board (30 or 90). Expanding to 90 fetches the
@@ -424,7 +431,7 @@ export default function TrackingPage() {
     return () => {
       cancelled = true;
     };
-  }, [orderWindowDays, userGroups, listingsByUser, listingsLoading, usingSandboxOrders, listingUsers, extraImages]);
+  }, [orderWindowDays, userGroups, listingsByUser, listingsLoading, usingSandboxOrders, listingUsers, extraImages, listingImages]);
 
   useEffect(() => {
     if (usingSandboxOrders) return;

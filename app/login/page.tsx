@@ -169,7 +169,7 @@ export default function LoginPage() {
 
                     <div className="text-center mt-6">
                         <Link href="/register" className="py-2 text-[11px] text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] transition-colors font-bold uppercase tracking-wider">
-                            don't have an account? create one
+                            don’t have an account? create one
                         </Link>
                     </div>
                 </form>

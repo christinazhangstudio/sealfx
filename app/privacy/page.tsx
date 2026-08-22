@@ -21,7 +21,7 @@ export default function PrivacyPage() {
 
             <Section heading="Who we are">
                 <p>
-                    Sealift is operated by <strong>[LEGAL ENTITY NAME]</strong> ("Sealift", "we").
+                    Sealift is operated by <strong>[LEGAL ENTITY NAME]</strong> (“Sealift”, “we”).
                     For any privacy question, or to exercise any right described here, contact{" "}
                     <strong>[PRIVACY CONTACT EMAIL]</strong>.
                 </p>
@@ -40,8 +40,8 @@ export default function PrivacyPage() {
                 </p>
                 <p>
                     <strong>eBay access tokens.</strong> When you authorize a seller account, eBay
-                    issues Sealift tokens that let it read that account's data. We store them, along
-                    with when they expire, so you don't have to reauthorize constantly.
+                    issues Sealift tokens that let it read that account’s data. We store them, along
+                    with when they expire, so you don’t have to reauthorize constantly.
                 </p>
                 <p>
                     <strong>eBay notifications.</strong> When you subscribe a seller to a notification
@@ -60,7 +60,7 @@ export default function PrivacyPage() {
                 </p>
                 <p>
                     <strong>In your browser only.</strong> A counter of how many API calls the app has
-                    made, kept in your browser's local storage so the usage indicator works. It never
+                    made, kept in your browser’s local storage so the usage indicator works. It never
                     reaches our servers, and clearing your browser data erases it.
                 </p>
             </Section>
@@ -87,7 +87,7 @@ export default function PrivacyPage() {
             <Section heading="Who else sees it">
                 <p>
                     <strong>eBay.</strong> Unavoidably — Sealift is a client for their API. Your use of
-                    eBay remains governed by eBay's own terms and privacy policy.
+                    eBay remains governed by eBay’s own terms and privacy policy.
                 </p>
                 <p>
                     <strong>Our hosting and network provider.</strong> Traffic to Sealift passes
@@ -109,7 +109,7 @@ export default function PrivacyPage() {
                 <p>
                     Traffic to Sealift is encrypted in transit (HTTPS). Passwords are stored only as
                     argon2 hashes. Access to your data is scoped to your account, and our servers
-                    reject requests that aren't authenticated as you.
+                    reject requests that aren’t authenticated as you.
                 </p>
                 <p>
                     Your eBay Cert ID and the access tokens for your seller accounts are encrypted
@@ -122,7 +122,7 @@ export default function PrivacyPage() {
                 <p>
                     Even so, treat your Cert ID the way you would any password. If you ever suspect
                     it has been exposed, rotate it in the eBay Developer portal and update it on
-                    Sealift's Settings page.
+                    Sealift’s Settings page.
                 </p>
                 <p>
                     No service can promise perfect security, and we are not going to pretend otherwise.
@@ -141,19 +141,19 @@ export default function PrivacyPage() {
             <Section heading="Deleting your data">
                 <p>
                     You can delete individual notifications at any time. Removing a seller
-                    from the Add Sellers page deletes Sealift's stored tokens for that account and
+                    from the Add Sellers page deletes Sealift’s stored tokens for that account and
                     ends its access.
                 </p>
                 <p>
                     Deleting your account from the Admin page removes your account, your eBay keys,
                     your seller tokens and your notifications. It cannot be undone. One
                     caveat we want to be explicit about: if another Sealift account has also
-                    authorized the same eBay seller, that seller's stored notifications are retained
+                    authorized the same eBay seller, that seller’s stored notifications are retained
                     because they belong to that account too.
                 </p>
                 <p>
                     Deleting your Sealift account does not touch your eBay account or your listings —
-                    it only removes Sealift's access and the data described above.
+                    it only removes Sealift’s access and the data described above.
                 </p>
             </Section>
 
@@ -177,7 +177,7 @@ export default function PrivacyPage() {
                 <p>
                     As a privacy-preserving measure, Sealift prevents the automatic loading of external
                     images and embedded resources within these communications. Such resources are fetched
-                    only upon your explicit consent via the provided "Load Images" control.
+                    only upon your explicit consent via the provided “Load Images” control.
                 </p>
             </Section>
 

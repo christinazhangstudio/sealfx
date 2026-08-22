@@ -37,22 +37,27 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
     };
   }, []);
 
-  // Reset mobile states when switching out of mobile view
-  useEffect(() => {
+  // Reset mobile states when switching out of mobile view, and reset the
+  // sub-menus when the main mobile menu closes. Adjust-during-render instead
+  // of effects — same semantics without cascading extra commits.
+  const [prevIsMobile, setPrevIsMobile] = useState(isMobile);
+  if (prevIsMobile !== isMobile) {
+    setPrevIsMobile(isMobile);
     if (!isMobile) {
       setIsMobileMenuOpen(false);
       setIsMobileMoreOpen(false);
       setIsMobileAnalyticsOpen(false);
     }
-  }, [isMobile]);
+  }
 
-  // Reset mobile "More" and "Analytics" when main mobile menu closes
-  useEffect(() => {
+  const [prevMenuOpen, setPrevMenuOpen] = useState(isMobileMenuOpen);
+  if (prevMenuOpen !== isMobileMenuOpen) {
+    setPrevMenuOpen(isMobileMenuOpen);
     if (!isMobileMenuOpen) {
       setIsMobileMoreOpen(false);
       setIsMobileAnalyticsOpen(false);
     }
-  }, [isMobileMenuOpen]);
+  }
 
   if (pathname === "/login") return null;
 

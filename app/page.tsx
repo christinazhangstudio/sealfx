@@ -385,7 +385,7 @@ export default function RegisterSellerPage() {
               Confirm Deletion
             </h3>
             <p className="text-text-primary text-center mb-6">
-              Are you sure you want to delete user "{userToDelete}"?
+              Are you sure you want to delete user “{userToDelete}”?
             </p>
             <div className="flex justify-center space-x-4">
               <button

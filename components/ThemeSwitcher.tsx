@@ -1,19 +1,16 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 
 export default function ThemeSwitcher() {
     const { theme, setTheme } = useTheme();
-    const [mounted, setMounted] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
 
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    const currentTheme = mounted && theme ? theme : "light";
+    // No mounted flag: every node below carries suppressHydrationWarning, so
+    // rendering the real theme on the first client paint is safe.
+    const currentTheme = theme ?? "light";
 
     return (
         <div
