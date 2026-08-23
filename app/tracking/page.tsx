@@ -2,10 +2,12 @@
 
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import PageHeader from "@/components/PageHeader";
+import PageActionBar, { RefreshAction } from "@/components/PageActionBar";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
-import { useEbayListings } from "@/lib/useEbayListings";
+import { useDefaultEbayListings } from "@/lib/useEbayListings";
+import PersonIcon from "@/components/PersonIcon";
 import { listingImageCandidates, rewriteEbayImageUrl, fetchListingItem } from "@/lib/ebay-data";
-import { defaultListingsRange, formatFetchedAt, isWithinLocalDays, parseLocalDate } from "@/lib/date-range";
+import { formatFetchedAt, isWithinLocalDays, parseLocalDate } from "@/lib/date-range";
 import { getCachedListingItem, rememberListingItem } from "@/lib/listings-interval-cache";
 
 import {
@@ -100,12 +102,12 @@ interface UserOrders {
 }
 
 const USER_TONES = [
-  "bg-sky-50/90 dark:bg-sky-950/25 border-l-sky-400",
-  "bg-violet-50/90 dark:bg-violet-950/25 border-l-violet-400",
-  "bg-amber-50/90 dark:bg-amber-950/25 border-l-amber-400",
-  "bg-emerald-50/90 dark:bg-emerald-950/25 border-l-emerald-400",
-  "bg-rose-50/90 dark:bg-rose-950/25 border-l-rose-400",
-  "bg-teal-50/90 dark:bg-teal-950/25 border-l-teal-400",
+  "bg-sky-50/90 dark:bg-sky-950/25",
+  "bg-violet-50/90 dark:bg-violet-950/25",
+  "bg-amber-50/90 dark:bg-amber-950/25",
+  "bg-emerald-50/90 dark:bg-emerald-950/25",
+  "bg-rose-50/90 dark:bg-rose-950/25",
+  "bg-teal-50/90 dark:bg-teal-950/25",
 ] as const;
 
 const USER_AVATAR_TONES = [
@@ -117,20 +119,21 @@ const USER_AVATAR_TONES = [
   "bg-teal-100 text-teal-700 dark:bg-teal-900/60 dark:text-teal-300",
 ] as const;
 
-type StepId = "not_started" | "paid" | "processing" | "shipped";
+type StepId = "paid" | "processing" | "shipped";
+
+const STEP_LABELS: Record<StepId, string> = {
+  paid: "Paid",
+  processing: "Partially fulfilled",
+  shipped: "Shipped",
+};
 
 const STEPS: { id: StepId; label: string }[] = [
-  { id: "not_started", label: "Not started" },
-  { id: "paid", label: "Paid" },
-  { id: "processing", label: "Processing" },
-  { id: "shipped", label: "Shipped" },
+  { id: "paid", label: STEP_LABELS.paid },
+  { id: "processing", label: STEP_LABELS.processing },
+  { id: "shipped", label: STEP_LABELS.shipped },
 ];
 
 const STEP_STYLES: Record<StepId, { bar: string; badge: string }> = {
-  not_started: {
-    bar: "bg-gray-400/70 dark:bg-gray-500/60",
-    badge: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300",
-  },
   paid: {
     bar: "bg-sky-400 dark:bg-sky-500",
     badge: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
@@ -152,6 +155,9 @@ type BoardCard = {
   order: Order;
   item: LineItem;
   step: StepId;
+  badgeStep: StepId;
+  statusLabel: string;
+  attentionReasons: readonly string[];
 };
 
 function formatMoney(amount?: { value: string; currency: string }) {
@@ -202,15 +208,91 @@ function isUspsCarrier(code?: string) {
   return c === "USPS" || c.startsWith("USPS") || c.includes("US POSTAL");
 }
 
-function StepIcon({ step, filled }: { step: number; filled: boolean }) {
+function itemStatus(step: StepId, item: LineItem) {
+  if (step !== "processing") {
+    return { badgeStep: step, label: STEP_LABELS[step] };
+  }
+
+  const fulfillmentStatus = item.lineItemFulfillmentStatus?.trim().toUpperCase();
+  if (fulfillmentStatus === "FULFILLED") {
+    return { badgeStep: "shipped" as const, label: "Fulfilled" };
+  }
+  if (fulfillmentStatus === "NOT_STARTED") {
+    return { badgeStep: "paid" as const, label: "Awaiting fulfillment" };
+  }
+  return { badgeStep: "processing" as const, label: STEP_LABELS.processing };
+}
+
+function getAttentionReasons(
+  order: Order,
+  liveUspsByNumber: Record<string, UspsTracking>,
+) {
+  const reasons: string[] = [];
+  if (
+    order.orderPaymentStatus === "PAID" &&
+    order.orderFulfillmentStatus !== "FULFILLED" &&
+    order.orderFulfillmentStatus !== "IN_PROGRESS"
+  ) {
+    reasons.push("Paid and awaiting shipment");
+  }
+  if (order.orderFulfillmentStatus === "IN_PROGRESS") {
+    reasons.push("Order is partially fulfilled");
+  }
+
+  let hasTrackingNumber = false;
+  let hasCarrierIssue = false;
+  let expectedDeliveryPassed = false;
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  for (const fulfillment of order.shippingFulfillments || []) {
+    const trackingNumber = fulfillment.shipmentTrackingNumber?.trim();
+    if (trackingNumber) hasTrackingNumber = true;
+    const usps =
+      (trackingNumber ? liveUspsByNumber[trackingNumber] : undefined) ||
+      fulfillment.uspsTracking;
+    if (!usps) continue;
+
+    const statusText = [
+      usps.statusCategory,
+      usps.status,
+      usps.statusSummary,
+    ].join(" ");
+    const delivered = /\bdelivered\b/i.test(statusText);
+    if (
+      /\b(exception|delayed|delay|alert|undeliverable|delivery failed|return to sender)\b|later than expected/i.test(
+        statusText,
+      )
+    ) {
+      hasCarrierIssue = true;
+    }
+
+    if (!delivered && usps.expectedDeliveryDate) {
+      const expectedDelivery = new Date(usps.expectedDeliveryDate);
+      if (
+        !Number.isNaN(expectedDelivery.getTime()) &&
+        expectedDelivery < startOfToday
+      ) {
+        expectedDeliveryPassed = true;
+      }
+    }
+  }
+
+  if (order.orderFulfillmentStatus === "FULFILLED" && !hasTrackingNumber) {
+    reasons.push("Shipped without tracking");
+  }
+  if (hasCarrierIssue) reasons.push("Carrier reported a delivery issue");
+  if (expectedDeliveryPassed) reasons.push("Expected delivery date has passed");
+  return reasons;
+}
+
+function StepIcon({ step, filled }: { step: StepId; filled: boolean }) {
   const path =
-    step === 3
+    step === "shipped"
       ? "M12 4l8 5v6c0 4.4-3.2 7.9-8 9-4.8-1.1-8-4.6-8-9V9l8-5z"
-      : step === 2
+      : step === "processing"
         ? "M12 6a6 6 0 110 12 6 6 0 010-12zm0 3.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5z"
-        : step === 1
-          ? "M12 2a10 10 0 110 20 10 10 0 010-20zm0 3a7 7 0 100 14A7 7 0 0012 5zm-1.8 4h3.6v1.6h-2v3.2h2V15.4h-3.6v-1.6h2V10.6h-2V9z"
-          : "M12 2a10 10 0 110 20 10 10 0 010-20zm0 4.5A5.5 5.5 0 1012 17.5 5.5 5.5 0 0012 6.5z";
+        : "M12 2a10 10 0 110 20 10 10 0 010-20zm0 3a7 7 0 100 14A7 7 0 0012 5zm-1.8 4h3.6v1.6h-2v3.2h2V15.4h-3.6v-1.6h2V10.6h-2V9z";
   return (
     <svg
       viewBox="0 0 24 24"
@@ -224,24 +306,26 @@ function StepIcon({ step, filled }: { step: number; filled: boolean }) {
   );
 }
 
-function PaymentBadge({ status }: { status: string }) {
-  if (status === "PAID") {
-    return (
-      <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">
-        Paid
-      </span>
-    );
-  }
-  if (status === "FULLY_REFUNDED") {
+function StatusBadge({
+  step,
+  label,
+  paymentStatus,
+}: {
+  step: StepId;
+  label: string;
+  paymentStatus: string;
+}) {
+  if (paymentStatus === "FULLY_REFUNDED") {
     return (
       <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
         Refunded
       </span>
     );
   }
+
   return (
-    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
-      {status.replace(/_/g, " ")}
+    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STEP_STYLES[step].badge}`}>
+      {label}
     </span>
   );
 }
@@ -261,10 +345,13 @@ export default function TrackingPage() {
   const [userGroups, setUserGroups] = useState<UserOrders[]>([]);
   const [listingUsers, setListingUsers] = useState<string[]>([]);
   const [usingSandboxOrders, setUsingSandboxOrders] = useState(false);
+  const [hiddenUsers, setHiddenUsers] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeStep, setActiveStep] = useState<StepId | "all">("all");
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [showRefunded, setShowRefunded] = useState(false);
+  const [needsAttentionOnly, setNeedsAttentionOnly] = useState(false);
   const [orderWindowDays, setOrderWindowDays] = useState<30 | 90>(30);
   const abortRef = useRef<AbortController | null>(null);
   const [ordersRefreshing, setOrdersRefreshing] = useState(false);
@@ -275,12 +362,9 @@ export default function TrackingPage() {
   const [uspsFailed, setUspsFailed] = useState<Set<string>>(new Set());
   const uspsTriedRef = useRef<Set<string>>(new Set());
 
-  // Same users + same local 120-day window as Gallery → one SWR cache entry.
-  const listingRange = useMemo(() => defaultListingsRange(), []);
-  const { listingsByUser, errorsByUser, fetchedAt, isLoading: listingsLoading, isValidating, refresh } = useEbayListings(
+  // Same users + same rolling local 120-day window as Inventory → one SWR cache entry.
+  const { listingsByUser, errorsByUser, fetchedAt, isLoading: listingsLoading, isValidating, refresh } = useDefaultEbayListings(
     listingUsers,
-    listingRange.start,
-    listingRange.end,
   );
   const lastRefreshed = fetchedAt ? new Date(fetchedAt) : null;
 
@@ -365,11 +449,14 @@ export default function TrackingPage() {
         map[id] = [rewriteEbayImageUrl(url), url];
       }
     }
-    Object.values(listingsByUser).forEach((items) => {
-      items.forEach((item) => {
-        if (!item.ItemID) return;
-        const candidates = listingImageCandidates(item.PictureDetails);
-        if (candidates.length > 0) map[item.ItemID] = candidates;
+    Object.values(listingsByUser).forEach((items: unknown) => {
+      if (!Array.isArray(items)) return;
+      items.forEach((item: unknown) => {
+        if (!item || typeof item !== "object") return;
+        const typedItem = item as { ItemID?: string, PictureDetails?: unknown };
+        if (!typedItem.ItemID) return;
+        const candidates = listingImageCandidates(typedItem.PictureDetails as any);
+        if (candidates.length > 0) map[typedItem.ItemID] = candidates;
       });
     });
     for (const [id, urls] of Object.entries(extraImages)) {
@@ -520,7 +607,7 @@ export default function TrackingPage() {
     return () => controller.abort();
   }, [loadTracking]);
 
-  const getProgressState = (order: Order): StepId => {
+  const getProgressState = (order: Order): StepId | null => {
     const isPaid =
       order.orderPaymentStatus === "PAID" ||
       order.orderPaymentStatus === "FULLY_REFUNDED";
@@ -530,18 +617,19 @@ export default function TrackingPage() {
     if (isShipped) return "shipped";
     if (isProcessing) return "processing";
     if (isPaid) return "paid";
-    return "not_started";
+    return null;
   };
-
-  const stepIndex = (step: StepId) => STEPS.findIndex((s) => s.id === step);
 
   const boardCards = useMemo(() => {
     const cards: BoardCard[] = [];
     for (const group of userGroups) {
+      if (hiddenUsers.has(group.user)) continue;
       for (const order of group.orders) {
         if (!isWithinLocalDays(order.creationDate, orderWindowDays)) continue;
         if (!showRefunded && order.orderPaymentStatus === "FULLY_REFUNDED") continue;
         const step = getProgressState(order);
+        if (!step) continue;
+        const attentionReasons = getAttentionReasons(order, uspsByNumber);
         const items =
           order.lineItems && order.lineItems.length > 0
             ? order.lineItems
@@ -555,21 +643,31 @@ export default function TrackingPage() {
                 } satisfies LineItem,
               ];
         for (const item of items) {
+          const status = itemStatus(step, item);
           cards.push({
             key: `${order.orderId}-${item.lineItemId}`,
             user: group.user,
             order,
             item,
             step,
+            badgeStep: status.badgeStep,
+            statusLabel: status.label,
+            attentionReasons,
           });
         }
       }
     }
     return cards;
-  }, [userGroups, showRefunded, orderWindowDays]);
+  }, [userGroups, showRefunded, orderWindowDays, hiddenUsers, uspsByNumber]);
 
-  const visibleCards =
-    activeStep === "all" ? boardCards : boardCards.filter((c) => c.step === activeStep);
+  const attentionCount = boardCards.filter(
+    (card) => card.attentionReasons.length > 0,
+  ).length;
+  const stageCards =
+    activeStep === "all" ? boardCards : boardCards.filter((card) => card.step === activeStep);
+  const visibleCards = needsAttentionOnly
+    ? stageCards.filter((card) => card.attentionReasons.length > 0)
+    : stageCards;
 
   const userStats = useMemo(() => {
     const stats: Record<
@@ -577,9 +675,11 @@ export default function TrackingPage() {
       { orders: number; shipped: number; processing: number; total: string | null }
     > = {};
     for (const group of userGroups) {
+      if (hiddenUsers.has(group.user)) continue;
       const orders = group.orders.filter((o) => {
         if (!isWithinLocalDays(o.creationDate, orderWindowDays)) return false;
         if (!showRefunded && o.orderPaymentStatus === "FULLY_REFUNDED") return false;
+        if (!getProgressState(o)) return false;
         return true;
       });
       let orderTotal = 0;
@@ -603,7 +703,7 @@ export default function TrackingPage() {
       };
     }
     return stats;
-  }, [userGroups, showRefunded, orderWindowDays]);
+  }, [userGroups, showRefunded, orderWindowDays, hiddenUsers]);
 
   const uniqueUsersArray = useMemo(
     () => Array.from(new Set(userGroups.map((g) => g.user))),
@@ -639,13 +739,13 @@ export default function TrackingPage() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="page-content-shell bg-background">
       <PageHeader
         title="Tracking"
         description={
-          <>
-            Showing the last {orderWindowDays} days.
-          </>
+          needsAttentionOnly
+            ? `Showing items that need attention from the last ${orderWindowDays} days.`
+            : `Showing the last ${orderWindowDays} days.`
         }
       />
 
@@ -653,7 +753,7 @@ export default function TrackingPage() {
         <div className="mb-4 space-y-2">
           {Object.entries(errorsByUser).map(([user, message]) => (
             <p key={user} className="font-medium text-red-500">
-              {user}: Request failed: {message}
+              {user}: Request failed: {String(message)}
             </p>
           ))}
         </div>
@@ -671,69 +771,117 @@ export default function TrackingPage() {
         </div>
       ) : (
         <>
-          <div className="mb-4 flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-wrap items-center justify-center gap-4">
-              <div className="flex items-center overflow-hidden rounded-lg border border-border shadow-sm">
-                <button
-                  type="button"
-                  onClick={() => setOrderWindowDays(30)}
-                  className={`px-3 py-1.5 text-sm font-medium transition-colors ${
-                    orderWindowDays === 30
-                      ? "bg-primary text-white"
-                      : "bg-surface text-text-secondary hover:bg-hover"
-                  }`}
-                >
-                  Last 30 days
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOrderWindowDays(90)}
-                  className={`px-3 py-1.5 text-sm font-medium transition-colors ${
-                    orderWindowDays === 90
-                      ? "bg-primary text-white"
-                      : "bg-surface text-text-secondary hover:bg-hover"
-                  }`}
-                >
-                  Last 90 days
-                </button>
-              </div>
-              <label className="flex cursor-pointer select-none items-center gap-2.5 text-sm text-text-secondary">
-                <span>Show refunded</span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={showRefunded}
-                  onClick={() => setShowRefunded((v) => !v)}
-                  className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
-                    showRefunded ? "bg-emerald-400 dark:bg-emerald-500" : "bg-border/50"
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${
-                      showRefunded ? "left-[18px]" : "left-0.5"
+          <PageActionBar ariaLabel="Tracking controls">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="grid w-full grid-cols-2 rounded-xl border border-border/60 bg-background/60 p-1 sm:flex sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={() => setOrderWindowDays(30)}
+                    aria-pressed={orderWindowDays === 30}
+                    className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all ${
+                      orderWindowDays === 30
+                        ? "bg-surface text-text-primary shadow-sm"
+                        : "text-text-secondary hover:bg-hover/70 hover:text-text-primary"
                     }`}
-                  />
-                </button>
-              </label>
-            </div>
-            {lastRefreshed ? (
-              <p className="text-center text-sm text-text-secondary sm:text-right">
-                Last updated at {formatFetchedAt(lastRefreshed)}.{" "}
+                  >
+                    Last 30 days
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOrderWindowDays(90)}
+                    aria-pressed={orderWindowDays === 90}
+                    className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all ${
+                      orderWindowDays === 90
+                        ? "bg-surface text-text-primary shadow-sm"
+                        : "text-text-secondary hover:bg-hover/70 hover:text-text-primary"
+                    }`}
+                  >
+                    Last 90 days
+                  </button>
+                </div>
                 <button
-                  onClick={handleRefresh}
-                  disabled={isValidating || ordersRefreshing}
-                  className="rounded-sm underline decoration-dotted underline-offset-4 transition-colors hover:text-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/50 disabled:cursor-not-allowed disabled:opacity-50"
+                  type="button"
+                  aria-pressed={needsAttentionOnly}
+                  onClick={() => setNeedsAttentionOnly((current) => !current)}
+                  className={`flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors sm:w-auto ${
+                    needsAttentionOnly
+                      ? "border-amber-400/60 bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200"
+                      : "border-border/60 bg-background/60 text-text-secondary hover:bg-hover/70 hover:text-text-primary"
+                  }`}
                 >
-                  {isValidating || ordersRefreshing ? "Refreshing…" : "Refresh"}
+                  Needs attention
+                  <span className="rounded-full bg-current/10 px-1.5 py-0.5 text-xs">
+                    {attentionCount}
+                  </span>
                 </button>
-              </p>
-            ) : (
-              <span className="hidden sm:block" aria-hidden="true" />
+                <div className="flex select-none items-center justify-between gap-2.5 text-sm text-text-secondary sm:justify-start">
+                  <span>Show refunded</span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-label="Show refunded"
+                    aria-checked={showRefunded}
+                    onClick={() => setShowRefunded((refunded) => !refunded)}
+                    className={`relative h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors ${
+                      showRefunded ? "bg-emerald-400 dark:bg-emerald-500" : "bg-border/50"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${
+                        showRefunded ? "left-4.5" : "left-0.5"
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              <RefreshAction
+                updated={lastRefreshed ? formatFetchedAt(lastRefreshed) : null}
+                refreshing={isValidating || ordersRefreshing}
+                onRefresh={handleRefresh}
+              />
+            </div>
+
+            {listingUsers.length > 0 && (
+              <div className="px-1 pb-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="mr-1 text-xs font-semibold uppercase tracking-wider text-text-muted">Sellers</span>
+                  {listingUsers.map((user) => {
+                    const visible = !hiddenUsers.has(user);
+                    return (
+                      <label
+                        key={user}
+                        className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                          visible
+                            ? "border-primary/25 bg-primary/10 text-primary"
+                            : "border-border/60 bg-background/60 text-text-muted"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={visible}
+                          onChange={() => {
+                            setHiddenUsers((previous) => {
+                              const next = new Set(previous);
+                              if (next.has(user)) next.delete(user);
+                              else next.add(user);
+                              return next;
+                            });
+                          }}
+                          className="h-3.5 w-3.5 cursor-pointer accent-primary"
+                        />
+                        {user}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
             )}
-          </div>
+          </PageActionBar>
           <div className="mb-6 overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
-            <div className="grid grid-cols-4 divide-x divide-border/70">
-              {STEPS.map((step, idx) => {
+            <div className="grid grid-cols-1 gap-px bg-border/70 sm:grid-cols-3">
+              {STEPS.map((step) => {
                 const count = boardCards.filter((c) => c.step === step.id).length;
                 const active = activeStep === step.id;
                 return (
@@ -742,22 +890,22 @@ export default function TrackingPage() {
                     type="button"
                     onClick={() => setActiveStep(active ? "all" : step.id)}
                     aria-pressed={active}
-                    className={`flex items-center gap-3 px-4 py-3.5 text-left transition-colors ${
-                      active ? "bg-surface-light/70" : "hover:bg-hover/60"
+                    className={`flex min-w-0 items-center gap-2 px-3 py-3 text-left transition-colors sm:gap-3 sm:px-4 sm:py-3.5 ${
+                      active ? "bg-surface-light/70" : "bg-surface hover:bg-hover/60"
                     }`}
                   >
                     <span
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 ${
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 sm:h-9 sm:w-9 ${
                         active
                           ? `border-transparent text-white ${STEP_STYLES[step.id].bar}`
                           : "border-border/60 text-text-secondary"
                       }`}
                     >
-                      <StepIcon step={idx} filled={active} />
+                      <StepIcon step={step.id} filled={active} />
                     </span>
                     <span className="min-w-0">
                       <span
-                        className={`block truncate text-sm font-semibold ${
+                        className={`block text-sm font-semibold leading-tight ${
                           active ? "text-primary" : "text-text-secondary"
                         }`}
                       >
@@ -772,10 +920,9 @@ export default function TrackingPage() {
               })}
             </div>
           </div>
-
           {/* Sellers */}
-          <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {userGroups.map((group) => {
+          <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {userGroups.filter(g => !hiddenUsers.has(g.user)).map((group) => {
               const stats = userStats[group.user];
               return (
                 <div
@@ -800,7 +947,7 @@ export default function TrackingPage() {
                       </dd>
                     </div>
                     <div className="flex justify-between">
-                      <dt>In progress</dt>
+                      <dt>Partially fulfilled</dt>
                       <dd className="font-semibold text-text-primary">
                         {stats.processing}
                       </dd>
@@ -828,35 +975,32 @@ export default function TrackingPage() {
           {/* Orders */}
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="text-sm font-bold uppercase tracking-wider text-text-secondary">
-              {activeStep === "all" ? (
-                <>All items ({visibleCards.length})</>
-              ) : (
-                <>
-                  {STEPS.find((s) => s.id === activeStep)?.label} (
-                  {visibleCards.length})
-                </>
-              )}
+              {needsAttentionOnly ? "Needs attention" : activeStep === "all" ? "All items" : STEPS.find((step) => step.id === activeStep)?.label}{" "}
+              ({visibleCards.length})
             </h2>
-            {activeStep !== "all" && (
+            {(needsAttentionOnly || activeStep !== "all") && (
               <button
                 type="button"
-                onClick={() => setActiveStep("all")}
+                onClick={() => {
+                  setNeedsAttentionOnly(false);
+                  setActiveStep("all");
+                }}
                 className="text-xs font-medium text-hover underline-offset-2 hover:underline"
               >
-                Show all
+                Clear filters
               </button>
             )}
           </div>
 
           {visibleCards.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border/70 p-10 text-center text-sm text-text-secondary">
-              No items in this stage.
+              {needsAttentionOnly
+                ? "No items need attention."
+                : "No items in this stage."}
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-              {visibleCards.map(({ key, user, order, item }) => {
-                const step = getProgressState(order);
-                const stepIdx = stepIndex(step);
+            <div className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2 sm:gap-y-6 xl:grid-cols-3 2xl:grid-cols-4">
+              {visibleCards.map(({ key, user, order, item, badgeStep, statusLabel, attentionReasons }) => {
                 const toneIdx = userToneIndex(user);
                 const shipTo =
                   order.fulfillmentStartInstructions?.[0]?.shippingStep?.shipTo;
@@ -871,11 +1015,12 @@ export default function TrackingPage() {
                 const itemUrl = item.legacyItemId
                   ? `https://www.ebay.com/itm/${item.legacyItemId}`
                   : "#";
+                const detailsExpanded = expandedCards.has(key);
 
                 return (
                   <article
                     key={key}
-                    className={`flex min-w-0 flex-col rounded-xl border border-border/50 ${USER_TONES[toneIdx]} p-3.5 shadow-sm`}
+                    className={`flex min-w-0 flex-col rounded-xl border border-border/50 ${USER_TONES[toneIdx]} p-3 shadow-sm sm:p-3.5`}
                   >
                     {/* Item */}
                     <div className="flex gap-3">
@@ -911,31 +1056,48 @@ export default function TrackingPage() {
                       </div>
                     </div>
 
-                    {/* Stage progress */}
                     <div className="mt-3">
-                      <div className="flex items-center gap-1.5">
-                        {STEPS.map((s, idx) => (
-                          <span
-                            key={s.id}
-                            title={s.label}
-                            className={`h-1.5 flex-1 rounded-full ${
-                              idx <= stepIdx ? STEP_STYLES[step].bar : "bg-border/30"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                      <div className="mt-2 flex items-center justify-between gap-2">
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${STEP_STYLES[step].badge}`}
-                        >
-                          {STEPS[stepIdx].label}
-                        </span>
-                        <PaymentBadge status={order.orderPaymentStatus} />
-                      </div>
+                      <StatusBadge
+                        step={badgeStep}
+                        label={statusLabel}
+                        paymentStatus={order.orderPaymentStatus}
+                      />
                     </div>
 
+                    {needsAttentionOnly && (
+                      <p className="mt-2 rounded-lg bg-amber-100/80 px-2.5 py-2 text-xs font-medium leading-relaxed text-amber-900 dark:bg-amber-900/30 dark:text-amber-200">
+                        {attentionReasons.join(" · ")}
+                      </p>
+                    )}
+
+                    <button
+                      type="button"
+                      aria-expanded={detailsExpanded}
+                      onClick={() => {
+                        setExpandedCards((previous) => {
+                          const next = new Set(previous);
+                          if (next.has(key)) next.delete(key);
+                          else next.add(key);
+                          return next;
+                        });
+                      }}
+                      className="mt-3 flex w-full items-center justify-between rounded-lg border border-border/50 bg-surface/50 px-3 py-2 text-xs font-semibold text-text-secondary transition-colors hover:bg-hover/60 hover:text-text-primary sm:hidden"
+                    >
+                      Order details
+                      <svg
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        className={`h-4 w-4 transition-transform ${detailsExpanded ? "rotate-180" : ""}`}
+                        aria-hidden="true"
+                      >
+                        <path d="m5 7.5 5 5 5-5" />
+                      </svg>
+                    </button>
+
                     {/* Details */}
-                    <dl className="mt-3 space-y-1.5 border-t border-border/40 pt-2.5">
+                    <dl className={`${detailsExpanded ? "block" : "hidden"} mt-3 space-y-1.5 border-t border-border/40 pt-2.5 sm:block`}>
                       <DetailRow label="Order">#{order.orderId}</DetailRow>
                       {placed && <DetailRow label="Placed">{placed}</DetailRow>}
                       {modified && (
@@ -944,11 +1106,6 @@ export default function TrackingPage() {
                       {order.buyer?.username && (
                         <DetailRow label="Buyer">
                           <span className="break-all">{order.buyer.username}</span>
-                        </DetailRow>
-                      )}
-                      {order.salesRecordReference && (
-                        <DetailRow label="Sales record">
-                          {order.salesRecordReference}
                         </DetailRow>
                       )}
                       {formatMoney(order.pricingSummary?.total) && (

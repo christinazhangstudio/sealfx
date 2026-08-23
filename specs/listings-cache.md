@@ -4,7 +4,7 @@ Session-only. Lives in this tab’s JS heap. Not `localStorage`, not the server.
 
 Two layers:
 
-1. **SWR** — one view per `(users, from, to)`. Stops Gallery and Tracking from crawling the same window twice. No background recrawl (`revalidateOnFocus` / `revalidateIfStale` off). Freshness is the **Refresh** button.
+1. **SWR** — one view per `(users, from, to)`. Stops Inventory and Tracking from crawling the same window twice. No background recrawl (`revalidateOnFocus` / `revalidateIfStale` off). Freshness is the **Refresh** button.
 2. **Interval store** (`lib/listings-interval-cache.ts`) — one copy of each listing per seller, plus the local-day spans already covered. Sits *under* the SWR fetcher.
 
 ## Why two layers
@@ -30,12 +30,12 @@ Listings are `Map<ItemID, Item>` per seller. Overlapping views point at the same
 ## Date rules
 
 - Whole **local** calendar days (`formatApiDate` / `parseLocalDate`). Never `toISOString()` / `new Date("YYYY-MM-DD")` — those are UTC and shift the day west of UTC.
-- Default window: today and the 119 local days before it (`defaultListingsRange`, 120 inclusive). Gallery Reset and Tracking both use this, so they share one SWR key.
-- Gallery pickers are a draft. The cache key uses `appliedDates` (Apply / Reset). Changing From/To without Apply does not crawl.
+- Default window: today and the 119 local days before it (`defaultListingsRange`, 120 inclusive). Inventory Reset and Tracking both use this, so they share one SWR key.
+- Inventory pickers are a draft. The cache key uses `appliedDates` (Apply / Reset). Changing From/To without Apply does not crawl.
 
 ## What Refresh does
 
-- **Gallery:** invalidate the applied day span in the interval store, then `mutate()` that SWR key. Recrawls listings for that range only.
+- **Inventory:** invalidate the applied day span in the interval store, then `mutate()` that SWR key. Recrawls listings for that range only.
 - **Tracking:** same listings recrawl, **plus** a new `GET /tracking` (fulfillment / orders). Fulfillment is not in SWR.
 
 The “Last updated at …” stamp is `fetchedAt` on the SWR payload — time of that view’s last listings crawl, not fulfillment.

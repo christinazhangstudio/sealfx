@@ -9,12 +9,17 @@ const changelogEntriesNewestFirst: ChangelogEntry[] = [
     version: "v1",
     date: "August 2026",
     updates: [
+      "View each seller account’s payment method and recent payout destinations on Accounts.",
       "Use AI-suggested inbox rules to organize recurring messages and preview matches before applying them.",
       "Applied inbox rules are saved to your account and restored when you return.",
       "Inbox analysis now reviews up to 100 messages, cleans HTML email content, and clearly notes when long messages are truncated.",
       "Select multiple inbox messages to move them to Trash, or permanently delete multiple trashed messages at once.",
       "Launched Tracking page: 30/90-day shipping fulfillment view, refunded-order filter, richer shipment cards.",
+      "Tracking now uses compact expandable order cards and clearer stage and seller layouts on phones and narrow screens.",
+      "See fulfilled and awaiting items separately within partially fulfilled orders, and filter items that need attention.",
+      "Theme selector now shows the active saved theme after refreshing.",
       "Filter inbox messages by seller.",
+      "API usage now separates notifications, settings, tracking, and AI inbox analysis instead of grouping them as Other.",
     ],
   },
   {
@@ -61,7 +66,7 @@ const changelogEntriesNewestFirst: ChangelogEntry[] = [
     version: "pre-release",
     date: "March-May 2025",
     updates: [
-      "Launched the first version of Sealift for listings, payouts, transactions, and gallery.",
+      "Launched the first version of Sealift for listings, payouts, transactions, and inventory.",
       "Supported multiple users and improved browsing speed.",
     ],
   },

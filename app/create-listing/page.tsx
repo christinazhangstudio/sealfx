@@ -178,7 +178,7 @@ export default function CreateListing() {
   };
 
   return (
-    <div className="page-content-shell @container">
+    <div className="page-content-shell bg-background @container">
       <div className="max-w-5xl mx-auto">
         <PageHeader
           title="Create Listing"

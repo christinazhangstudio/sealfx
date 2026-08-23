@@ -241,7 +241,7 @@ export default function RegisterSellerPage() {
 
   return (
     <div
-      className="page-content-shell bg-[var(--background)] relative"
+      className="page-content-shell bg-background relative"
     >
       <div className={`max-w-5xl mx-auto ${showDeletePopup ? 'blur-sm' : ''}`}>
         <PageHeader title="Add Sellers" />

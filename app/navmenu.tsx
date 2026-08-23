@@ -9,16 +9,39 @@ import { clearListingsSession } from "@/lib/useEbayListings";
 import { usePathname } from "next/navigation";
 import { useNotifications } from "@/components/NotificationContext";
 
+type NavigationItemVariant = "desktop" | "mobile" | "dropdown";
+
+function navigationItemClass(variant: NavigationItemVariant, active: boolean): string {
+  if (variant === "desktop") {
+    return `relative inline-flex items-center whitespace-nowrap rounded-full border px-3.5 py-2 text-sm font-semibold tracking-wide transition-all duration-200 motion-reduce:transform-none motion-reduce:transition-none ${
+      active
+        ? "border-primary/35 bg-surface text-primary shadow-[0_4px_14px_rgba(0,0,0,0.08)] ring-1 ring-inset ring-primary/10"
+        : "border-transparent text-primary/80 hover:-translate-y-0.5 hover:border-border/70 hover:bg-surface/70 hover:text-hover-content hover:shadow-sm"
+    }`;
+  }
+
+  if (variant === "mobile") {
+    return `relative flex w-full items-center justify-center rounded-full border px-4 py-2 text-base font-semibold tracking-wide transition-all duration-200 ${
+      active
+        ? "border-primary/35 bg-primary/10 text-primary shadow-sm ring-1 ring-inset ring-primary/10"
+        : "border-transparent text-primary/85 hover:border-border/70 hover:bg-hover/70 hover:text-hover-content"
+    }`;
+  }
+
+  return `flex items-center rounded-xl border px-3 py-2 text-sm font-medium transition-all duration-150 ${
+    active
+      ? "border-primary/25 bg-primary/10 text-primary shadow-sm"
+      : "border-transparent text-primary/85 hover:border-border/60 hover:bg-hover hover:text-hover-content"
+  }`;
+}
+
 export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
   const { data: session } = useSession();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileMoreOpen, setIsMobileMoreOpen] = useState(false);
-  const [isMobileAnalyticsOpen, setIsMobileAnalyticsOpen] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
-  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const moreDropdownRef = useRef<HTMLDivElement>(null);
-  const analyticsDropdownRef = useRef<HTMLDivElement>(null);
   const { unreadCount } = useNotifications();
 
   // Close dropdowns when clicking outside
@@ -26,9 +49,6 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
     const handleClickOutside = (event: MouseEvent) => {
       if (moreDropdownRef.current && !moreDropdownRef.current.contains(event.target as Node)) {
         setIsMoreOpen(false);
-      }
-      if (analyticsDropdownRef.current && !analyticsDropdownRef.current.contains(event.target as Node)) {
-        setIsAnalyticsOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -46,7 +66,6 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
     if (!isMobile) {
       setIsMobileMenuOpen(false);
       setIsMobileMoreOpen(false);
-      setIsMobileAnalyticsOpen(false);
     }
   }
 
@@ -55,7 +74,6 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
     setPrevMenuOpen(isMobileMenuOpen);
     if (!isMobileMenuOpen) {
       setIsMobileMoreOpen(false);
-      setIsMobileAnalyticsOpen(false);
     }
   }
 
@@ -64,49 +82,46 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
   const navLinks = [
     { name: "Inbox", href: "/inbox" },
     { name: "Create Listing", href: "/create-listing" },
-    { name: "Gallery", href: "/gallery" },
+    { name: "Inventory", href: "/inventory" },
     { name: "Tracking", href: "/tracking" },
-  ];
-
-  const analyticsLinks = [
-    { name: "Payouts", href: "/payouts" },
-    { name: "Listings", href: "/listings" },
-    { name: "Charts", href: "/charts" },
+    { name: "Calendar", href: "/calendar" },
   ];
 
   const moreLinks = [
+    { name: "Charts", href: "/charts" },
     { name: "Accounts", href: "/accounts" },
-    { name: "Transactions", href: "/transaction" },
     { name: "Notifications", href: "/notifications" },
     { name: "Settings", href: "/settings" },
     { name: "Admin", href: "/admin" },
   ];
 
   const isActive = (path: string) => pathname === path;
-  const isAnalyticsActive = analyticsLinks.some((link) => isActive(link.href));
+  const isMoreActive = moreLinks.some((link) => isActive(link.href));
+
 
   return (
-    <nav
-      className="shadow-sm sticky top-0 z-40 transition-colors duration-200 @container"
-      style={{ background: "var(--nav-bg)" }}
-    >
+    <nav className="font-nav sticky top-0 z-40 border-b border-border/50 bg-surface/85 shadow-[0_8px_30px_rgba(0,0,0,0.06)] backdrop-blur-xl transition-colors duration-200 @container">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 relative">
+        <div className="relative flex h-16 justify-between">
           {/* Left Side: Home + Desktop Links */}
           <div className="flex items-center">
-            <div className="flex-shrink-0 flex items-center absolute left-1/2 -translate-x-1/2 @5xl:static @5xl:translate-x-0">
-              <Link href="/" className="text-xl font-bold text-primary hover:text-hover-content transition-colors">
+            <div className="absolute left-1/2 flex flex-shrink-0 -translate-x-1/2 items-center @5xl:static @5xl:translate-x-0">
+              <Link
+                href="/"
+                aria-current={isActive("/") ? "page" : undefined}
+                className={`${navigationItemClass("desktop", isActive("/"))} text-base font-bold`}
+              >
                 Home
               </Link>
             </div>
             {/* Desktop Navigation */}
-            <div className="hidden @5xl:ml-6 @5xl:flex @5xl:items-center @5xl:space-x-2 @5xl:space-x-4 flex-wrap">
+            <div className="hidden flex-wrap @5xl:ml-5 @5xl:flex @5xl:items-center @5xl:gap-2">
               {navLinks.map((link) => (
                 <Link
                   key={link.name}
                   href={link.href}
-                  className={`relative px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 whitespace-nowrap ${isActive(link.href) ? "text-hover-content font-bold bg-hover" : "text-primary hover:text-hover-content hover:bg-hover"
-                    }`}
+                  aria-current={isActive(link.href) ? "page" : undefined}
+                  className={navigationItemClass("desktop", isActive(link.href))}
                 >
                   {link.name}
                   {link.name === "Inbox" && unreadCount > 0 && (
@@ -117,45 +132,14 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
                 </Link>
               ))}
 
-              {/* Analytics Dropdown */}
-              <div className="relative" ref={analyticsDropdownRef}>
-                <button
-                  onClick={() => {
-                    setIsAnalyticsOpen(!isAnalyticsOpen);
-                    setIsMoreOpen(false);
-                  }}
-                  className={`px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors duration-200 ${isAnalyticsActive ? "text-hover-content font-bold bg-hover" : "text-primary hover:text-hover-content hover:bg-hover"
-                    }`}
-                >
-                  Analytics
-                  <svg className={`ml-1 h-4 w-4 transition-transform duration-200 ${isAnalyticsOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {isAnalyticsOpen && (
-                  <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-surface border border-border ring-1 ring-black ring-opacity-5 focus:outline-none z-[var(--z-nav)] animate-in fade-in zoom-in-95 duration-100">
-                    {analyticsLinks.map((link) => (
-                      <Link
-                        key={link.name}
-                        href={link.href}
-                        className="block px-4 py-2 text-sm text-primary hover:bg-hover hover:text-hover-content transition-colors"
-                        onClick={() => setIsAnalyticsOpen(false)}
-                      >
-                        {link.name}
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
 
               {/* More Dropdown */}
               <div className="relative" ref={moreDropdownRef}>
                 <button
-                  onClick={() => {
-                    setIsMoreOpen(!isMoreOpen);
-                    setIsAnalyticsOpen(false);
-                  }}
-                  className="px-3 py-2 rounded-md text-sm font-medium text-primary hover:text-hover-content hover:bg-hover flex items-center transition-colors"
+                  type="button"
+                  onClick={() => setIsMoreOpen(!isMoreOpen)}
+                  aria-expanded={isMoreOpen}
+                  className={navigationItemClass("desktop", isMoreActive)}
                 >
                   More
                   <svg className={`ml-1 h-4 w-4 transition-transform duration-200 ${isMoreOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -163,12 +147,13 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
                   </svg>
                 </button>
                 {isMoreOpen && (
-                  <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-surface border border-border ring-1 ring-black ring-opacity-5 focus:outline-none z-[var(--z-nav)] animate-in fade-in zoom-in-95 duration-100">
+                  <div className="absolute right-0 z-[var(--z-nav)] mt-2 w-52 space-y-1 rounded-2xl border border-border/60 bg-surface/95 p-1.5 shadow-xl ring-1 ring-black/5 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200">
                     {moreLinks.map((link) => (
                       <Link
                         key={link.name}
                         href={link.href}
-                        className="block px-4 py-2 text-sm text-primary hover:bg-hover hover:text-hover-content transition-colors"
+                        aria-current={isActive(link.href) ? "page" : undefined}
+                        className={navigationItemClass("dropdown", isActive(link.href))}
                         onClick={() => setIsMoreOpen(false)}
                       >
                         {link.name}
@@ -181,7 +166,7 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
           </div>
 
           {/* Right Side: Desktop Actions */}
-          <div className="hidden @5xl:flex @5xl:items-center @5xl:space-x-4 flex-shrink-0 ml-4">
+          <div className="ml-4 hidden flex-shrink-0 @5xl:flex @5xl:items-center @5xl:gap-3">
             <ApiUsageIndicator />
             <ThemeSwitcher />
             {session && !(session.user as any)?.isGuest && (
@@ -193,7 +178,7 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
                   }
                 }}
                 title="Logout"
-                className="p-2 rounded-xl bg-primary/10 text-primary hover:bg-primary/60 hover:text-white transition-all duration-200"
+                className="rounded-full border border-primary/15 bg-primary/10 p-2 text-primary shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/60 hover:text-white hover:shadow-md motion-reduce:transform-none"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -245,14 +230,14 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
 
       {/* Mobile Menu Panel */}
       {isMobileMenuOpen && (
-        <div className="@5xl:hidden border-t border-border/100 bg-surface shadow-lg animate-in slide-in-from-top-1 duration-200">
-          <div className="px-2 pt-1 pb-2">
+        <div className="border-t border-border/60 bg-surface/95 shadow-xl backdrop-blur-xl animate-in slide-in-from-top-1 duration-200 @5xl:hidden">
+          <div className="space-y-1 p-2">
             {navLinks.map((link) => (
               <Link
                 key={link.name}
                 href={link.href}
-                className={`relative block px-3 py-1.5 text-base font-medium text-center transition-colors border-b border-solid border-border/50 ${isActive(link.href) ? "text-hover-content font-bold bg-hover" : "text-primary hover:text-hover-content hover:bg-hover"
-                  }`}
+                aria-current={isActive(link.href) ? "page" : undefined}
+                className={navigationItemClass("mobile", isActive(link.href))}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 {link.name}
@@ -264,44 +249,14 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
               </Link>
             ))}
 
-            {/* Collapsible Analytics Links */}
-            <div>
-              <button
-                onClick={() => setIsMobileAnalyticsOpen(!isMobileAnalyticsOpen)}
-                className="w-full px-3 py-1.5 text-base font-medium text-center relative text-primary hover:text-hover-content hover:bg-hover transition-colors border-b border-solid border-border/50"
-              >
-                <span>Analytics</span>
-                <svg
-                  className={`absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 transition-transform duration-200 ${isMobileAnalyticsOpen ? 'rotate-180' : ''}`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-
-              {isMobileAnalyticsOpen && (
-                <div className="animate-in slide-in-from-top-1 duration-200">
-                  {analyticsLinks.map((link, index) => (
-                    <Link
-                      key={link.name}
-                      href={link.href}
-                      className={`block px-3 py-1.5 text-base font-medium text-center text-primary hover:text-hover-content hover:bg-hover transition-colors border-b border-solid border-border/50 ${index === analyticsLinks.length - 1 ? 'border-b-0' : ''}`}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      {link.name}
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
 
             {/* Collapsible More Links */}
             <div>
               <button
+                type="button"
                 onClick={() => setIsMobileMoreOpen(!isMobileMoreOpen)}
-                className="w-full px-3 py-1.5 text-base font-medium text-center relative text-primary hover:text-hover-content hover:bg-hover transition-colors border-b border-solid border-border/50"
+                aria-expanded={isMobileMoreOpen}
+                className={navigationItemClass("mobile", isMoreActive)}
               >
                 <span>More</span>
                 <svg
@@ -315,12 +270,13 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
               </button>
 
               {isMobileMoreOpen && (
-                <div className="animate-in slide-in-from-top-1 duration-200">
+                <div className="mt-1 space-y-1 rounded-2xl border border-border/50 bg-background/40 p-1.5 animate-in slide-in-from-top-1 duration-200">
                   {moreLinks.map((link) => (
                     <Link
                       key={link.name}
                       href={link.href}
-                      className="block px-3 py-1.5 text-base font-medium text-center text-primary hover:text-hover-content hover:bg-hover transition-colors border-b border-solid border-border/50 last:border-b-0"
+                      aria-current={isActive(link.href) ? "page" : undefined}
+                      className={navigationItemClass("dropdown", isActive(link.href))}
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       {link.name}
@@ -331,8 +287,8 @@ export default function NavMenu({ isMobile }: { isMobile?: boolean }) {
             </div>
           </div>
 
-          <div className="pt-4 pb-4 border-t border-border/100">
-            <div className="flex items-center justify-center gap-6 px-5">
+          <div className="border-t border-border/60 py-4">
+            <div className="flex items-center justify-center gap-5 px-5">
               <div className="flex items-center">
                 <ApiUsageIndicator />
               </div>

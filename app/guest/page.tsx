@@ -30,12 +30,6 @@ export default async function GuestPage(props: { searchParams: Promise<{ p?: str
         cta = "Sign In";
         blockTitle = "Complete Inventory Control";
         blockDesc = "Track inventory, edit prices, and manage listings across all your accounts";
-    } else if (pathname.startsWith("/transaction")) {
-        title = "View Transactions";
-        description = "Sign in to view detailed transaction histories and summaries";
-        cta = "Sign In";
-        blockTitle = "Transaction History";
-        blockDesc = "Monitor credits, debits, holds, and processing transactions across all your accounts";
     } else if (pathname.startsWith("/notifications")) {
         title = "Notifications";
         description = "Sign in to receive alert settings and notifications";
@@ -70,17 +64,17 @@ export default async function GuestPage(props: { searchParams: Promise<{ p?: str
         blockTitle = "System Administration";
         blockDesc = "Manage system settings and administrative functions";
     } else if (pathname.startsWith("/accounts")) {
-        title = "Manage Accounts";
-        description = "Sign in to configure your seller accounts";
+        title = "Accounts & Transactions";
+        description = "Sign in to review seller balances, billing details, and transaction activity";
         cta = "Sign In";
-        blockTitle = "Account Management";
-        blockDesc = "Connect and manage multiple eBay seller accounts";
-    } else if (pathname.startsWith("/gallery")) {
-        title = "Manage Your Gallery";
-        description = "Sign in to organize and upload product images";
+        blockTitle = "Seller Financial Overview";
+        blockDesc = "Monitor account balances, payment status, credits, debits, holds, and processing activity in one place";
+    } else if (pathname.startsWith("/inventory")) {
+        title = "View Your Inventory";
+        description = "Sign in to browse and manage listings across your sellers";
         cta = "Sign In";
-        blockTitle = "Image Management";
-        blockDesc = "Upload, organize, and manage product photos across your inventory";
+        blockTitle = "Seller Inventory";
+        blockDesc = "Review active, completed, and ended listings across every connected seller";
     } else if (pathname.startsWith("/create-listing")) {
         title = "Create Listing";
         description = "Sign in to generate unlimited AI-powered descriptions from your images for Facebook Marketplace.";
@@ -90,7 +84,7 @@ export default async function GuestPage(props: { searchParams: Promise<{ p?: str
     }
 
     return (
-        <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8 relative ">
+        <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8 relative">
             <div className="max-w-2xl mx-auto space-y-6">
                 <LoginCtaBanner
                     title={title}

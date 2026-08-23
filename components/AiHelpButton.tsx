@@ -103,14 +103,14 @@ function ThinkingBlock({ thinking, isActive }: { thinking: string; isActive: boo
 // space for whichever form this panel takes, and a mismatch left a dead zone
 // (roughly tablet widths) padded for a bottom sheet while showing a side panel.
 function useIsMobile(breakpoint = 1024) {
-    // Lazy init reads matchMedia during first client render (this tree only
-    // mounts in the browser), so the effect below is a pure subscription.
-    const [isMobile, setIsMobile] = useState(() =>
-        typeof window !== "undefined" &&
-        window.matchMedia(`(max-width: ${breakpoint}px)`).matches,
-    );
+    // Default to false for SSR/initial hydration to prevent mismatch.
+    const [isMobile, setIsMobile] = useState(false);
+    
     useEffect(() => {
         const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setIsMobile(mql.matches); // Immediately update on mount
+        
         const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
         mql.addEventListener("change", handler);
         return () => mql.removeEventListener("change", handler);

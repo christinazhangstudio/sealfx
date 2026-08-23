@@ -326,10 +326,10 @@ a {
 }
 
 
-/* One shared page frame: 64rem of content plus responsive outer padding. */
+/* One shared page frame aligned with the navigation width and responsive padding. */
 .page-content-shell {
   width: 100%;
-  max-width: 68rem;
+  max-width: 80rem;
   min-height: 100vh;
   margin-inline: auto;
   padding: 1rem;

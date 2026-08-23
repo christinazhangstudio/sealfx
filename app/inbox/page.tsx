@@ -1,11 +1,13 @@
 "use client";
 
 import DOMPurify from "dompurify";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useNotifications } from "@/components/NotificationContext";
+import type { NotifEnvelope } from "@/components/NotificationContext";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import PageHeader from "@/components/PageHeader";
+import PageActionBar from "@/components/PageActionBar";
 import StatusAlert from "@/components/StatusAlert";
 import InboxRuleSuggestions, { InboxRulesToggle, type InboxRuleSuggestion } from "./InboxRuleSuggestions";
 import { messageBodyHasHtml, messageBodyToPlainText } from "./message-text";
@@ -89,38 +91,45 @@ function envelopeEventTime(envelope: { notif: { notification?: { eventDate?: str
         ?? "";
 }
 
-function messageListPreview(envelope: {
-    notif: {
-        metadata?: { topic?: string };
-        notification?: {
-            notificationId?: string;
-            data?: { messageBody?: unknown; subject?: unknown };
-        };
-    };
-}): string {
-    const topic = envelope.notif?.metadata?.topic;
-    if (topic === "NEW_MESSAGE") {
-        const plain = messageBodyToPlainText(envelope.notif?.notification?.data?.messageBody)
-            .replace(/\s+/g, " ")
-            .trim();
-        if (plain) return plain;
-        const subject = String(envelope.notif?.notification?.data?.subject ?? "").trim();
-        if (subject) return subject;
-    }
-    return envelope.notif?.notification?.notificationId || "No ID";
-}
-function measureMessageScrollbar(element: HTMLDivElement) {
-    const { clientHeight, scrollHeight, scrollTop } = element;
-    const visible = scrollHeight > clientHeight + 1;
-    const height = visible ? Math.max(32, clientHeight * clientHeight / scrollHeight) : clientHeight;
-    const top = visible
-        ? scrollTop / (scrollHeight - clientHeight) * (clientHeight - height)
-        : 0;
-    return { visible, height, top };
+function notificationHasParsedMessage(envelope: Pick<NotifEnvelope, "notif">): boolean {
+    const data = envelope.notif?.notification?.data;
+    return (typeof data?.messageBody === "string" && data.messageBody.trim() !== "")
+        || (typeof data?.subject === "string" && data.subject.trim() !== "");
 }
 
-function generateEmailFrameHead(cspImgSrc: string) {
-    const styleBlock = "html,body{max-width:100%;overflow-wrap:anywhere}body{margin:0;padding:16px}img{max-width:100%;height:auto}table{max-width:100%}";
+function messageListPreview(envelope: Pick<NotifEnvelope, "notif">): string {
+    const data = envelope.notif?.notification?.data;
+    const plain = messageBodyToPlainText(data?.messageBody)
+        .replace(/\s+/g, " ")
+        .trim();
+    if (plain) return plain;
+
+    const subject = String(data?.subject ?? "").trim();
+    if (subject) return subject;
+
+    return envelope.notif?.notification?.notificationId || "No ID";
+}
+
+function conversationParticipant(envelope: Pick<NotifEnvelope, "notif" | "user">): string {
+    const data = envelope.notif?.notification?.data;
+    const sender = typeof data?.senderUserName === "string" ? data.senderUserName.trim() : "";
+    const recipient = typeof data?.recipientUserName === "string" ? data.recipientUserName.trim() : "";
+    if (sender && sender !== envelope.user) return sender;
+    if (recipient && recipient !== envelope.user) return recipient;
+    if (sender) return sender;
+    if (recipient) return recipient;
+    return String(envelope.notif?.metadata?.topic ?? "Notification").replace(/_/g, " ");
+}
+
+function participantInitial(participant: string): string {
+    return participant.trim().charAt(0).toUpperCase() || "?";
+}
+
+const EMAIL_SCALE_OPTIONS = [0.5, 0.75, 1, 1.25] as const;
+type EmailScale = typeof EMAIL_SCALE_OPTIONS[number];
+
+function generateEmailFrameHead(cspImgSrc: string, scale: EmailScale) {
+    const styleBlock = `html,body{max-width:100%;overflow-wrap:anywhere}body{zoom:${scale}!important;margin:0;padding:16px}img{max-width:100%;height:auto}table{max-width:100%}`;
     return `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src ${cspImgSrc}; font-src data:; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -128,7 +137,7 @@ function generateEmailFrameHead(cspImgSrc: string) {
 <style>${styleBlock}</style>`;
 }
 
-function sanitizeEmailHtml(html: string, showImages: boolean): string {
+function sanitizeEmailHtml(html: string, showImages: boolean, scale: EmailScale): string {
     const purifier = DOMPurify(window);
     const sanitized = purifier.sanitize(html, {
         WHOLE_DOCUMENT: true,
@@ -137,28 +146,26 @@ function sanitizeEmailHtml(html: string, showImages: boolean): string {
         FORBID_ATTR: ["action", "formaction", "ping", ...(showImages ? [] : ["src", "srcset"])],
     });
 
-    const frameHead = generateEmailFrameHead(showImages ? "https: data: cid:" : "data: cid:");
+    const frameHead = generateEmailFrameHead(showImages ? "https: data: cid:" : "data: cid:", scale);
     return /<head(?:\s[^>]*)?>/i.test(sanitized)
         ? sanitized.replace(/<head(?:\s[^>]*)?>/i, (head) => `${head}${frameHead}`)
         : `<!doctype html><html><head>${frameHead}</head><body>${sanitized}</body></html>`;
 }
 
-function HtmlMessageBody({ html }: { html: string }) {
+function HtmlMessageBody({
+    html,
+    scale,
+    onScaleChange,
+}: {
+    html: string;
+    scale: EmailScale;
+    onScaleChange: (scale: EmailScale) => void;
+}) {
     const [showImages, setShowImages] = useState(false);
-    // Sanitization is pure and synchronous, so compute it during render keyed
-    // to its inputs instead of round-tripping through an effect. The empty
-    // string can never be a real result (the frame always has <head>), so it
-    // still means "not ready" for the plain-text fallback below.
-    const [prevKey, setPrevKey] = useState<string | null>(null);
-    const [sanitizedHtml, setSanitizedHtml] = useState("");
-    const key = `${showImages}`;
-    if (prevKey !== key || sanitizedHtml === "") {
-        if (typeof window !== "undefined") {
-            setPrevKey(key);
-            const next = sanitizeEmailHtml(html, showImages);
-            if (next !== sanitizedHtml) setSanitizedHtml(next);
-        }
-    }
+    const sanitizedHtml = useMemo(
+        () => typeof window === "undefined" ? "" : sanitizeEmailHtml(html, showImages, scale),
+        [html, scale, showImages],
+    );
 
     if (sanitizedHtml === "") {
         return (
@@ -168,29 +175,51 @@ function HtmlMessageBody({ html }: { html: string }) {
         );
     }
 
+    const hasHiddenImages = /<img[^>]+src=/i.test(html) && !showImages;
+
     return (
         <div className="flex h-full flex-col gap-3">
-            {/<img[^>]+src=/i.test(html) && !showImages && (
-                <div className="flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-2.5 shadow-sm">
-                    <span className="text-sm italic text-text-secondary">
-                        Images have been hidden to{" "}
-                        <Link
-                            href="/privacy#tracking-pixels"
-                            className="underline decoration-text-muted decoration-dotted underline-offset-4 hover:text-primary hover:decoration-primary/50"
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2.5 shadow-sm">
+                {hasHiddenImages && (
+                    <>
+                        <span className="min-w-48 flex-1 text-sm italic text-text-secondary">
+                            Images have been hidden to{" "}
+                            <Link
+                                href="/privacy#tracking-pixels"
+                                className="underline decoration-text-muted decoration-dotted underline-offset-4 hover:text-primary hover:decoration-primary/50"
+                            >
+                                protect your privacy
+                            </Link>
+                            .
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => setShowImages(true)}
+                            className="rounded-md bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20"
                         >
-                            protect your privacy
-                        </Link>
-                        .
-                    </span>
-                    <button
-                        type="button"
-                        onClick={() => setShowImages(true)}
-                        className="rounded-md bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20"
+                            Load Images
+                        </button>
+                    </>
+                )}
+                <label className="ml-auto inline-flex items-center gap-2 whitespace-nowrap text-xs font-semibold text-text-secondary">
+                    Email scale
+                    <select
+                        aria-label="Email scale"
+                        value={scale}
+                        onChange={(event) => {
+                            const selected = EMAIL_SCALE_OPTIONS.find((option) => option === Number(event.target.value));
+                            if (selected) onScaleChange(selected);
+                        }}
+                        className="rounded-md border border-border bg-background px-2 py-1 text-xs font-semibold text-text-primary outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                     >
-                        Load Images
-                    </button>
-                </div>
-            )}
+                        {EMAIL_SCALE_OPTIONS.map((option) => (
+                            <option key={option} value={option}>
+                                {Math.round(option * 100)}%
+                            </option>
+                        ))}
+                    </select>
+                </label>
+            </div>
             <iframe
                 title="Rendered email message"
                 sandbox="allow-popups allow-popups-to-escape-sandbox"
@@ -202,21 +231,197 @@ function HtmlMessageBody({ html }: { html: string }) {
     );
 }
 
-function MessageBody({ body }: { body: unknown }) {
+function MessageBody({
+    body,
+    emailScale,
+    onEmailScaleChange,
+}: {
+    body: unknown;
+    emailScale: EmailScale;
+    onEmailScaleChange: (scale: EmailScale) => void;
+}) {
     const content = String(body ?? "");
     if (content === "") {
         return (
-            <div className="bg-message-pill/4 rounded-lg p-8 border border-primary/20 shadow-inner text-text-secondary leading-relaxed">
+            <p className="italic text-text-muted">
                 No message content.
-            </div>
+            </p>
         );
     }
     if (messageBodyHasHtml(content)) {
-        return <HtmlMessageBody html={content} />;
+        return (
+            <HtmlMessageBody
+                html={content}
+                scale={emailScale}
+                onScaleChange={onEmailScaleChange}
+            />
+        );
     }
     return (
-        <div className="bg-message-pill/4 rounded-lg p-8 border border-primary/20 shadow-inner text-text-secondary leading-relaxed whitespace-pre-wrap">
+        <div className="whitespace-pre-wrap break-words leading-relaxed text-text-primary">
             {content}
+        </div>
+    );
+}
+
+interface MessageMediaAttachment {
+    mediaUrl?: string;
+    mediaName?: string;
+    mediaType?: string;
+}
+
+function isImageAttachment(attachment: MessageMediaAttachment): boolean {
+    const mediaType = attachment.mediaType?.trim().toUpperCase() || "";
+    if (mediaType === "IMAGE" || mediaType.startsWith("IMAGE/")) return true;
+
+    const candidate = attachment.mediaName || attachment.mediaUrl || "";
+    return /\.(?:avif|bmp|gif|jpe?g|png|svg|webp)(?:$|[?#])/i.test(candidate);
+}
+
+function ImageAttachmentThumbnail({
+    mediaUrl,
+    label,
+}: {
+    mediaUrl: string;
+    label: string;
+}) {
+    const [failed, setFailed] = useState(false);
+
+    return (
+        <a
+            href={mediaUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-attachment-kind="image"
+            className="group/attachment block w-40 overflow-hidden rounded-xl border border-border/70 bg-background/60 shadow-sm transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md motion-reduce:transform-none"
+        >
+            <span className="flex aspect-[4/3] w-full items-center justify-center overflow-hidden bg-surface">
+                {failed ? (
+                    <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-text-muted">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <path d="m21 15-5-5L5 21" />
+                    </svg>
+                ) : (
+                    <>
+                        {/* Attachment URLs are dynamic eBay media; load them directly instead of proxying them through Next.js. */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                            src={mediaUrl}
+                            alt={label}
+                            loading="lazy"
+                            referrerPolicy="no-referrer"
+                            onError={() => setFailed(true)}
+                            className="h-full w-full object-cover transition-transform duration-200 group-hover/attachment:scale-[1.03] motion-reduce:transform-none"
+                        />
+                    </>
+                )}
+            </span>
+            <span className="block truncate border-t border-border/50 px-2.5 py-2 text-xs font-medium text-text-primary">
+                {label}
+            </span>
+        </a>
+    );
+}
+
+function MessageAttachments({
+    messageId,
+    media,
+}: {
+    messageId: string;
+    media: MessageMediaAttachment[];
+}) {
+    if (!media.some((item) => item.mediaUrl)) return null;
+
+    return (
+        <div className="flex flex-wrap gap-2 border-t border-border/40 pt-3">
+            {media.map((item, mediaIndex) => {
+                if (!item.mediaUrl) return null;
+                const label = item.mediaName || `Attachment ${mediaIndex + 1}`;
+                if (isImageAttachment(item)) {
+                    return (
+                        <ImageAttachmentThumbnail
+                            key={`${messageId}-${mediaIndex}`}
+                            mediaUrl={item.mediaUrl}
+                            label={label}
+                        />
+                    );
+                }
+
+                return (
+                    <a
+                        key={`${messageId}-${mediaIndex}`}
+                        href={item.mediaUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        data-attachment-kind="file"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-background/60 px-3 py-1.5 text-xs font-medium text-primary ring-1 ring-inset ring-primary/15 transition-colors hover:bg-primary/10"
+                    >
+                        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                        </svg>
+                        {label}
+                    </a>
+                );
+            })}
+        </div>
+    );
+}
+
+
+function notificationFieldLabel(field: string): string {
+    return field
+        .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+        .replace(/_/g, " ")
+        .replace(/^./, (character) => character.toUpperCase());
+}
+
+function NotificationSummary({ envelope }: { envelope: NotifEnvelope }) {
+    const notification = envelope.notif?.notification;
+    const data = notification?.data;
+    const fields = data && typeof data === "object"
+        ? Object.entries(data)
+            .filter(([, value]) =>
+                typeof value === "string"
+                || typeof value === "number"
+                || typeof value === "boolean",
+            )
+            .slice(0, 12)
+        : [];
+    const dateValue = envelopeEventTime(envelope);
+    const date = dateValue ? new Date(dateValue) : null;
+
+    return (
+        <div className="flex-grow pb-6">
+            <section className="rounded-2xl border border-border/50 bg-background/35 p-4 sm:p-5">
+                <h3 className="font-semibold text-text-primary">Notification details</h3>
+                <dl className="mt-4 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+                    <div>
+                        <dt className="text-xs text-text-muted">Seller</dt>
+                        <dd className="mt-0.5 break-words text-text-primary">{envelope.user}</dd>
+                    </div>
+                    <div>
+                        <dt className="text-xs text-text-muted">Notification ID</dt>
+                        <dd className="mt-0.5 break-all text-text-primary">
+                            {notification?.notificationId || "Unavailable"}
+                        </dd>
+                    </div>
+                    {date && !Number.isNaN(date.getTime()) && (
+                        <div>
+                            <dt className="text-xs text-text-muted">Received</dt>
+                            <dd className="mt-0.5 text-text-primary">
+                                {date.toLocaleDateString()} {date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            </dd>
+                        </div>
+                    )}
+                    {fields.map(([field, value]) => (
+                        <div key={field}>
+                            <dt className="text-xs text-text-muted">{notificationFieldLabel(field)}</dt>
+                            <dd className="mt-0.5 break-words text-text-primary">{String(value)}</dd>
+                        </div>
+                    ))}
+                </dl>
+            </section>
         </div>
     );
 }
@@ -255,12 +460,46 @@ function messageSelectionKey(message: { id: string; user: string }): string {
     return `${message.user}\u0000${message.id}`;
 }
 
+
+interface MessageThread {
+    id: string;
+    messages: NotifEnvelope[];
+    latest: NotifEnvelope;
+}
+
+function messageThreadKey(envelope: NotifEnvelope): string {
+    const topic = envelope.notif?.metadata?.topic;
+    const conversationId = envelope.notif?.notification?.data?.conversationId;
+    if (topic === "NEW_MESSAGE" && typeof conversationId === "string" && conversationId.trim() !== "") {
+        return `${envelope.user}\u0000conversation\u0000${conversationId.trim()}`;
+    }
+    return `${envelope.user}\u0000message\u0000${envelope.id}`;
+}
+
+function groupMessageThreads(envelopes: NotifEnvelope[]): MessageThread[] {
+    const grouped = new Map<string, NotifEnvelope[]>();
+    for (const envelope of envelopes) {
+        const key = messageThreadKey(envelope);
+        const messages = grouped.get(key);
+        if (messages) messages.push(envelope);
+        else grouped.set(key, [envelope]);
+    }
+
+    return [...grouped.entries()]
+        .map(([id, messages]) => {
+            messages.sort((left, right) => envelopeEventTime(left).localeCompare(envelopeEventTime(right)));
+            return { id, messages, latest: messages[messages.length - 1] };
+        })
+        .sort((left, right) => envelopeEventTime(right.latest).localeCompare(envelopeEventTime(left.latest)));
+}
+
 export default function InboxPage() {
     const [mounted, setMounted] = useState(false);
     useEffect(() => setMounted(true), []);
     const { users, envelopes, unreadCount, isSandbox, selectMessage: contextSelectMessage, trashMessage, deleteMessage, loadingUsers, error } = useNotifications();
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<"inbox" | "trash">("inbox");
+    const [emailScale, setEmailScale] = useState<EmailScale>(0.75);
     const [testingDelivery, setTestingDelivery] = useState(false);
     const [testFeedback, setTestFeedback] = useState<TestFeedback | null>(null);
     const [pendingTests, setPendingTests] = useState<PendingTest[]>([]);
@@ -278,8 +517,6 @@ export default function InboxPage() {
     const [hasRequestedRuleAnalysis, setHasRequestedRuleAnalysis] = useState(false);
     const [ruleFilter, setRuleFilter] = useState("all");
     const [showRuleConfigurator, setShowRuleConfigurator] = useState(false);
-    const messageListRef = useRef<HTMLDivElement>(null);
-    const [messageScrollbar, setMessageScrollbar] = useState({ visible: false, height: 0, top: 0 });
     const savedRuleAnalysisRequest = useRef<AbortController | null>(null);
     const rulePreferenceSaveRequest = useRef<AbortController | null>(null);
 
@@ -294,36 +531,41 @@ export default function InboxPage() {
             .filter((envelope) => !envelope.trashed && !hiddenUsers.has(envelope.user))
             .map((envelope) => envelope.id),
     );
-    const displayedEnvelopes = envelopes
+    const tabEnvelopes = envelopes
         .filter((envelope) => activeTab === "trash" ? envelope.trashed : !envelope.trashed)
-        .filter((envelope) => activeTab === "trash"
-            || ruleFilter === "all"
-            || activeRules.some((rule) => rule.destination === ruleFilter && rule.matchingIds.includes(envelope.id)))
-        .filter((envelope) => !hiddenUsers.has(envelope.user))
-        .sort((a, b) => envelopeEventTime(b).localeCompare(envelopeEventTime(a)));
+        .filter((envelope) => !hiddenUsers.has(envelope.user));
+    const tabThreads = groupMessageThreads(tabEnvelopes);
+    const displayedThreads = activeTab === "trash" || ruleFilter === "all"
+        ? tabThreads
+        : tabThreads.filter((thread) =>
+            thread.messages.some((envelope) =>
+                activeRules.some((rule) =>
+                    rule.destination === ruleFilter && rule.matchingIds.includes(envelope.id),
+                ),
+            ),
+        );
+    const displayedEnvelopes = displayedThreads.flatMap((thread) => thread.messages);
     const tabHasMessages = envelopes.some((envelope) =>
         (activeTab === "trash" ? envelope.trashed : !envelope.trashed)
         && (activeTab === "trash"
             || ruleFilter === "all"
             || activeRules.some((rule) => rule.destination === ruleFilter && rule.matchingIds.includes(envelope.id))));
-    const selectedEnvelope = envelopes.find((envelope) => envelope.id === selectedId) ?? null;
+    const selectedThread = displayedThreads.find((thread) =>
+        thread.messages.some((envelope) => envelope.id === selectedId),
+    ) ?? null;
+    const selectedEnvelope = selectedThread?.latest ?? null;
+    const selectedHasParsedMessage = selectedEnvelope
+        ? notificationHasParsedMessage(selectedEnvelope)
+        : false;
+    const selectedParticipant = selectedEnvelope
+        ? conversationParticipant(selectedEnvelope)
+        : null;
     const selectedDisplayedEnvelopes = displayedEnvelopes.filter((envelope) =>
         selectedMessageKeys.has(messageSelectionKey(envelope)),
     );
     const allDisplayedMessagesSelected = displayedEnvelopes.length > 0
         && selectedDisplayedEnvelopes.length === displayedEnvelopes.length;
 
-    useEffect(() => {
-        const list = messageListRef.current;
-        if (!list) return;
-
-        const update = () => setMessageScrollbar(measureMessageScrollbar(list));
-        update();
-        
-        const observer = new ResizeObserver(update);
-        observer.observe(list);
-        return () => observer.disconnect();
-    }, [activeTab, displayedEnvelopes.length, ruleFilter, hiddenUsers, mounted, loadingUsers]);
 
     useEffect(() => {
         if (!apiBaseUrl) return;
@@ -387,14 +629,14 @@ export default function InboxPage() {
         }
     };
 
-    const toggleMessageSelection = (message: { id: string; user: string }) => {
-        const key = messageSelectionKey(message);
+    const toggleThreadSelection = (thread: MessageThread) => {
+        const keys = thread.messages.map(messageSelectionKey);
+        const allSelected = keys.every((key) => selectedMessageKeys.has(key));
         setSelectedMessageKeys((current) => {
             const next = new Set(current);
-            if (next.has(key)) {
-                next.delete(key);
-            } else {
-                next.add(key);
+            for (const key of keys) {
+                if (allSelected) next.delete(key);
+                else next.add(key);
             }
             return next;
         });
@@ -599,23 +841,23 @@ export default function InboxPage() {
         return () => window.clearTimeout(timer);
     }, [pendingTests]);
 
-    const selectMessage = (id: string, user: string) => {
-        setSelectedId(id);
-        contextSelectMessage(id, user);
-    };
-
-    const handleTrash = () => {
-        if (!selectedEnvelope) return;
-        trashMessage(selectedEnvelope.id, selectedEnvelope.user);
-        setSelectedId(null);
-    };
-
-    const handleDelete = () => {
-        if (!selectedEnvelope) return;
-        if (confirm("Are you sure you want to permanently delete this message?")) {
-            deleteMessage(selectedEnvelope.id, selectedEnvelope.user);
-            setSelectedId(null);
+    const selectThread = (thread: MessageThread) => {
+        setSelectedId(thread.latest.id);
+        for (const message of thread.messages) {
+            if (!message.read) void contextSelectMessage(message.id, message.user);
         }
+    };
+
+    const trashThread = async (thread: MessageThread) => {
+        await Promise.all(thread.messages.map((message) => trashMessage(message.id, message.user)));
+        if (selectedThread?.id === thread.id) setSelectedId(null);
+    };
+
+    const deleteThread = async (thread: MessageThread) => {
+        const count = thread.messages.length;
+        if (!confirm(`Permanently delete this thread and its ${count} message${count === 1 ? "" : "s"}? This cannot be undone.`)) return;
+        await Promise.all(thread.messages.map((message) => deleteMessage(message.id, message.user)));
+        if (selectedThread?.id === thread.id) setSelectedId(null);
     };
 
     const handleTestDelivery = async () => {
@@ -733,42 +975,55 @@ export default function InboxPage() {
                 <PageHeader
                     title="Inbox"
                     flush
-                    description={(
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                            <span>Live notifications across all sellers.</span>
+                    description="Live notifications across all sellers."
+                />
+
+                <PageActionBar ariaLabel="Inbox controls">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <BellIcon count={unreadCount} />
+                            <InboxRulesToggle
+                                savedCount={ruleSuggestions.length}
+                                expanded={showRuleConfigurator}
+                                loading={ruleAnalysisLoading}
+                                onToggle={() => setShowRuleConfigurator((current) => !current)}
+                            />
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
                             <Link
                                 href="/notifications"
-                                className="rounded-sm text-xs font-medium text-text-muted underline decoration-dotted underline-offset-4 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                                className="shrink-0 rounded-full border border-border/60 bg-surface px-3 py-1.5 text-xs font-semibold text-text-primary transition-colors hover:border-primary/30 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                             >
                                 Manage Notifications
                             </Link>
                             {!isSandbox && (
-                            <span className="group relative inline-flex">
-                                <button
-                                    type="button"
-                                    onClick={handleTestDelivery}
-                                    disabled={testingDelivery || loadingUsers || users.length === 0}
-                                    aria-describedby="test-delivery-tooltip"
-                                    className="rounded-sm text-xs font-medium text-text-muted underline decoration-dotted underline-offset-4 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    {testingDelivery ? "Sending test…" : "Test delivery"}
-                                </button>
-                                <span
-                                    id="test-delivery-tooltip"
-                                    role="tooltip"
-                                    className="pointer-events-none invisible absolute left-0 top-full z-20 mt-2 w-72 rounded-lg border border-border bg-surface px-3 py-2 text-left text-xs font-normal leading-relaxed text-text-secondary opacity-0 shadow-lg transition-opacity sm:left-1/2 sm:-translate-x-1/2 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100"
-                                >
-                                    Sends one eBay test per seller, preferring the NEW_MESSAGE subscription. Sealift then waits up to 45 seconds for the exact test notification to arrive here.
+                                <span className="group relative inline-flex">
+                                    <button
+                                        type="button"
+                                        onClick={handleTestDelivery}
+                                        disabled={testingDelivery || loadingUsers || users.length === 0}
+                                        aria-describedby="test-delivery-tooltip"
+                                        className="shrink-0 rounded-full border border-border/60 bg-surface px-3 py-1.5 text-xs font-semibold text-text-primary transition-colors hover:border-primary/30 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        {testingDelivery ? "Sending test…" : "Test delivery"}
+                                    </button>
+                                    <span
+                                        id="test-delivery-tooltip"
+                                        role="tooltip"
+                                        className="pointer-events-none invisible absolute right-0 top-full z-20 mt-2 w-72 rounded-lg border border-border bg-surface px-3 py-2 text-left text-xs font-normal leading-relaxed text-text-secondary opacity-0 shadow-lg transition-opacity sm:left-1/2 sm:right-auto sm:-translate-x-1/2 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100"
+                                    >
+                                        Sends one eBay test per seller, preferring the NEW_MESSAGE subscription. Sealift then waits up to 45 seconds for the exact test notification to arrive here.
+                                    </span>
                                 </span>
-                            </span>
                             )}
                         </div>
-                    )}
-                >
+                    </div>
+
                     {testFeedback && (
                         <p
                             role="status"
-                            className={`max-w-2xl whitespace-pre-wrap break-words text-xs ${testFeedback.kind === "success"
+                            className={`px-1 whitespace-pre-wrap break-words text-xs ${testFeedback.kind === "success"
                                 ? "text-success-text"
                                 : testFeedback.kind === "pending"
                                     ? "text-primary"
@@ -778,45 +1033,42 @@ export default function InboxPage() {
                             {testFeedback.message}
                         </p>
                     )}
-                </PageHeader>
 
-                <div className="flex flex-wrap items-center gap-4">
-                    <BellIcon count={unreadCount} />
-                    <InboxRulesToggle
-                        savedCount={ruleSuggestions.length}
-                        expanded={showRuleConfigurator}
-                        loading={ruleAnalysisLoading}
-                        onToggle={() => setShowRuleConfigurator((current) => !current)}
-                    />
                     {loadingUsers ? (
-                        <div className="h-6 w-40 bg-surface rounded-full animate-pulse" />
-                    ) : (
-                        <div className="flex flex-wrap gap-2">
-                            {users.map((u) => {
-                                const visible = !hiddenUsers.has(u);
-                                return (
-                                    <label
-                                        key={u}
-                                        className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-mono ${
-                                            visible
-                                                ? "border-primary/20 bg-primary/10 text-primary"
-                                                : "border-border bg-surface text-text-muted"
-                                        }`}
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            checked={visible}
-                                            onChange={() => toggleUserFilter(u)}
-                                            aria-label={`Show messages for ${u}`}
-                                            className="h-3.5 w-3.5 cursor-pointer accent-primary"
-                                        />
-                                        {u}
-                                    </label>
-                                );
-                            })}
+                        <div className="flex items-center gap-3 px-1 pb-1">
+                            <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">Sellers</span>
+                            <div className="h-7 w-40 animate-pulse rounded-full bg-background/70" />
                         </div>
-                    )}
-                </div>
+                    ) : users.length > 0 ? (
+                        <div className="-mx-1 overflow-x-auto px-1 pb-1">
+                            <div className="flex min-w-max items-center gap-2">
+                                <span className="mr-1 text-xs font-semibold uppercase tracking-wider text-text-muted">Sellers</span>
+                                {users.map((user) => {
+                                    const visible = !hiddenUsers.has(user);
+                                    return (
+                                        <label
+                                            key={user}
+                                            className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                                                visible
+                                                    ? "border-primary/25 bg-primary/10 text-primary"
+                                                    : "border-border/60 bg-background/60 text-text-muted"
+                                            }`}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={visible}
+                                                onChange={() => toggleUserFilter(user)}
+                                                aria-label={`Show messages for ${user}`}
+                                                className="h-3.5 w-3.5 cursor-pointer accent-primary"
+                                            />
+                                            {user}
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ) : null}
+                </PageActionBar>
 
                 {error && (
                     <StatusAlert
@@ -864,7 +1116,9 @@ export default function InboxPage() {
                                     Trash
                                 </button>
                             </div>
-                            <span className="text-sm text-text-muted font-mono">{displayedEnvelopes.length} total</span>
+                            <span className="text-right text-xs text-text-muted font-mono">
+                                {displayedThreads.length} {displayedThreads.length === 1 ? "thread" : "threads"} · {displayedEnvelopes.length} {displayedEnvelopes.length === 1 ? "message" : "messages"}
+                            </span>
                         </div>
                         {activeTab === "inbox" && activeRules.length > 0 && (
                             <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-2">
@@ -926,13 +1180,6 @@ export default function InboxPage() {
                                             <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
                                         </svg>
                                     )}
-                                    {/* <span>
-                                        {bulkMessageActionLoading
-                                            ? "Working..."
-                                            : activeTab === "inbox"
-                                                ? "" // move to trash
-                                                : "Delete forever"}
-                                    </span> */}
                                 </button>
                             </div>
                         )}
@@ -948,11 +1195,9 @@ export default function InboxPage() {
                             <div className="relative">
                                 <div className="pointer-events-none absolute bottom-0 left-4 right-0 z-10 h-8 bg-gradient-to-t from-background to-transparent" />
                                 <div
-                                    ref={messageListRef}
-                                    onScroll={(event) => setMessageScrollbar(measureMessageScrollbar(event.currentTarget))}
-                                    className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto pl-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                    className="flex max-h-[70vh] flex-col gap-2 overflow-y-auto pb-3 pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                                 >
-                                {displayedEnvelopes.length === 0 ? (
+                                {displayedThreads.length === 0 ? (
                                     <div className="text-secondary p-4 bg-surface rounded-xl border border-border text-center flex flex-col items-center gap-2">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-muted"><path d="M22 13V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h8" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /><path d="m16 19 2 2 4-4" /></svg>
                                         {activeTab === "inbox"
@@ -963,132 +1208,144 @@ export default function InboxPage() {
                                                 ? "No trashed messages for the selected sellers."
                                                 : "Trash is empty.")}
                                     </div>
-                                ) : displayedEnvelopes.map((env) => {
-                                    const topic = env.notif?.metadata?.topic || "UNKNOWN_TOPIC";
-                                    const dateStr =
-                                        env.notif?.notification?.eventDate ??
-                                        env.notif?.notification?.publishDate;
-                                    const date = dateStr ? new Date(dateStr) : null;
-                                    const isSelected = env.id === selectedId;
-                                    const isBulkSelected = selectedMessageKeys.has(messageSelectionKey(env));
-                                    const isUnread = !env.read;
-                                    const matchingRules = activeRules.filter((rule) => rule.matchingIds.includes(env.id));
+                                ) : displayedThreads.map((thread) => {
+                                    const env = thread.latest;
+                                    const data = env.notif?.notification?.data;
+                                    const subject = typeof data?.subject === "string" ? data.subject.trim() : "";
+                                    const participant = conversationParticipant(env);
+                                    const preview = messageListPreview(env);
+                                    const dateValue = envelopeEventTime(env);
+                                    const date = dateValue ? new Date(dateValue) : null;
+                                    const validDate = date && !Number.isNaN(date.getTime()) ? date : null;
+                                    const dateLabel = validDate
+                                        ? (validDate.toDateString() === new Date().toDateString()
+                                            ? validDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                                            : validDate.toLocaleDateString([], { month: "short", day: "numeric" }))
+                                        : null;
+                                    const isSelected = selectedThread?.id === thread.id;
+                                    const isBulkSelected = thread.messages.every((message) =>
+                                        selectedMessageKeys.has(messageSelectionKey(message)),
+                                    );
+                                    const isUnread = thread.messages.some((message) => !message.read);
+                                    const matchingRules = activeRules.filter((rule) =>
+                                        thread.messages.some((message) => rule.matchingIds.includes(message.id)),
+                                    );
 
                                     return (
                                         <div
-                                            key={env.id}
-                                            onClick={() => selectMessage(env.id, env.user)}
-                                            className={`relative h-36 shrink-0 overflow-hidden rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer
-                                                ${isBulkSelected
-                                                    ? "border-primary/60 bg-message-pill/10 shadow-sm ring-primary/30"
+                                            key={thread.id}
+                                            onClick={() => selectThread(thread)}
+                                            className={`group relative shrink-0 cursor-pointer rounded-2xl border px-3 py-3.5 transition-all duration-200 ${
+                                                isBulkSelected
+                                                    ? "border-primary/50 bg-primary/10 ring-2 ring-primary/15"
                                                     : isSelected
-                                                        ? "bg-message-pill/10 border-primary/50 shadow-sm"
+                                                        ? "border-primary/40 bg-primary/[0.07] shadow-sm"
                                                         : isUnread
-                                                            ? "bg-blue-500/4 border-primary/20 hover:border-primary/40"
-                                                            : "bg-surface border-primary/20 hover:border-primary/40"
-                                                }`}
+                                                            ? "border-border/60 bg-blue-500/[0.08] hover:bg-blue-500/[0.11] hover:shadow-sm"
+                                                            : "border-border/60 bg-surface/75 hover:border-primary/25 hover:bg-surface hover:shadow-sm"
+                                            }`}
                                         >
+                                            <div className="flex min-w-0 items-start gap-3 pr-6">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isBulkSelected}
+                                                    onChange={() => toggleThreadSelection(thread)}
+                                                    onClick={(event) => event.stopPropagation()}
+                                                    aria-label={`Select conversation with ${participant}`}
+                                                    className="mt-3.5 h-4 w-4 flex-shrink-0 cursor-pointer accent-primary"
+                                                />
+                                                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                                                    {participantInitial(participant)}
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex min-w-0 items-center gap-2">
+                                                        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-text-primary">
+                                                            {participant}
+                                                        </span>
+                                                        {dateLabel && (
+                                                            <time
+                                                                className="flex-shrink-0 whitespace-nowrap text-[11px] text-text-muted"
+                                                                dateTime={validDate?.toISOString()}
+                                                            >
+                                                                {dateLabel}
+                                                            </time>
+                                                        )}
+                                                    </div>
+                                                    {subject && (
+                                                        <p className="mt-0.5 truncate text-xs text-text-secondary">
+                                                            {subject}
+                                                        </p>
+                                                    )}
+                                                    <p className="mt-0.5 truncate text-xs text-text-muted">
+                                                        {preview}
+                                                    </p>
+                                                    <div className="mt-2 flex min-h-5 flex-wrap items-center gap-1.5">
+                                                        {users.length > 1 && (
+                                                            <span className="text-[10px] text-text-muted">
+                                                                via {env.user}
+                                                            </span>
+                                                        )}
+                                                        {thread.messages.length > 1 && (
+                                                            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                                                                <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                    <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
+                                                                </svg>
+                                                                {thread.messages.length}
+                                                            </span>
+                                                        )}
+                                                        {matchingRules.map((rule) => {
+                                                            const ruleIndex = ruleSuggestions.findIndex((suggestion) => suggestion.id === rule.id);
+                                                            const amber = ruleIndex % 2 === 1;
+                                                            return (
+                                                                <span
+                                                                    key={rule.id}
+                                                                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                                                        amber
+                                                                            ? "bg-amber-500/10 text-amber-600 [[data-theme=dark]_&]:text-amber-200"
+                                                                            : "bg-blue-500/10 text-blue-600 [[data-theme=dark]_&]:text-blue-200"
+                                                                    }`}
+                                                                >
+                                                                    {rule.destination}
+                                                                </span>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            </div>
                                             {!env.trashed ? (
                                                 <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        trashMessage(env.id, env.user);
-                                                        if (isSelected) setSelectedId(null);
+                                                    type="button"
+                                                    onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        void trashThread(thread);
                                                     }}
-                                                    className="absolute right-2 bottom-2 text-text-muted hover:text-error-text p-1.5 rounded-md hover:bg-error-bg z-10"
-                                                    title="Move to Trash"
+                                                    className="absolute bottom-2 right-2 rounded-md p-1.5 text-text-muted opacity-60 transition-opacity hover:bg-error-bg hover:text-error-text group-hover:opacity-100"
+                                                    title="Move conversation to Trash"
+                                                    aria-label="Move conversation to Trash"
                                                 >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" />
+                                                    <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
                                                     </svg>
                                                 </button>
                                             ) : (
                                                 <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        if (confirm("Are you sure you want to permanently delete this message?")) {
-                                                            deleteMessage(env.id, env.user);
-                                                            if (isSelected) setSelectedId(null);
-                                                        }
+                                                    type="button"
+                                                    onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        void deleteThread(thread);
                                                     }}
-                                                    className="absolute right-2 bottom-2 text-text-muted hover:text-orange-600 p-1.5 rounded-md hover:bg-orange-600/10 z-10"
-                                                    title="Permanently Delete"
+                                                    className="absolute bottom-2 right-2 rounded-md p-1.5 text-text-muted opacity-60 transition-opacity hover:bg-orange-600/10 hover:text-orange-600 group-hover:opacity-100"
+                                                    title="Permanently delete conversation"
+                                                    aria-label="Permanently delete conversation"
                                                 >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                         <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
                                                     </svg>
                                                 </button>
                                             )}
-                                            <div className="flex justify-between items-start mb-1">
-                                                <div className="flex items-center gap-2 overflow-hidden pr-2">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={isBulkSelected}
-                                                        onChange={() => toggleMessageSelection(env)}
-                                                        onClick={(event) => event.stopPropagation()}
-                                                        aria-label={`Select ${topic} message`}
-                                                        className="h-4 w-4 flex-shrink-0 cursor-pointer accent-primary"
-                                                    />
-                                                    {isUnread && (
-                                                        <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 shadow-[0_0_6px_rgba(59,130,246,0.6)]" />
-                                                    )}
-                                                    <span className={`font-bold font-mono text-sm truncate ${isUnread ? "text-text-primary" : "text-primary"}`}>
-                                                        {topic === "NEW_MESSAGE" && env.notif?.notification?.data?.senderUserName
-                                                            ? `From: ${env.notif.notification.data.senderUserName}`
-                                                            : topic}
-                                                    </span>
-                                                </div>
-                                                {date && (
-                                                    <span className={`text-xs whitespace-nowrap flex-shrink-0 ${isUnread ? "text-text-primary font-medium" : "text-text-muted"}`}>
-                                                        {date.toLocaleDateString()} {date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <span className="text-[10px] font-mono bg-surface border border-border text-text-muted px-2 py-0.5 rounded-full">
-                                                    {env.user}
-                                                </span>
-                                            </div>
-                                            {matchingRules.length > 0 && (
-                                                <div className="mb-1 flex flex-wrap gap-1">
-                                                    {matchingRules.map((rule) => {
-                                                        const ruleIndex = ruleSuggestions.findIndex((suggestion) => suggestion.id === rule.id);
-                                                        const amber = ruleIndex % 2 === 1;
-                                                        return (
-                                                            <span
-                                                                key={rule.id}
-                                                                className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${amber
-                                                                    ? "border-amber-500/50 bg-amber-500/10 text-amber-500 [[data-theme=dark]_&]:text-amber-200"
-                                                                    : "border-blue-500/50 bg-blue-500/10 text-blue-500 [[data-theme=dark]_&]:text-blue-200"
-                                                                    }`}
-                                                            >
-                                                                {rule.destination}
-                                                            </span>
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
-                                            <div className={`text-xs truncate ${isUnread ? "text-text-primary font-medium" : "text-text-secondary"}`}>
-                                                {messageListPreview(env)}
-                                            </div>
                                         </div>
                                     );
                                 })}
-                                </div>
-                                <div
-                                    aria-hidden="true"
-                                    className="pointer-events-none absolute inset-y-0 left-1 w-1.5 rounded-full bg-border/40"
-                                    style={{
-                                        visibility: messageScrollbar.visible ? "visible" : "hidden"
-                                    }}
-                                >
-                                    <div
-                                        className="absolute inset-x-0 rounded-full bg-text-muted/80"
-                                        style={{
-                                            height: `${messageScrollbar.height}px`,
-                                            transform: `translateY(${messageScrollbar.top}px)`,
-                                        }}
-                                    />
                                 </div>
                             </div>
                         )}
@@ -1108,111 +1365,149 @@ export default function InboxPage() {
                                 Back to {activeTab === "inbox" ? "inbox" : "trash"}
                             </button>
                         )}
-                        {selectedEnvelope ? (
+                        {selectedThread && selectedEnvelope ? (
                             <>
-                                <div className="bg-background/50 border-b border-border/30 p-4 sm:p-6 relative group">
-                                    {selectedEnvelope.notif?.metadata?.topic === "NEW_MESSAGE" ? (
-                                        <div className="space-y-4">
-                                            <div className="flex justify-between items-center w-full gap-3">
-                                                <h2 className="text-2xl font-bold text-primary break-all pr-12">
-                                                    {selectedEnvelope.notif.notification?.data?.subject || "No Subject"}
-                                                </h2>
-                                                <span className="text-sm font-medium px-3 py-1 bg-primary/10 text-primary rounded-full whitespace-nowrap">
-                                                    {selectedEnvelope.notif.notification?.data?.conversationType?.replace(/_/g, " ")}
-                                                </span>
+                                <div className="relative border-b border-border/30 bg-surface/80 p-4 sm:p-5">
+                                    {selectedHasParsedMessage ? (
+                                        <div className="flex min-w-0 items-center gap-3">
+                                            <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                                                {participantInitial(selectedParticipant || "Notification")}
                                             </div>
-                                            <div className="flex flex-col sm:flex-row gap-2 sm:gap-6 text-sm text-text-secondary">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-semibold text-text-primary">From:</span>
-                                                    <span className="bg-surface border border-border/20 px-2 py-0.5 rounded-md">
-                                                        {selectedEnvelope.notif.notification?.data?.senderUserName}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-semibold text-text-primary">To:</span>
-                                                    <span className="bg-surface border border-border/20 px-2 py-0.5 rounded-md">
-                                                        {selectedEnvelope.notif.notification?.data?.recipientUserName}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-semibold text-text-primary">Seller:</span>
-                                                    <span className="bg-primary/10 border border-primary/20 text-primary font-mono px-2 py-0.5 rounded-md text-xs">
-                                                        {selectedEnvelope.user}
-                                                    </span>
-                                                </div>
+                                            <div className="min-w-0 flex-1">
+                                                <h2 className="break-words text-xl font-bold leading-tight text-text-primary sm:text-2xl">
+                                                    {selectedEnvelope.notif.notification?.data?.subject || "Conversation"}
+                                                </h2>
+                                                <p className="mt-1 text-sm text-text-muted">
+                                                    {selectedParticipant || "Unknown participant"}
+                                                    <span aria-hidden="true"> · </span>
+                                                    {selectedThread.messages.length} {selectedThread.messages.length === 1 ? "message" : "messages"}
+                                                </p>
                                             </div>
                                         </div>
                                     ) : (
                                         <div>
-                                            <div className="text-2xl font-bold font-mono text-primary break-all">
-                                                {selectedEnvelope.notif?.metadata?.topic || "Unknown Topic"}
-                                            </div>
-                                            <div className="text-sm text-text-secondary mt-1">
-                                                ID: {selectedEnvelope.notif?.notification?.notificationId || "N/A"}
-                                            </div>
+                                            <h2 className="break-words text-xl font-bold text-text-primary sm:text-2xl">
+                                                {String(selectedEnvelope.notif?.metadata?.topic || "Notification").replace(/_/g, " ")}
+                                            </h2>
+                                            <p className="mt-1 text-sm text-text-muted">{selectedEnvelope.user}</p>
                                         </div>
                                     )}
                                 </div>
 
-                                <div
-                                    className="px-4 pb-0 pt-4 sm:px-6 sm:pb-0 sm:pt-6 text-text-primary flex-grow flex flex-col"
-                                >
-                                    {selectedEnvelope.notif?.metadata?.topic === "NEW_MESSAGE" ? (
-                                        <div className="flex-grow flex flex-col space-y-6">
-                                            <MessageBody body={selectedEnvelope.notif.notification?.data?.messageBody} />
+                                <div className="flex-grow overflow-y-auto bg-background/25 px-3 py-5 text-text-primary sm:px-6 sm:py-6">
+                                    {selectedHasParsedMessage ? (
+                                        <div className="space-y-4">
+                                            {selectedThread.messages.map((message, index) => {
+                                                const data = message.notif?.notification?.data;
+                                                const dateValue = envelopeEventTime(message);
+                                                const date = dateValue ? new Date(dateValue) : null;
+                                                const validDate = date && !Number.isNaN(date.getTime()) ? date : null;
+                                                const previousDateValue = index > 0
+                                                    ? envelopeEventTime(selectedThread.messages[index - 1])
+                                                    : "";
+                                                const previousDate = previousDateValue ? new Date(previousDateValue) : null;
+                                                const showDay = validDate && (
+                                                    !previousDate
+                                                    || Number.isNaN(previousDate.getTime())
+                                                    || validDate.toDateString() !== previousDate.toDateString()
+                                                );
+                                                const dayLabel = validDate
+                                                    ? (validDate.toDateString() === new Date().toDateString()
+                                                        ? "Today"
+                                                        : validDate.toLocaleDateString([], {
+                                                            weekday: "short",
+                                                            month: "short",
+                                                            day: "numeric",
+                                                        }))
+                                                    : "";
+                                                const media = (Array.isArray(data?.messageMedia)
+                                                    ? data.messageMedia
+                                                    : []) as MessageMediaAttachment[];
+                                                const isOwnMessage = data?.senderUserName === message.user;
+                                                const sender = isOwnMessage
+                                                    ? "You"
+                                                    : data?.senderUserName || selectedParticipant || "Unknown";
+                                                const messageBody = String(data?.messageBody ?? "");
+                                                const isHtmlMessage = messageBodyHasHtml(messageBody);
 
-                                            {selectedEnvelope.notif.notification?.data?.messageMedia?.some((m: any) => m.mediaUrl) && (
-                                                <div className="border-t border-border pt-4">
-                                                    <h3 className="font-bold text-primary mb-3">Attachments:</h3>
-                                                    <div className="flex flex-wrap gap-3">
-                                                        {selectedEnvelope.notif.notification.data.messageMedia.map((media: any, i: number) =>
-                                                            media.mediaUrl ? (
-                                                                <a
-                                                                    key={i}
-                                                                    href={media.mediaUrl}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="flex items-center gap-2 bg-primary/5 hover:bg-primary/10 text-primary border border-primary/20 px-4 py-2 rounded-lg transition-colors"
-                                                                >
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                        <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                                                                    </svg>
-                                                                    {media.mediaName || `Attachment ${i + 1}`}
-                                                                </a>
-                                                            ) : null
+                                                return (
+                                                    <div key={message.id} className="space-y-4">
+                                                        {showDay && (
+                                                            <div className="flex items-center gap-3 py-1" aria-label={dayLabel}>
+                                                                <span className="h-px flex-1 bg-border/50" />
+                                                                <span className="text-[11px] font-medium text-text-muted">{dayLabel}</span>
+                                                                <span className="h-px flex-1 bg-border/50" />
+                                                            </div>
                                                         )}
+                                                        <article
+                                                            data-thread-message-id={message.id}
+                                                            data-message-direction={isOwnMessage ? "outgoing" : "incoming"}
+                                                            data-message-format={isHtmlMessage ? "html" : "plain"}
+                                                            className={isHtmlMessage
+                                                                ? "w-full"
+                                                                : `flex items-end gap-2 ${isOwnMessage ? "justify-end" : "justify-start"}`
+                                                            }
+                                                        >
+                                                            {isHtmlMessage ? (
+                                                                <div className="w-full overflow-hidden rounded-xl border border-border/70 bg-surface shadow-sm">
+                                                                    <header className="flex items-center gap-3 border-b border-border/50 bg-surface/80 px-4 py-3">
+                                                                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                                                                            {participantInitial(String(sender))}
+                                                                        </div>
+                                                                        <div className="min-w-0 flex-1">
+                                                                            <span className="block truncate text-sm font-semibold text-text-primary">{sender}</span>
+                                                                            {validDate && (
+                                                                                <time className="block text-[11px] text-text-muted" dateTime={validDate.toISOString()}>
+                                                                                    {validDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                                                                </time>
+                                                                            )}
+                                                                        </div>
+                                                                    </header>
+                                                                    <div className="space-y-3 p-3 sm:p-4">
+                                                                        <MessageBody body={messageBody} emailScale={emailScale} onEmailScaleChange={setEmailScale} />
+                                                                        <MessageAttachments messageId={message.id} media={media} />
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <>
+                                                                    {!isOwnMessage && (
+                                                                        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-surface text-xs font-bold text-primary shadow-sm ring-1 ring-border/50">
+                                                                            {participantInitial(String(sender))}
+                                                                        </div>
+                                                                    )}
+                                                                    <div className={`min-w-0 max-w-[84%] sm:max-w-[78%] ${isOwnMessage ? "items-end" : "items-start"}`}>
+                                                                        <div className={`mb-1 flex items-center gap-2 px-1 ${isOwnMessage ? "justify-end" : "justify-start"}`}>
+                                                                            <span className="text-xs font-semibold text-text-secondary">{sender}</span>
+                                                                            {validDate && (
+                                                                                <time className="text-[11px] text-text-muted" dateTime={validDate.toISOString()}>
+                                                                                    {validDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                                                                </time>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className={`space-y-3 px-4 py-3 shadow-sm ${
+                                                                            isOwnMessage
+                                                                                ? "rounded-2xl rounded-tr-md bg-primary/12 ring-1 ring-inset ring-primary/15"
+                                                                                : "rounded-2xl rounded-tl-md bg-surface ring-1 ring-inset ring-border/60"
+                                                                        }`}>
+                                                                            <MessageBody body={messageBody} emailScale={emailScale} onEmailScaleChange={setEmailScale} />
+                                                                            <MessageAttachments messageId={message.id} media={media} />
+                                                                        </div>
+                                                                    </div>
+                                                                </>
+                                                            )}
+                                                        </article>
                                                     </div>
-                                                </div>
-                                            )}
-
-                                            <div className="mt-8">
-                                                <details className="group">
-                                                    <summary className="cursor-pointer text-sm font-medium text-text-secondary hover:text-primary mb-2 flex items-center transition-colors">
-                                                        <svg className="w-4 h-4 mr-2 transition-transform group-open:rotate-90" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                            <path d="m9 18 6-6-6-6" />
-                                                        </svg>
-                                                        View Raw Data
-                                                    </summary>
-                                                    <div className="mt-3 p-4 border border-border/50 rounded-lg">
-                                                        <pre className="text-xs sm:text-sm font-mono text-secondary whitespace-pre-wrap break-all">
-                                                            {JSON.stringify(selectedEnvelope.notif, null, 2)}
-                                                        </pre>
-                                                    </div>
-                                                </details>
-                                            </div>
+                                                );
+                                            })}
                                         </div>
                                     ) : (
-                                        <div className="bg-[#0d1117] p-4 rounded-xl h-full border border-border">
-                                            <pre className="text-xs sm:text-sm font-mono text-[#c9d1d9] whitespace-pre-wrap break-all">
-                                                {JSON.stringify(selectedEnvelope.notif, null, 2)}
-                                            </pre>
-                                        </div>
+                                        <NotificationSummary envelope={selectedEnvelope} />
                                     )}
                                 </div>
                             </>
                         ) : (
                             <div className="flex-grow flex items-center justify-center p-12 text-center">
-                                <p className="text-secondary text-lg">Select a message to read.</p>
+                                <p className="text-secondary text-lg">Select a thread to read.</p>
                             </div>
                         )}
                     </div>

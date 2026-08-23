@@ -151,6 +151,7 @@ export default function AdminPage() {
                   <li>Remove your webhook notification destination</li>
                   <li>Delete all registered eBay seller accounts</li>
                   <li>Purge all inbox messages</li>
+                  <li>Delete all private inventory notes</li>
                   <li>Delete your Sealift tenant account</li>
                 </ul>
               </div>

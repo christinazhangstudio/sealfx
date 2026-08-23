@@ -15,6 +15,7 @@ import { useUsers } from "@/components/UsersContext";
 import { formatCurrency } from "@/lib/format-utils";
 import { Line } from "react-chartjs-2";
 import PageHeader from "@/components/PageHeader";
+import PageActionBar from "@/components/PageActionBar";
 import PersonIcon from "@/components/PersonIcon";
 import {
   Chart as ChartJS,
@@ -438,9 +439,10 @@ export default function ChartsPage() {
     <div>
       <div className="page-content-shell bg-background">
         <PageHeader title="Charts" />
-        <div className="mb-8 flex flex-col lg:flex-row gap-4 items-center xl:items-center">
-          <div className="flex flex-wrap justify-center xl:justify-start gap-4">
-            <div className="flex items-center gap-2 bg-surface rounded-lg shadow-sm border border-border p-1">
+        <PageActionBar ariaLabel="Chart controls">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="flex flex-wrap justify-center gap-2 lg:justify-start">
+            <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-background/60 p-1">
               <label className="text-primary font-bold text-sm uppercase tracking-wider px-2 border-r border-border">Range:</label>
               <select
                 value={range}
@@ -453,13 +455,16 @@ export default function ChartsPage() {
               </select>
             </div>
             <button
+              type="button"
               onClick={handleApply}
-              className="px-6 py-2 bg-btn-apply text-white rounded-lg hover:bg-btn-apply-hover transition-all shadow-sm font-bold active:scale-95"
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-hover"
             >
               Apply
             </button>
           </div>
         </div>
+          <UserTableOfContents users={users} />
+        </PageActionBar>
         {dateError && <p className="text-error-text text-lg mb-4">{dateError}</p>}
         {error && <p className="text-error-text text-lg mb-4">{error}</p>}
         {usersLoading ? (
@@ -468,7 +473,6 @@ export default function ChartsPage() {
           </div>
         ) : users.length > 0 ? (
           <div className="space-y-6">
-            <UserTableOfContents users={users} />
             <div className="w-full min-w-0">
               {Object.keys(dataLoading).length > 0 && Object.values(dataLoading).some(v => v) ? (
                 <div className="seller-card">

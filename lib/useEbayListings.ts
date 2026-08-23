@@ -1,5 +1,6 @@
+import { useState } from "react";
 import useSWR, { mutate } from "swr";
-import { formatApiDate, parseLocalDate } from "@/lib/date-range";
+import { defaultListingsRange, formatApiDate, parseLocalDate } from "@/lib/date-range";
 import {
     clearListingsIntervalCache,
     invalidateListingsRange,
@@ -47,7 +48,7 @@ export function useEbayListings(users: string[], startFrom: Date, startTo: Date)
 
     // Session cache only. No background recrawl — the eBay crawl is too expensive
     // to fire on focus/remount. Freshness is manual Refresh. Default ~2s dedupe is
-    // enough to merge Gallery + Tracking if they mount together.
+    // enough to merge Inventory + Tracking if they mount together.
     const { data, error, isLoading, isValidating, mutate } = useSWR(key, fetcher, {
         revalidateOnFocus: false,
         revalidateIfStale: false,
@@ -70,6 +71,27 @@ export function useEbayListings(users: string[], startFrom: Date, startTo: Date)
         },
     };
 }
+/**
+ * Listings for the rolling default window. If a tab crosses midnight, Refresh
+ * advances the window before SWR loads the newly entered local day.
+ */
+export function useDefaultEbayListings(users: string[]) {
+    const [range, setRange] = useState(() => defaultListingsRange());
+    const listings = useEbayListings(users, range.start, range.end);
+
+    return {
+        ...listings,
+        refresh: () => {
+            const next = defaultListingsRange();
+            if (next.end.getTime() !== range.end.getTime()) {
+                setRange(next);
+                return Promise.resolve();
+            }
+            return listings.refresh();
+        },
+    };
+}
+
 
 /** Interval store + every SWR listings view. Use before signOut. */
 export function clearListingsSession(): void {

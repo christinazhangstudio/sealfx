@@ -75,9 +75,198 @@ export interface SandboxListing {
     PictureURLs: string[];
   };
 }
+const DENSE_CALENDAR_ORDERS: SandboxOrder[] = [
+  {
+    suffix: "A",
+    creationDate: "2026-08-18T12:00:00-07:00",
+    legacyItemId: "307014232143",
+    title: "[Mock] Vintage camera lens",
+    itemTotal: "32.50",
+    orderTotal: "37.99",
+  },
+  {
+    suffix: "B",
+    creationDate: "2026-08-19T12:00:00-07:00",
+    legacyItemId: "307014712708",
+    title: "[Mock] Handmade ceramic vase",
+    itemTotal: "46.00",
+    orderTotal: "51.49",
+  },
+  {
+    suffix: "C",
+    creationDate: "2026-08-20T12:00:00-07:00",
+    legacyItemId: "307014720318",
+    title: "[Mock] Wireless mechanical keyboard",
+    itemTotal: "68.50",
+    orderTotal: "73.99",
+  },
+  {
+    suffix: "D",
+    creationDate: "2026-08-21T12:00:00-07:00",
+    legacyItemId: "307014728027",
+    title: "[Mock] Classic strategy board game",
+    itemTotal: "24.50",
+    orderTotal: "29.99",
+  },
+].map(({ suffix, creationDate, legacyItemId, title, itemTotal, orderTotal }) => ({
+  orderId: `MOCK-CALENDAR-DENSE-${suffix}`,
+  legacyOrderId: `MOCK-CALENDAR-DENSE-${suffix}`,
+  creationDate,
+  orderFulfillmentStatus: "NOT_STARTED",
+  orderPaymentStatus: "PAID",
+  salesRecordReference: `CALENDAR-DENSE-${suffix}`,
+  buyer: { username: `dense_calendar_${suffix.toLowerCase()}` },
+  pricingSummary: {
+    total: { value: orderTotal, currency: "USD" },
+    deliveryCost: { value: "5.49", currency: "USD" },
+  },
+  fulfillmentStartInstructions: [
+    {
+      minEstimatedDeliveryDate: "2026-08-24T12:00:00-07:00",
+      maxEstimatedDeliveryDate: "2026-08-26T12:00:00-07:00",
+      shippingStep: {
+        shippingCarrierCode: "UPS",
+        shippingServiceCode: "UPSGround",
+        shipTo: {
+          fullName: `Dense Calendar Buyer ${suffix}`,
+          city: "Austin",
+          stateOrProvince: "TX",
+          postalCode: "78704",
+          countryCode: "US",
+        },
+      },
+    },
+  ],
+  lineItems: [
+    {
+      lineItemId: `mock-calendar-dense-${suffix.toLowerCase()}-line`,
+      legacyItemId,
+      title,
+      sku: `CAL-DENSE-${suffix}`,
+      quantity: 1,
+      lineItemFulfillmentStatus: "NOT_STARTED",
+      total: { value: itemTotal, currency: "USD" },
+    },
+  ],
+}));
+
 
 export const SANDBOX_ORDERS: Record<string, SandboxOrder[]> = {
   czhang19: [
+    ...DENSE_CALENDAR_ORDERS,
+    {
+      orderId: "MOCK-PARTIAL-FULFILLMENT",
+      legacyOrderId: "MOCK-PARTIAL-FULFILLMENT",
+      creationDate: "2026-08-22T12:00:00-07:00",
+      orderFulfillmentStatus: "IN_PROGRESS",
+      orderPaymentStatus: "PAID",
+      buyer: { username: "partial_order_buyer" },
+      pricingSummary: {
+        total: { value: "83.99", currency: "USD" },
+        deliveryCost: { value: "5.49", currency: "USD" },
+      },
+      fulfillmentStartInstructions: [
+        {
+          minEstimatedDeliveryDate: "2026-08-25T12:00:00-07:00",
+          maxEstimatedDeliveryDate: "2026-08-28T12:00:00-07:00",
+          shippingStep: {
+            shippingCarrierCode: "UPS",
+            shippingServiceCode: "UPSGround",
+            shipTo: {
+              fullName: "Partial Order Buyer",
+              city: "Austin",
+              stateOrProvince: "TX",
+              postalCode: "78704",
+              countryCode: "US",
+            },
+          },
+        },
+      ],
+      lineItems: [
+        {
+          lineItemId: "mock-partial-fulfilled-line",
+          legacyItemId: "307014232143",
+          title: "[Mock] Fulfilled item from a partial order",
+          sku: "PARTIAL-DONE",
+          quantity: 1,
+          lineItemFulfillmentStatus: "FULFILLED",
+          total: { value: "32.50", currency: "USD" },
+        },
+        {
+          lineItemId: "mock-partial-awaiting-line",
+          legacyItemId: "307014712708",
+          title: "[Mock] Item awaiting fulfillment",
+          sku: "PARTIAL-WAITING",
+          quantity: 1,
+          lineItemFulfillmentStatus: "NOT_STARTED",
+          total: { value: "46.00", currency: "USD" },
+        },
+      ],
+      shippingFulfillments: [
+        {
+          fulfillmentId: "mock-partial-first-package",
+          shipmentTrackingNumber: "1Z999AA10123456784",
+          shippingCarrierCode: "UPS",
+          shippedDate: "2026-08-23T10:00:00-07:00",
+        },
+      ],
+    },
+    {
+      orderId: "MOCK-USPS-EXPECTED",
+      legacyOrderId: "MOCK-USPS-EXPECTED",
+      creationDate: "2026-08-18T12:00:00-07:00",
+      orderFulfillmentStatus: "FULFILLED",
+      orderPaymentStatus: "PAID",
+      salesRecordReference: "USPS-EXPECTED",
+      buyer: { username: "usps_date_test" },
+      pricingSummary: {
+        total: { value: "89.99", currency: "USD" },
+        deliveryCost: { value: "7.49", currency: "USD" },
+      },
+      fulfillmentStartInstructions: [
+        {
+          minEstimatedDeliveryDate: "2026-08-28T12:00:00-07:00",
+          maxEstimatedDeliveryDate: "2026-08-31T12:00:00-07:00",
+          shippingStep: {
+            shippingCarrierCode: "USPS",
+            shippingServiceCode: "USPSPriority",
+            shipTo: {
+              fullName: "USPS Date Test",
+              city: "Austin",
+              stateOrProvince: "TX",
+              postalCode: "78704",
+              countryCode: "US",
+            },
+          },
+        },
+      ],
+      lineItems: [
+        {
+          lineItemId: "mock-usps-expected-line",
+          legacyItemId: "307025390141",
+          title: "[Mock] USPS expected-date precedence order",
+          sku: "MOCK-USPS",
+          quantity: 1,
+          lineItemFulfillmentStatus: "FULFILLED",
+          total: { value: "82.50", currency: "USD" },
+        },
+      ],
+      shippingFulfillments: [
+        {
+          fulfillmentId: "mock-usps-expected-fulfillment",
+          shipmentTrackingNumber: "9400111899562537875333",
+          shippingCarrierCode: "USPS",
+          shippedDate: "2026-08-20T12:00:00-07:00",
+          uspsTracking: {
+            trackingNumber: "9400111899562537875333",
+            status: "In Transit",
+            statusCategory: "In Transit",
+            statusSummary: "Mock USPS response with an expected delivery date.",
+            expectedDeliveryDate: "2026-08-26T12:00:00-07:00",
+          },
+        },
+      ],
+    },
     {
       orderId: "01-14822-01194",
       legacyOrderId: "01-14822-01194",
@@ -270,6 +459,55 @@ export const SANDBOX_ORDERS: Record<string, SandboxOrder[]> = {
     },
   ],
   zha_5764: [
+    {
+      orderId: "MOCK-EBAY-FALLBACK",
+      legacyOrderId: "MOCK-EBAY-FALLBACK",
+      creationDate: "2026-08-19T12:00:00-07:00",
+      orderFulfillmentStatus: "FULFILLED",
+      orderPaymentStatus: "PAID",
+      salesRecordReference: "EBAY-FALLBACK",
+      buyer: { username: "fallback_date_test" },
+      pricingSummary: {
+        total: { value: "64.49", currency: "USD" },
+        deliveryCost: { value: "5.49", currency: "USD" },
+      },
+      fulfillmentStartInstructions: [
+        {
+          minEstimatedDeliveryDate: "2026-08-27T12:00:00-07:00",
+          maxEstimatedDeliveryDate: "2026-08-30T12:00:00-07:00",
+          shippingStep: {
+            shippingCarrierCode: "USPS",
+            shippingServiceCode: "USPSGroundAdvantage",
+            shipTo: {
+              fullName: "Fallback Date Test",
+              city: "Richmond",
+              stateOrProvince: "VA",
+              postalCode: "23227",
+              countryCode: "US",
+            },
+          },
+        },
+      ],
+      lineItems: [
+        {
+          lineItemId: "mock-ebay-fallback-line",
+          legacyItemId: "307029461243",
+          title: "[Mock] eBay delivery-date fallback order",
+          sku: "MOCK-FALLBACK",
+          quantity: 1,
+          lineItemFulfillmentStatus: "FULFILLED",
+          total: { value: "59.00", currency: "USD" },
+        },
+      ],
+      shippingFulfillments: [
+        {
+          fulfillmentId: "mock-ebay-fallback-fulfillment",
+          shipmentTrackingNumber: "",
+          shippingCarrierCode: "USPS",
+          shippedDate: "2026-08-21T12:00:00-07:00",
+        },
+      ],
+    },
     {
       orderId: "16-14982-19002",
       legacyOrderId: "16-14982-19002",

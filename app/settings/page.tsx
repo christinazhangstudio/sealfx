@@ -129,7 +129,7 @@ export default function SettingsPage() {
     const card = "max-w-2xl bg-surface p-8 rounded-3xl shadow-lg border border-border/50 space-y-6";
 
     return (
-        <div className="page-content-shell">
+        <div className="page-content-shell bg-background">
             <div className="max-w-5xl mx-auto">
                 <PageHeader title="Settings" description="Your account and eBay connection." />
 

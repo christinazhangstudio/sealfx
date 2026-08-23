@@ -7,15 +7,25 @@ const ebayMessage = ({
     date,
     subject,
     body,
+    messageMedia = null,
     read = false,
     user = SANDBOX_SELLER,
+    conversationId = id.replace("ebay-message-", ""),
+    senderUserName = "eBay",
+    conversationType = "FROM_EBAY",
+    recipientUserName = user,
 }: {
     id: string;
     date: string;
     subject: string;
     body: string;
+    messageMedia?: { mediaName: string; mediaType: string; mediaUrl: string }[] | null;
     read?: boolean;
     user?: string;
+    conversationId?: string;
+    senderUserName?: string;
+    conversationType?: string;
+    recipientUserName?: string;
 }) => ({
     metadata: {
         deprecated: false,
@@ -25,15 +35,15 @@ const ebayMessage = ({
     },
     notification: {
         data: {
-            conversationId: id.replace("ebay-message-", ""),
-            conversationType: "FROM_EBAY",
+            conversationId,
+            conversationType,
             createdDate: date,
             messageBody: body,
             messageId: id.replace("ebay-message-", ""),
-            messageMedia: null,
+            messageMedia,
             readStatus: read,
-            recipientUserName: user,
-            senderUserName: "eBay",
+            recipientUserName,
+            senderUserName,
             subject,
         },
         eventDate: date,
@@ -107,6 +117,81 @@ const payoutNotificationHtml = `<!DOCTYPE html>
 </html>`;
 
 export const SANDBOX_NOTIFICATIONS = [
+    ebayMessage({
+        id: "ebay-message-attachment-preview",
+        date: "2026-08-22T14:30:00.000Z",
+        subject: "HTML email with attachment previews",
+        body: `<!doctype html>
+<html>
+<body>
+    <h1>Attachment preview</h1>
+    <p>This sandbox message includes two image attachments for testing thumbnail layout and full-size links.</p>
+</body>
+</html>`,
+        messageMedia: [
+            {
+                mediaName: "listing-performance.png",
+                mediaType: "IMAGE",
+                mediaUrl: "/tutorial/slide1.png",
+            },
+            {
+                mediaName: "inventory-overview.png",
+                mediaType: "",
+                mediaUrl: "/tutorial/slide2.png",
+            },
+        ],
+    }),
+    ebayMessage({
+        id: "ebay-message-buyer-thread-5",
+        date: "2026-08-21T18:42:00.000Z",
+        subject: "Question about the vintage camera lens",
+        body: "Thanks for checking. If the focus ring moves smoothly, I would like to buy it today.",
+        conversationId: "buyer-vintage-lens-88421",
+        senderUserName: "retro.photo.88",
+        conversationType: "FROM_MEMBERS",
+    }),
+    ebayMessage({
+        id: "ebay-message-buyer-thread-4",
+        date: "2026-08-21T17:28:00.000Z",
+        subject: "Question about the vintage camera lens",
+        body: "Yes. Both lens caps are included, and the focus ring moves smoothly through the full range.",
+        conversationId: "buyer-vintage-lens-88421",
+        senderUserName: SANDBOX_SELLER,
+        recipientUserName: "retro.photo.88",
+        conversationType: "FROM_MEMBERS",
+        read: true,
+    }),
+    ebayMessage({
+        id: "ebay-message-buyer-thread-3",
+        date: "2026-08-21T16:11:00.000Z",
+        subject: "Question about the vintage camera lens",
+        body: "That helps. Does the listing include both lens caps?",
+        conversationId: "buyer-vintage-lens-88421",
+        senderUserName: "retro.photo.88",
+        conversationType: "FROM_MEMBERS",
+        read: true,
+    }),
+    ebayMessage({
+        id: "ebay-message-buyer-thread-2",
+        date: "2026-08-21T15:35:00.000Z",
+        subject: "Question about the vintage camera lens",
+        body: "The glass is clean with no scratches, haze, or fungus that I can see.",
+        conversationId: "buyer-vintage-lens-88421",
+        senderUserName: SANDBOX_SELLER,
+        recipientUserName: "retro.photo.88",
+        conversationType: "FROM_MEMBERS",
+        read: true,
+    }),
+    ebayMessage({
+        id: "ebay-message-buyer-thread-1",
+        date: "2026-08-21T15:02:00.000Z",
+        subject: "Question about the vintage camera lens",
+        body: "Hi, I am interested in this lens. Is the glass clean and free of scratches?",
+        conversationId: "buyer-vintage-lens-88421",
+        senderUserName: "retro.photo.88",
+        conversationType: "FROM_MEMBERS",
+        read: true,
+    }),
     ebayMessage({
         id: "ebay-message-210976065843",
         date: "2026-08-10T19:18:04.000Z",

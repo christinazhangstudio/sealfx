@@ -19,7 +19,7 @@ const STORAGE_KEY = "sealfx_api_usage";
  *
  *  - A missing value used to mean "assume guest, block the request". That is
  *    exactly the state during the first render, so any page fetching from a
- *    mount-only effect got a synthetic 403 and never retried — Gallery
+ *    mount-only effect got a synthetic 403 and never retried — Inventory
  *    and Notifications broke on a fresh load, in incognito, or after clearing
  *    site data, and a manual refresh fixed it, which made it look random.
  *  - Persisting it to localStorage leaked across tabs: signing out in one tab
@@ -94,6 +94,79 @@ function saveUsage(usage: ApiUsage) {
     }
 }
 
+type EndpointCategory = {
+    label: string;
+    prefixes: readonly (string | undefined)[];
+};
+
+function normalizedPath(value: string): string {
+    try {
+        const pathname = new URL(value, "http://sealift.local").pathname.replace(/\/+$/, "");
+        return pathname || "/";
+    } catch {
+        const pathname = value.split(/[?#]/, 1)[0].replace(/\/+$/, "");
+        return pathname || "/";
+    }
+}
+
+function apiPath(endpoint: string | undefined): string | undefined {
+    if (!endpoint) return undefined;
+
+    const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ?? "";
+    return normalizedPath(`${base}/${endpoint.replace(/^\/+/, "")}`);
+}
+
+// Match complete route prefixes instead of arbitrary substrings. In particular,
+// notification routes contain "/users/" but are not Users API calls.
+const ENDPOINT_CATEGORIES: readonly EndpointCategory[] = [
+    {
+        label: "Notification",
+        prefixes: [
+            apiPath(process.env.NEXT_PUBLIC_NOTIFICATIONS_TOPICS_URI),
+            apiPath(process.env.NEXT_PUBLIC_NOTIFICATIONS_USERS_BASE_URI),
+            apiPath(process.env.NEXT_PUBLIC_NOTIFICATIONS_DESTINATIONS_URI),
+            apiPath("notification"),
+        ],
+    },
+    {
+        label: "AI Assistant",
+        prefixes: [apiPath(process.env.NEXT_PUBLIC_AI_URI), apiPath("ai")],
+    },
+    { label: "Inbox", prefixes: [apiPath(process.env.NEXT_PUBLIC_INBOX_URI)] },
+    { label: "Settings", prefixes: [apiPath("settings")] },
+    { label: "Tracking", prefixes: [apiPath("tracking")] },
+    { label: "Inventory", prefixes: [apiPath("inventory-notes")] },
+    {
+        label: "Users",
+        prefixes: [
+            apiPath(process.env.NEXT_PUBLIC_USERS_URI),
+            apiPath(process.env.NEXT_PUBLIC_REGISTER_SELLER_URI),
+        ],
+    },
+    { label: "Listings", prefixes: [apiPath(process.env.NEXT_PUBLIC_LISTINGS_URI)] },
+    { label: "Payouts", prefixes: [apiPath(process.env.NEXT_PUBLIC_PAYOUTS_URI)] },
+    { label: "Account", prefixes: [apiPath(process.env.NEXT_PUBLIC_ACCOUNT_URI)] },
+    {
+        label: "Transaction Summaries",
+        prefixes: [apiPath(process.env.NEXT_PUBLIC_TRANSACTION_SUMMARIES_URI)],
+    },
+];
+
+
+export function categorizeApiEndpoint(url: string): string {
+    const path = normalizedPath(url);
+
+    for (const category of ENDPOINT_CATEGORIES) {
+        if (category.prefixes.some((prefix) =>
+            prefix && (path === prefix || path.startsWith(`${prefix}/`)),
+        )) {
+            return category.label;
+        }
+    }
+
+    return "other";
+}
+
 /**
  * Custom fetch wrapper that tracks calls
  */
@@ -118,27 +191,7 @@ export async function trackedFetch(input: RequestInfo | URL, init?: RequestInit)
 
     const usage = getUsage();
 
-    // Categorize the endpoint. Unset env vars are skipped: String(undefined)
-    // is "undefined", which silently matched nothing (or worse, any URL that
-    // happened to contain that word).
-    const CATEGORIES: [string | undefined, string][] = [
-        [process.env.NEXT_PUBLIC_USERS_URI, "Users"],
-        [process.env.NEXT_PUBLIC_LISTINGS_URI, "Listings"],
-        [process.env.NEXT_PUBLIC_PAYOUTS_URI, "Payouts"],
-        [process.env.NEXT_PUBLIC_ACCOUNT_URI, "Account"],
-        [process.env.NEXT_PUBLIC_NOTIFICATIONS_TOPICS_URI, "Notification"],
-        [process.env.NEXT_PUBLIC_TRANSACTION_SUMMARIES_URI, "Transaction Summaries"],
-        [process.env.NEXT_PUBLIC_INBOX_URI, "Inbox"],
-        [process.env.NEXT_PUBLIC_AI_URI, "AI Assistant"],
-    ];
-
-    let category = "other";
-    for (const [uri, label] of CATEGORIES) {
-        if (uri && url.includes(uri)) {
-            category = label;
-            break;
-        }
-    }
+    const category = categorizeApiEndpoint(url);
 
     usage.total += 1;
     usage.endpoints[category] = (usage.endpoints[category] || 0) + 1;

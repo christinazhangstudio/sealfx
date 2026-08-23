@@ -39,13 +39,11 @@ export function addDays(date: Date, days: number): Date {
 
 /**
  * Splits a range into consecutive windows of at most MAX_DAYS_PER_CHUNK whole
- * days, with no day in two windows and no day skipped between them.
+ * local days, with no day in two windows and no day skipped between them.
  *
- * The previous implementation subtracted a millisecond from each window's end
- * and started the next one a millisecond later. Because the API takes dates,
- * both windows truncated to the same calendar day — so every item listed on a
- * boundary day was fetched and counted twice, and the default range (exactly
- * one window long) always produced such a boundary.
+ * A 120-day local span that crosses the fall DST transition is 120 days plus
+ * one hour as an absolute timestamp range. eBay rejects spans over 120 × 24
+ * hours, so that one exceptional window is shortened by a day.
  */
 export function getDateChunks(from: Date, to: Date): { start: Date; end: Date }[] {
     const chunks: { start: Date; end: Date }[] = [];
@@ -57,7 +55,11 @@ export function getDateChunks(from: Date, to: Date): { start: Date; end: Date }[
     while (currentStart <= finalEnd) {
         // -1 because both endpoints are inclusive.
         const proposedEnd = addDays(currentStart, MAX_DAYS_PER_CHUNK - 1);
-        const end = proposedEnd > finalEnd ? finalEnd : proposedEnd;
+        let end = proposedEnd > finalEnd ? finalEnd : proposedEnd;
+        const endExclusive = addDays(end, 1);
+        if (endExclusive.getTime() - currentStart.getTime() > MAX_DAYS_PER_CHUNK * 86_400_000) {
+            end = addDays(end, -1);
+        }
         chunks.push({ start: currentStart, end });
         currentStart = addDays(end, 1);
     }

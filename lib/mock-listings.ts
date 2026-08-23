@@ -287,3 +287,16 @@ export const MOCK_LISTINGS: Record<string, { ItemArray?: { Items?: unknown[] } }
     },
   },
 };
+
+export const MOCK_INVENTORY_SELLERS = Object.keys(MOCK_LISTINGS);
+
+export const MOCK_INVENTORY_NOTES: Record<string, Record<string, string>> = {
+  czhang19: {
+    "307014232143": "Stored on shelf B4. Confirm the drive capacities before packing.",
+    "307014712708": "Capture card only — no USB cable or HDMI cable included.",
+  },
+  zha_5764: {
+    "377150711906": "Check the floral pattern and photograph the maker's mark on the back.",
+    "377150767663": "Wrap the gold rim separately to prevent rubbing during shipment.",
+  },
+};

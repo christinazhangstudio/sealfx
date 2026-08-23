@@ -90,13 +90,19 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     const unreadCount = envelopes.filter((e) => !e.read && !e.trashed).length;
     useEffect(() => {
         if (!isSandbox) return;
-        setEnvelopes(SANDBOX_NOTIFICATIONS.map((notif) => ({
-            notif,
-            user: notif.notification.data.recipientUserName,
-            id: notif.notification.notificationId,
-            read: notif.sealift_read,
-            trashed: notif.sealift_trashed,
-        })));
+        setEnvelopes(SANDBOX_NOTIFICATIONS.map((notif) => {
+            const data = notif.notification.data;
+            const user = SANDBOX_SELLERS.find((seller) =>
+                seller === data.senderUserName || seller === data.recipientUserName,
+            ) ?? data.recipientUserName;
+            return {
+                notif,
+                user,
+                id: notif.notification.notificationId,
+                read: notif.sealift_read,
+                trashed: notif.sealift_trashed,
+            };
+        }));
     }, [isSandbox]);
 
 

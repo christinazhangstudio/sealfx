@@ -4,15 +4,13 @@ import React, { useState, useEffect } from "react";
 import { getApiUsageStats, ApiUsage } from "../lib/api-tracker";
 
 export default function ApiUsageIndicator() {
-    // getApiUsageStats reads localStorage, which only exists on the client.
-    // This component is only mounted in the browser (inside the client layout),
-    // so lazy state init is safe — no effect needed for the initial read.
-    const [usage, setUsage] = useState<ApiUsage | null>(() =>
-        typeof window === "undefined" ? null : getApiUsageStats(),
-    );
+    const [usage, setUsage] = useState<ApiUsage | null>(null);
     const [isOpen, setIsOpen] = useState(false);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setUsage(getApiUsageStats());
+
         // Subscribe for updates from the tracker.
         const handleUpdate = (_event: Event) => {
             setUsage(getApiUsageStats());

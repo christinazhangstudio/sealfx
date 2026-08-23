@@ -1,7 +1,7 @@
 /**
  * Canonical eBay data fetching for the analytics pages.
  *
- * Listings, Gallery and Charts each carried their own copy of the date
+ * Listings, Inventory and Charts each carried their own copy of the date
  * chunking, page-draining and merge logic. The copies drifted, and two of the
  * bugs that caused were visible to users:
  *
@@ -17,7 +17,7 @@
  */
 
 import { trackedFetch as fetch } from "@/lib/api-tracker";
-import { formatApiDate, getDateChunks } from "@/lib/date-range";
+import { addDays, getDateChunks, startOfDay } from "@/lib/date-range";
 import { MOCK_LISTINGS } from "./mock-listings";
 
 export { formatApiDate, getDateChunks, MAX_DAYS_PER_CHUNK } from "@/lib/date-range";
@@ -182,6 +182,16 @@ async function readError(response: Response, user: string): Promise<never> {
     throw new Error(`Request failed for ${user} (${response.status})`);
 }
 
+function listingTimestampRange(from: Date, to: Date): { startFrom: string; startTo: string } {
+    const start = startOfDay(from);
+    const endExclusive = addDays(startOfDay(to), 1);
+    return {
+        startFrom: start.toISOString(),
+        startTo: new Date(endExclusive.getTime() - 1).toISOString(),
+    };
+}
+
+
 async function fetchListingsPage(
     user: string,
     pageIdx: number,
@@ -192,11 +202,12 @@ async function fetchListingsPage(
     const base = requireEnv("NEXT_PUBLIC_API_URL", process.env.NEXT_PUBLIC_API_URL);
     const uri = requireEnv("NEXT_PUBLIC_LISTINGS_URI", process.env.NEXT_PUBLIC_LISTINGS_URI);
 
+    const range = listingTimestampRange(from, to);
     const params = new URLSearchParams({
         pageSize: String(API_PAGE_SIZE),
         pageIdx: String(pageIdx),
-        startFrom: formatApiDate(from),
-        startTo: formatApiDate(to),
+        startFrom: range.startFrom,
+        startTo: range.startTo,
     });
 
     const response = await fetch(`${base}/${uri}/${user}?${params}`, { signal: opts.signal });

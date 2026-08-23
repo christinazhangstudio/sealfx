@@ -25,7 +25,7 @@ GET /api/listings/{seller}/items/{itemId}
 
 Default board is 30 days, so only those misses are fetched. Switching to 90 days fetches the additional misses (days 31–90). Already-tried ids are not refetched.
 
-Sealift calls Trading `GetItem`. One request per missing id. Store the item in the same per-seller interval map (`rememberListingItem`) so a later Gallery/Tracking view can reuse the photo. That write does **not** mark a day-span as covered — we did not crawl those days.
+Sealift calls Trading `GetItem`. One request per missing id. Store the item in the same per-seller interval map (`rememberListingItem`) so a later Inventory/Tracking view can reuse the photo. That write does **not** mark a day-span as covered — we did not crawl those days.
 
 Failed lookups are remembered for the session so we do not hammer GetItem.
 

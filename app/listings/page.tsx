@@ -14,6 +14,7 @@ import {
 import UserTableOfContents from "@/components/UserTableOfContents";
 import { useUsers } from "@/components/UsersContext";
 import PageHeader from "@/components/PageHeader";
+import PageActionBar from "@/components/PageActionBar";
 import PersonIcon from "@/components/PersonIcon";
 
 
@@ -242,9 +243,10 @@ export default function ListingsPage() {
     <>
           <div className="page-content-shell bg-background">
         <PageHeader title="Listings" />
-        <div className="mb-8 flex flex-col lg:flex-row gap-6 items-center lg:items-center lg:flex-wrap">
-          <div className="flex flex-wrap justify-center lg:justify-start gap-4">
-            <div className="flex items-center rounded-lg shadow-sm border border-border overflow-hidden focus-within:ring-2 focus-within:ring-primary transition-all">
+        <PageActionBar ariaLabel="Listing controls">
+          <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">
+          <div className="flex flex-wrap justify-center gap-2 lg:justify-start">
+            <div className="flex items-center overflow-hidden rounded-xl border border-border/60 bg-background/60 focus-within:ring-2 focus-within:ring-primary/30">
               <label className="bg-surface text-primary font-bold text-sm uppercase tracking-wider px-3 py-2 border-r border-border flex items-center h-full">From</label>
               <input
                 type="date"
@@ -259,7 +261,7 @@ export default function ListingsPage() {
                 max={formatApiDate(new Date())}
               />
             </div>
-            <div className="flex items-center rounded-lg shadow-sm border border-border overflow-hidden focus-within:ring-2 focus-within:ring-primary transition-all">
+            <div className="flex items-center overflow-hidden rounded-xl border border-border/60 bg-background/60 focus-within:ring-2 focus-within:ring-primary/30">
               <label className="bg-surface text-primary font-bold text-sm uppercase tracking-wider px-3 py-2 border-r border-border flex items-center h-full">To</label>
               <input
                 type="date"
@@ -276,7 +278,7 @@ export default function ListingsPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap justify-center lg:justify-start gap-4 items-center">
+          <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-start">
             <div className="flex gap-2">
               <button
                 onClick={handleApply}
@@ -307,6 +309,8 @@ export default function ListingsPage() {
             </div>
           </div>
         </div>
+          <UserTableOfContents users={users} />
+        </PageActionBar>
         {dateError && <p className="text-error-text text-lg mb-4">{dateError}</p>}
         {error && <p className="text-error-text text-lg mb-4">{error}</p>}
         {userLoading.global ? (
@@ -315,7 +319,6 @@ export default function ListingsPage() {
           </div>
         ) : users.length > 0 ? (
           <div className="space-y-6">
-            <UserTableOfContents users={users} />
             <div className="w-full min-w-0 space-y-8">
               {users.map((user) => (
                 <div key={user} id={`user-section-${user}`}>
