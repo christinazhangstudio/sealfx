@@ -9,7 +9,7 @@
  * See listings-cache.md.
  */
 
-import { fetchAllListings, type Item } from "@/lib/ebay-data";
+import { fetchAllListings, fetchListingItem, listingImageCandidates, type Item } from "@/lib/ebay-data";
 import {
     addDays,
     formatApiDate,
@@ -125,10 +125,15 @@ export function getCachedListingItem(user: string, itemId: string): Item | undef
     return sellers.get(user)?.items.get(itemId);
 }
 
-/** Store one item without marking any day span covered. Used for order-photo lookups outside the 120-day crawl. */
-export function rememberListingItem(user: string, item: Item): void {
-    if (!item?.ItemID) return;
-    getSeller(user).items.set(item.ItemID, item);
+/** Fetch an order-photo item without letting an old session repopulate the cache. */
+export async function loadListingItem(user: string, itemId: string): Promise<Item | null> {
+    const store = getSeller(user);
+    const cached = store.items.get(itemId);
+    if (cached && listingImageCandidates(cached.PictureDetails).length > 0) return cached;
+    const item = await fetchListingItem(user, itemId);
+    if (sellers.get(user) !== store) return null;
+    if (item?.ItemID) store.items.set(item.ItemID, item);
+    return item;
 }
 
 /** Drop covered days in [from, to] so the next load recrawls them. Items in that window are removed. */

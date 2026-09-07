@@ -6,9 +6,9 @@ import PageActionBar, { RefreshAction } from "@/components/PageActionBar";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import { useDefaultEbayListings } from "@/lib/useEbayListings";
 import PersonIcon from "@/components/PersonIcon";
-import { listingImageCandidates, rewriteEbayImageUrl, fetchListingItem } from "@/lib/ebay-data";
+import { listingImageCandidates, rewriteEbayImageUrl } from "@/lib/ebay-data";
 import { formatFetchedAt, isWithinLocalDays, parseLocalDate } from "@/lib/date-range";
-import { getCachedListingItem, rememberListingItem } from "@/lib/listings-interval-cache";
+import { getCachedListingItem, loadListingItem } from "@/lib/listings-interval-cache";
 
 import {
   SANDBOX_SELLERS,
@@ -481,10 +481,12 @@ export default function TrackingPage() {
           if (listingImages[id]?.length || extraImages[id] || extraTriedRef.current.has(key)) continue;
           const cached = getCachedListingItem(group.user, id);
           if (cached) {
-            extraTriedRef.current.add(key);
             const urls = listingImageCandidates(cached.PictureDetails);
-            if (urls.length > 0) cachedHits[id] = urls;
-            continue;
+            if (urls.length > 0) {
+              extraTriedRef.current.add(key);
+              cachedHits[id] = urls;
+              continue;
+            }
           }
           extraTriedRef.current.add(key);
           missing.push({ user: group.user, id });
@@ -501,9 +503,8 @@ export default function TrackingPage() {
       await Promise.all(
         missing.map(async ({ user, id }) => {
           try {
-            const item = await fetchListingItem(user, id);
+            const item = await loadListingItem(user, id);
             if (!item) return;
-            rememberListingItem(user, item);
             const urls = listingImageCandidates(item.PictureDetails);
             if (urls.length > 0) found[id] = urls;
           } catch (err) {
