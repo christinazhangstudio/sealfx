@@ -110,6 +110,14 @@ export async function loadListingsForRange(
     const store = getSeller(user);
     const { signal } = store.controller;
 
+    // Covered views do not depend on unrelated in-flight gaps for this seller.
+    signal.throwIfAborted();
+    if (missingIntervals(fromStr, toStr, store.intervals).length === 0) {
+        return Array.from(store.items.values()).filter((item) =>
+            listingInRange(item, fromStr, toStr),
+        );
+    }
+
     // SWR deduplicates exact view keys only. Serialize per seller and calculate
     // gaps after earlier crawls finish, so overlapping views reuse those days.
     // Different sellers still load in parallel.
