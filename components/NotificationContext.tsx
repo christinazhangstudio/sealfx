@@ -5,15 +5,9 @@ import { useSession } from "next-auth/react";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import { useUsers } from "@/components/UsersContext";
 import { SANDBOX_NOTIFICATIONS, SANDBOX_SELLERS } from "@/app/inbox/sandbox-data";
+import { mergeNotifications, mutateNotification, type NotifEnvelope, type NotificationAction } from "@/lib/notification-state";
 
-// Define the notification envelope structure
-export interface NotifEnvelope {
-    notif: any;
-    user: string;
-    id: string; // stable key: notificationId or fallback
-    read: boolean;
-    trashed: boolean;
-}
+export type { NotifEnvelope } from "@/lib/notification-state";
 
 interface NotificationContextProps {
     envelopes: NotifEnvelope[];
@@ -31,7 +25,8 @@ const NotificationContext = createContext<NotificationContextProps | undefined>(
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
     const { data: session } = useSession();
-    const { users, loadingUsers, usersError: error } = useUsers();
+    const { users, loadingUsers, usersError } = useUsers();
+    const [messageError, setMessageError] = useState<string | null>(null);
     const isGuest = session?.user != null
         && "isGuest" in session.user
         && session.user.isGuest === true;
@@ -125,20 +120,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                     read: notif?.sealift_read === true,
                     trashed: notif?.sealift_trashed === true,
                 }));
-                setEnvelopes((prev) => {
-                    // Deduplicate by id (initial loads can overlap with live pushes)
-                    const existingIds = new Set(prev.map((e) => e.id));
-                    const fresh = newEnvs.filter((e) => !existingIds.has(e.id));
-                    if (fresh.length === 0) return prev;
-                    const merged = [...fresh, ...prev];
-                    // Sort newest first by eventDate
-                    merged.sort((a, b) => {
-                        const da = a.notif?.notification?.eventDate ?? a.notif?.notification?.publishDate ?? "";
-                        const db = b.notif?.notification?.eventDate ?? b.notif?.notification?.publishDate ?? "";
-                        return db.localeCompare(da);
-                    });
-                    return merged.slice(0, 200); // cap at 200 total
-                });
+                setEnvelopes((prev) => mergeNotifications(prev, newEnvs));
             };
 
             es.addEventListener("initial", (e) => {
@@ -182,79 +164,23 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         };
     }, [apiBaseUrl, isSandbox, sandboxResolved, users]);
 
-    const selectMessage = async (id: string, user: string) => {
-        const wasUnread = envelopes.some(
-            (envelope) => envelope.id === id && envelope.user === user && !envelope.read,
-        );
-
-        setEnvelopes((prev) =>
-            prev.map((e) =>
-                e.id === id && e.user === user ? { ...e, read: true } : e,
-            )
-        );
-
-        // Sandbox and guest messages are local-only and never write to the API.
-        if (isSandbox || isGuest || !wasUnread || !apiBaseUrl) return;
-
+    const changeMessage = async (action: NotificationAction, id: string, user: string) => {
+        const message = envelopes.find((envelope) => envelope.id === id && envelope.user === user);
+        if (!message) return;
+        setMessageError(null);
         try {
-            const response = await fetch(
-                `${apiBaseUrl}/${inboxUri}/${encodeURIComponent(user)}/${encodeURIComponent(id)}/${markReadUri}`,
-                { method: "PUT" },
-            );
-            if (!response.ok) {
-                throw new Error(`Failed to mark message as read (${response.status})`);
-            }
+            await mutateNotification({
+                action,
+                message,
+                localOnly: isSandbox || isGuest,
+                apiBaseUrl,
+                inboxUri,
+                actionUri: action === "read" ? markReadUri : trashUri,
+                update: setEnvelopes,
+            });
         } catch (err) {
             console.error(err);
-            setEnvelopes((prev) =>
-                prev.map((e) =>
-                    e.id === id && e.user === user ? { ...e, read: false } : e,
-                )
-            );
-        }
-    };
-
-    const trashMessage = async (id: string, user: string) => {
-        // Sandbox and guest messages are local-only and never write to the API.
-        if (isSandbox || isGuest) {
-            setEnvelopes((prev) =>
-                prev.map((e) => (e.id === id ? { ...e, trashed: true } : e))
-            );
-            return;
-        }
-
-        setEnvelopes((prev) =>
-            prev.map((e) => (e.id === id ? { ...e, trashed: true } : e))
-        );
-        if (!apiBaseUrl) return;
-        try {
-            const res = await fetch(`${apiBaseUrl}/${inboxUri}/${user}/${id}/${trashUri}`, { method: "PUT" });
-            if (!res.ok) throw new Error("Failed to trash message");
-        } catch (err) {
-            console.error(err);
-            // Revert on error
-            setEnvelopes((prev) =>
-                prev.map((e) => (e.id === id ? { ...e, trashed: false } : e))
-            );
-        }
-    };
-
-    const deleteMessage = async (id: string, user: string) => {
-        // Sandbox and guest messages are local-only and never write to the API.
-        if (isSandbox || isGuest) {
-            setEnvelopes((prev) => prev.filter((e) => e.id !== id));
-            return;
-        }
-
-        // Optimistically remove
-        setEnvelopes((prev) => prev.filter((e) => e.id !== id));
-        if (!apiBaseUrl) return;
-        try {
-            const res = await fetch(`${apiBaseUrl}/${inboxUri}/${user}/${id}/${trashUri}`, { method: "DELETE" });
-            if (!res.ok) throw new Error("Failed to delete message");
-        } catch (err) {
-            console.error(err);
-            // Revert on error could be complex, we just log it for now
+            setMessageError(err instanceof Error ? err.message : "Could not update message. Please try again.");
         }
     };
 
@@ -262,13 +188,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         <NotificationContext.Provider value={{
             envelopes,
             unreadCount,
-            selectMessage,
-            trashMessage,
-            deleteMessage,
+            selectMessage: (id, user) => changeMessage("read", id, user),
+            trashMessage: (id, user) => changeMessage("trash", id, user),
+            deleteMessage: (id, user) => changeMessage("delete", id, user),
             isSandbox,
             users: effectiveUsers,
             loadingUsers,
-            error
+            error: messageError ?? usersError,
         }}>
             {children}
         </NotificationContext.Provider>
