@@ -42,13 +42,16 @@ function initialSandboxEnvelopes(): NotifEnvelope[] {
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
     const { data: session } = useSession();
     const sessionUser = session?.user;
+    // Auth.js recreates the user object on refresh. Keep the resolved mode for
+    // the same account while its settings reload in the background.
+    const sessionUserKey = sessionUser?.id || sessionUser?.email || sessionUser;
     const { users, loadingUsers, usersError } = useUsers();
     const [messageError, setMessageError] = useState<string | null>(null);
     const isGuest = session?.user != null
         && "isGuest" in session.user
         && session.user.isGuest === true;
     const [settings, setSettings] = useState<{
-        user: typeof sessionUser;
+        userKey: typeof sessionUserKey;
         apiBaseUrl: string;
         sandbox: boolean;
     } | null>(null);
@@ -60,7 +63,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     const trashUri = process.env.NEXT_PUBLIC_TRASH_URI;
     const markReadUri = process.env.NEXT_PUBLIC_MARK_READ_URI || "mark_read";
     const forceSandbox = process.env.NEXT_PUBLIC_FORCE_SANDBOX_INBOX === "true";
-    const settingsMatch = settings?.user === sessionUser && settings?.apiBaseUrl === apiBaseUrl;
+    const settingsMatch = settings?.userKey === sessionUserKey && settings?.apiBaseUrl === apiBaseUrl;
     const isSandbox = forceSandbox || Boolean(!isGuest && settingsMatch && settings?.sandbox);
     const sandboxResolved = forceSandbox || !sessionUser || isGuest || !apiBaseUrl || settingsMatch;
     const effectiveUsers = isSandbox ? [...SANDBOX_SELLERS] : users;
@@ -81,17 +84,17 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                 const sandbox = ebayConfig && typeof ebayConfig === "object" && "isSandbox" in ebayConfig
                     ? ebayConfig.isSandbox === true
                     : false;
-                if (!cancelled) setSettings({ user: sessionUser, apiBaseUrl, sandbox });
+                if (!cancelled) setSettings({ userKey: sessionUserKey, apiBaseUrl, sandbox });
             })
             .catch((settingsError: unknown) => {
                 console.warn("Failed to determine eBay environment", settingsError);
-                if (!cancelled) setSettings({ user: sessionUser, apiBaseUrl, sandbox: false });
+                if (!cancelled) setSettings({ userKey: sessionUserKey, apiBaseUrl, sandbox: false });
             });
 
         return () => {
             cancelled = true;
         };
-    }, [apiBaseUrl, forceSandbox, isGuest, sessionUser]);
+    }, [apiBaseUrl, forceSandbox, isGuest, sessionUser, sessionUserKey]);
 
 
     // Track EventSources so we can clean them up
