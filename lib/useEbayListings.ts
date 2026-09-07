@@ -94,9 +94,9 @@ export function useDefaultEbayListings(users: string[]) {
 
 
 /** Interval store + every SWR listings view. Use before signOut. */
-export function clearListingsSession(): void {
+export async function clearListingsSession(): Promise<void> {
     clearListingsIntervalCache();
-    void mutate(
+    await mutate(
         (key) => Array.isArray(key) && key[0] === "ebayListings",
         undefined,
         { revalidate: false },

@@ -10,9 +10,9 @@ import { formatCurrency } from "@/lib/format-utils";
 import { SANDBOX_SELLERS, SANDBOX_ORDERS, SANDBOX_LISTING_IMAGES } from "../tracking/sandbox-data";
 import PersonIcon from "@/components/PersonIcon";
 import { useDefaultEbayListings } from "@/lib/useEbayListings";
-import { listingImageCandidates, rewriteEbayImageUrl, fetchListingItem } from "@/lib/ebay-data";
+import { listingImageCandidates, rewriteEbayImageUrl } from "@/lib/ebay-data";
 import { formatFetchedAt } from "@/lib/date-range";
-import { getCachedListingItem, rememberListingItem } from "@/lib/listings-interval-cache";
+import { getCachedListingItem, loadListingItem } from "@/lib/listings-interval-cache";
 import { trackedFetch } from "@/lib/api-tracker";
 
 interface UspsTracking {
@@ -463,10 +463,12 @@ export default function Calendar() {
           if (listingImages[id]?.length || extraImages[id] || extraTriedRef.current.has(key)) continue;
           const cached = getCachedListingItem(group.user, id);
           if (cached) {
-            extraTriedRef.current.add(key);
             const urls = listingImageCandidates(cached.PictureDetails);
-            if (urls.length > 0) cachedHits[id] = urls;
-            continue;
+            if (urls.length > 0) {
+              extraTriedRef.current.add(key);
+              cachedHits[id] = urls;
+              continue;
+            }
           }
           extraTriedRef.current.add(key);
           missing.push({ user: group.user, id });
@@ -483,9 +485,8 @@ export default function Calendar() {
       await Promise.all(
         missing.map(async ({ user, id }) => {
           try {
-            const item = await fetchListingItem(user, id);
+            const item = await loadListingItem(user, id);
             if (!item) return;
-            rememberListingItem(user, item);
             const urls = listingImageCandidates(item.PictureDetails);
             if (urls.length > 0) found[id] = urls;
           } catch (err) {
