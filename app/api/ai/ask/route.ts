@@ -1,4 +1,4 @@
-import { type NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 
 // Streams the Go backend's AI response through to the browser unbuffered.
 //
@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
       cookie: req.headers.get("cookie") ?? "",
     },
     cache: "no-store",
+    signal: req.signal,
   });
 
   const contentType = upstream.headers.get("content-type") ?? "application/json";
