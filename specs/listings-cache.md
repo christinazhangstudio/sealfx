@@ -18,6 +18,8 @@ SWR keys are exact. These are different entries:
 
 Without the interval store, Apply on a subset recrawled eBay and stored the same items twice. The interval store answers “which days do we already have for this seller?” and only fetches the gaps.
 
+Crawls queue per seller. Each request calculates its missing days after earlier requests finish, so concurrent overlapping views reuse their shared days. Different sellers still load in parallel. Failed or page-capped crawls leave their unfinished gap uncovered; a capped crawl reports an error asking for a narrower range instead of presenting partial data as complete.
+
 ```
 Apply Jan–Aug  → crawl Jan–Aug, remember that span
 Apply Mar–Apr  → span already covered → no crawl, filter the store
@@ -37,6 +39,8 @@ Listings are `Map<ItemID, Item>` per seller. Overlapping views point at the same
 
 - **Inventory:** invalidate the applied day span in the interval store, then `mutate()` that SWR key. Recrawls listings for that range only.
 - **Tracking:** same listings recrawl, **plus** a new `GET /tracking` (fulfillment / orders). Fulfillment is not in SWR.
+
+Invalidation cancels that seller's active and queued listings crawls. Their late responses cannot restore removed coverage or overwrite refreshed items. Session clearing cancels every seller's pending crawls before dropping the store.
 
 The “Last updated at …” stamp is `fetchedAt` on the SWR payload — time of that view’s last listings crawl, not fulfillment.
 
@@ -59,3 +63,5 @@ Clear on logout / account delete (`clearListingsSession` in `useEbayListings.ts`
 - `lib/listings-interval-cache.ts` — per-seller items + covered intervals, gap fetch, invalidate
 - `lib/useEbayListings.ts` — SWR view + Refresh
 - `lib/date-range.ts` — local-day helpers, default 120-day window, `formatFetchedAt`
+
+Run the cache regression tests with Node 24+: `node --test lib/listings-interval-cache.test.mjs`.

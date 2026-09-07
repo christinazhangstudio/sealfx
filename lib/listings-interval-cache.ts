@@ -22,6 +22,8 @@ export type DayInterval = { start: string; end: string };
 type SellerStore = {
     items: Map<string, Item>;
     intervals: DayInterval[];
+    pending: Promise<void>;
+    controller: AbortController;
 };
 
 const sellers = new Map<string, SellerStore>();
@@ -80,7 +82,12 @@ export function missingIntervals(
 function getSeller(user: string): SellerStore {
     let store = sellers.get(user);
     if (!store) {
-        store = { items: new Map(), intervals: [] };
+        store = {
+            items: new Map(),
+            intervals: [],
+            pending: Promise.resolve(),
+            controller: new AbortController(),
+        };
         sellers.set(user, store);
     }
     return store;
@@ -101,24 +108,48 @@ export async function loadListingsForRange(
     const fromStr = formatApiDate(from);
     const toStr = formatApiDate(to);
     const store = getSeller(user);
-    const gaps = missingIntervals(fromStr, toStr, store.intervals);
+    const { signal } = store.controller;
 
-    for (const gap of gaps) {
-        const { items } = await fetchAllListings(
-            user,
-            parseLocalDate(gap.start),
-            parseLocalDate(gap.end),
-            {},
+    // Covered views do not depend on unrelated in-flight gaps for this seller.
+    signal.throwIfAborted();
+    if (missingIntervals(fromStr, toStr, store.intervals).length === 0) {
+        return Array.from(store.items.values()).filter((item) =>
+            listingInRange(item, fromStr, toStr),
         );
-        for (const item of items) {
-            if (item?.ItemID) store.items.set(item.ItemID, item);
-        }
-        store.intervals = mergeIntervals([...store.intervals, gap]);
     }
 
-    return Array.from(store.items.values()).filter((item) =>
-        listingInRange(item, fromStr, toStr),
-    );
+    // SWR deduplicates exact view keys only. Serialize per seller and calculate
+    // gaps after earlier crawls finish, so overlapping views reuse those days.
+    // Different sellers still load in parallel.
+    const pending = store.pending.then(async () => {
+        signal.throwIfAborted();
+        const gaps = missingIntervals(fromStr, toStr, store.intervals);
+        for (const gap of gaps) {
+            const { items, truncated } = await fetchAllListings(
+                user,
+                parseLocalDate(gap.start),
+                parseLocalDate(gap.end),
+                { signal },
+            );
+            // A response can arrive after Refresh/logout even when its fetch
+            // ignored cancellation. Never publish that data or mark it covered.
+            signal.throwIfAborted();
+            if (truncated) {
+                throw new Error("Listings are incomplete. Choose a narrower date range and try again.");
+            }
+            for (const item of items) {
+                if (item?.ItemID) store.items.set(item.ItemID, item);
+            }
+            store.intervals = mergeIntervals([...store.intervals, gap]);
+        }
+
+        return Array.from(store.items.values()).filter((item) =>
+            listingInRange(item, fromStr, toStr),
+        );
+    });
+    // A failed request must not poison subsequent loads for this seller.
+    store.pending = pending.then(() => {}, () => {});
+    return pending;
 }
 
 export function getCachedListingItem(user: string, itemId: string): Item | undefined {
@@ -137,6 +168,12 @@ export function invalidateListingsRange(user: string, from: Date, to: Date): voi
     const toStr = formatApiDate(to);
     const store = sellers.get(user);
     if (!store) return;
+
+    // Cancel old and queued crawls before removing coverage. Refresh can begin
+    // immediately, without waiting for an obsolete request to settle.
+    store.controller.abort();
+    store.controller = new AbortController();
+    store.pending = Promise.resolve();
 
     for (const [id, item] of store.items) {
         if (listingInRange(item, fromStr, toStr)) store.items.delete(id);
@@ -170,5 +207,6 @@ function subtractInterval(span: DayInterval, cutFrom: string, cutTo: string): Da
 
 /** Drop every seller. Call on logout so the next account cannot see this tab's listings. */
 export function clearListingsIntervalCache(): void {
+    for (const store of sellers.values()) store.controller.abort();
     sellers.clear();
 }
