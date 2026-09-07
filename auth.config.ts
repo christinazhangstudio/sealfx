@@ -68,9 +68,9 @@ export const authConfig = {
         },
         async session({ session, token }) {
             if (token && session.user) {
-                session.user.id = token.sub ?? "";
                 (session as any).rememberDevice = token.rememberDevice;
                 (session.user as any).isGuest = token.isGuest || false;
+                session.user.id = token.sub ?? "";
             }
             return session;
         },

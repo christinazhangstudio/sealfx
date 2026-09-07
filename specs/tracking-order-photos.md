@@ -17,7 +17,7 @@ A GTC / long-running listing started 8 months ago and sold yesterday is on the T
 
 ## What we do
 
-GetItem runs for line items **on the current board** whose `legacyItemId` is not in the 120-day listings cache:
+GetItem runs for line items **on the current board** whose `legacyItemId` is absent from the 120-day listings cache or whose cached item has no pictures:
 
 ```
 GET /api/listings/{seller}/items/{itemId}
@@ -25,7 +25,7 @@ GET /api/listings/{seller}/items/{itemId}
 
 Default board is 30 days, so only those misses are fetched. Switching to 90 days fetches the additional misses (days 31–90). Already-tried ids are not refetched.
 
-Sealift calls Trading `GetItem`. One request per missing id. Store the item in the same per-seller interval map (`rememberListingItem`) so a later Inventory/Tracking view can reuse the photo. That write does **not** mark a day-span as covered — we did not crawl those days.
+Sealift calls Trading `GetItem`. One request per missing id. `loadListingItem` stores the result in the same per-seller interval map so a later Inventory/Tracking view can reuse the photo. It discards a response if the account's store was cleared while the request was pending. That write does **not** mark a day-span as covered — we did not crawl those days.
 
 Failed lookups are remembered for the session so we do not hammer GetItem.
 
@@ -42,5 +42,5 @@ Sandbox orders keep using `SANDBOX_LISTING_IMAGES`. No GetItem.
 - `sealift/ebay/trading.go` — `GetItem`
 - `sealift/handlers_ebay.go` — `handleGetListingItem`
 - `sealfx/lib/ebay-data.ts` — `fetchListingItem`
-- `sealfx/lib/listings-interval-cache.ts` — `rememberListingItem` / `getCachedListingItem`
+- `sealfx/lib/listings-interval-cache.ts` — `loadListingItem` / `getCachedListingItem`
 - `sealfx/app/tracking/page.tsx` — fill missing card images after the 120-day crawl

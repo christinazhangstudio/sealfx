@@ -2,16 +2,21 @@
 
 import { ThemeProvider } from "next-themes";
 import { SessionProvider, useSession } from "next-auth/react";
+import { usePathname } from "next/navigation";
 import { UsersProvider } from "@/components/UsersContext";
 import { NotificationProvider } from "@/components/NotificationContext";
 import GuestSync from "@/components/GuestSync";
 import SessionDataBoundary from "@/components/SessionDataBoundary";
-import { sessionDataKey } from "@/lib/session-data-key";
+import { isPublicSessionRoute, sessionDataKey } from "@/lib/session-data-key";
 
 function SessionScopedProviders({ children }: { children: React.ReactNode }) {
     const { data: session, status } = useSession();
+    const pathname = usePathname();
     return (
-        <SessionDataBoundary identity={sessionDataKey(session, status)}>
+        <SessionDataBoundary
+            identity={sessionDataKey(session, status)}
+            allowAnonymousWhileLoading={isPublicSessionRoute(pathname)}
+        >
             <UsersProvider>
                 <NotificationProvider>
                     <GuestSync />

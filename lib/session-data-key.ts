@@ -20,3 +20,10 @@ export function sessionDataKey(
     }
     return status === "loading" ? null : "anonymous";
 }
+
+/** These pages must remain usable before the initial session lookup finishes. */
+export function isPublicSessionRoute(pathname: string | null): boolean {
+    return isFooterPath(pathname) || ["/login", "/register", "/forgot-password", "/reset-password"]
+        .some((path) => pathname === path || pathname?.startsWith(`${path}/`));
+}
+import { isFooterPath } from "@/lib/footer-links";

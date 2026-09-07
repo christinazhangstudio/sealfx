@@ -9,7 +9,10 @@ notification event, or SWR response from the old tree cannot update the new one.
 The key uses the JWT subject exposed by the session callback, with email as a
 fallback for older sessions. It excludes expiration time and session object
 identity, so routine token renewal preserves private state within the same
-account. An unresolved session without a user waits before mounting the tree.
+account. Private pages wait for an unresolved session without a user. Login,
+registration, password recovery, and legal pages immediately render with empty
+anonymous providers, preserving server-rendered content and form input while
+the initial session lookup is pending.
 
 Tracking and Calendar use `loadListingItem` for listing photos outside their
 normal date range. The loader retains the original seller store while fetching
@@ -23,5 +26,5 @@ Run the behavioral regression tests with Node 24+ after installing development
 dependencies:
 
 ```sh
-node --test lib/session-lifecycle.test.mjs
+node --test lib/session-*.test.mjs
 ```
