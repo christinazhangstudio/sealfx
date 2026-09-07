@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useNotifications } from "@/components/NotificationContext";
 import type { NotifEnvelope } from "@/components/NotificationContext";
+import { messageSelectionKey } from "@/lib/notification-state";
 import { trackedFetch as fetch } from "@/lib/api-tracker";
 import PageHeader from "@/components/PageHeader";
 import PageActionBar from "@/components/PageActionBar";
@@ -456,11 +457,6 @@ function BellIcon({ count }: { count: number }) {
     );
 }
 
-function messageSelectionKey(message: { id: string; user: string }): string {
-    return `${message.user}\u0000${message.id}`;
-}
-
-
 interface MessageThread {
     id: string;
     messages: NotifEnvelope[];
@@ -551,7 +547,7 @@ export default function InboxPage() {
             || ruleFilter === "all"
             || activeRules.some((rule) => rule.destination === ruleFilter && rule.matchingIds.includes(envelope.id))));
     const selectedThread = displayedThreads.find((thread) =>
-        thread.messages.some((envelope) => envelope.id === selectedId),
+        thread.messages.some((envelope) => messageSelectionKey(envelope) === selectedId),
     ) ?? null;
     const selectedEnvelope = selectedThread?.latest ?? null;
     const selectedHasParsedMessage = selectedEnvelope
@@ -842,7 +838,7 @@ export default function InboxPage() {
     }, [pendingTests]);
 
     const selectThread = (thread: MessageThread) => {
-        setSelectedId(thread.latest.id);
+        setSelectedId(messageSelectionKey(thread.latest));
         for (const message of thread.messages) {
             if (!message.read) void contextSelectMessage(message.id, message.user);
         }
@@ -1431,7 +1427,7 @@ export default function InboxPage() {
                                                 const isHtmlMessage = messageBodyHasHtml(messageBody);
 
                                                 return (
-                                                    <div key={message.id} className="space-y-4">
+                                                    <div key={messageSelectionKey(message)} className="space-y-4">
                                                         {showDay && (
                                                             <div className="flex items-center gap-3 py-1" aria-label={dayLabel}>
                                                                 <span className="h-px flex-1 bg-border/50" />
