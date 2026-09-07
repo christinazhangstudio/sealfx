@@ -80,6 +80,15 @@ apparently, `suppressHydrationWarning` is a common solution to Flash of Unstyled
 the session duration adjusts based on the "Remember Device" checkbox:
 - **Checked**: 30 days.
 - **Unchecked**: 24 hours.
+- **Guest**: 24 hours, regardless of any remember-device value.
+
+These are fixed durations from sign-in. Auth.js can re-sign the JWT during a session check, but the signed `sessionExpiresAt` deadline and the original choice do not change. Only boolean `true` enables the longer lifetime. The session response reports that same deadline. Existing sessions without this claim retain their original `exp`; sign in again to receive the new remembered duration.
+
+Auth.js uses a shared 30-day cookie lifetime, so a cookie can remain in the browser after its JWT expires; the expired JWT grants no access and Auth.js clears it on the next session check. A refresh cannot extend a signed-out token beyond the backend's revocation retention period.
+
+Deploy the backend's 30-day revoked-token retention before enabling this frontend change, including migration of an existing `revoked_tokens.createdAt` TTL index. A signed-out 30-day token must remain blocked through its original expiry.
+
+Run the session lifetime and Auth.js cookie/refresh regression tests with Node 24+: `node --test lib/session-lifetime.test.mjs`. The tests generate disposable signing keys and do not use production credentials.
 
 ## notifications
 

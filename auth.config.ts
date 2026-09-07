@@ -1,6 +1,7 @@
 import type { NextAuthConfig } from "next-auth";
 import * as jose from "jose";
 import { AUTH_PRIVATE_KEY, AUTH_PUBLIC_KEY } from "./lib/auth-keys";
+import { REMEMBERED_SESSION_MAX_AGE, sessionExpiresAt, sessionMaxAgeSeconds } from "./lib/session-lifetime";
 
 export const authConfig = {
     pages: {
@@ -8,7 +9,9 @@ export const authConfig = {
     },
     session: {
         strategy: "jwt",
-        maxAge: 24 * 60 * 60, // Lowered to 1 day
+        // Auth.js uses one cookie lifetime for every account. The signed JWT
+        // below enforces the member's shorter choice (and every guest's limit).
+        maxAge: REMEMBERED_SESSION_MAX_AGE,
     },
     useSecureCookies: process.env.NODE_ENV === "production",
     cookies: {
@@ -24,13 +27,14 @@ export const authConfig = {
         },
     },
     jwt: {
-        encode: async ({ secret, token, maxAge }) => {
+        encode: async ({ token }) => {
             const privateKeyObj = await jose.importPKCS8(AUTH_PRIVATE_KEY, "RS256");
             const jti = token?.jti || crypto.randomUUID();
-            return new jose.SignJWT({ ...token, jti })
+            const expiresAt = sessionExpiresAt(token);
+            return new jose.SignJWT({ ...token, jti, sessionExpiresAt: expiresAt })
                 .setProtectedHeader({ alg: "RS256", typ: "JWT", kid: "sealift-key-1" })
                 .setIssuedAt()
-                .setExpirationTime(Math.floor(Date.now() / 1000) + (maxAge || 24 * 60 * 60))
+                .setExpirationTime(expiresAt)
                 .sign(privateKeyObj);
         },
         decode: async ({ secret, token }) => {
@@ -61,17 +65,23 @@ export const authConfig = {
         },
         async jwt({ token, user }) {
             if (user) {
-                token.rememberDevice = (user as any).rememberDevice;
-                token.isGuest = (user as any).isGuest || false;
+                token.isGuest = (user as any).isGuest === true;
+                token.rememberDevice = (user as any).rememberDevice === true && !token.isGuest;
+                // All tokens sharing this session's JTI must expire together,
+                // so refresh cannot outlive the backend's revocation record.
+                token.sessionExpiresAt = Math.floor(Date.now() / 1000) + sessionMaxAgeSeconds(token);
             }
             return token;
         },
         async session({ session, token }) {
+            // Auth.js re-signs the JWT after this callback. Both must preserve
+            // the original deadline instead of its rolling cookie ceiling.
+            const expires = new Date(sessionExpiresAt(token) * 1000).toISOString();
             if (token && session.user) {
-                (session as any).rememberDevice = token.rememberDevice;
+                (session as any).rememberDevice = token.rememberDevice === true && token.isGuest !== true;
                 (session.user as any).isGuest = token.isGuest || false;
             }
-            return session;
+            return { ...session, expires };
         },
     },
     events: {
