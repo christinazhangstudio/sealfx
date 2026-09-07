@@ -23,36 +23,54 @@ interface NotificationContextProps {
 
 const NotificationContext = createContext<NotificationContextProps | undefined>(undefined);
 
+function initialSandboxEnvelopes(): NotifEnvelope[] {
+    return SANDBOX_NOTIFICATIONS.map((notif) => {
+        const data = notif.notification.data;
+        const user = SANDBOX_SELLERS.find((seller) =>
+            seller === data.senderUserName || seller === data.recipientUserName,
+        ) ?? data.recipientUserName;
+        return {
+            notif,
+            user,
+            id: notif.notification.notificationId,
+            read: notif.sealift_read,
+            trashed: notif.sealift_trashed,
+        };
+    });
+}
+
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
     const { data: session } = useSession();
+    const sessionUser = session?.user;
     const { users, loadingUsers, usersError } = useUsers();
     const [messageError, setMessageError] = useState<string | null>(null);
     const isGuest = session?.user != null
         && "isGuest" in session.user
         && session.user.isGuest === true;
-    const [isSandbox, setIsSandbox] = useState(false);
-    const [sandboxResolved, setSandboxResolved] = useState(false);
-    const effectiveUsers = isSandbox ? [...SANDBOX_SELLERS] : users;
-    const [envelopes, setEnvelopes] = useState<NotifEnvelope[]>([]);
+    const [settings, setSettings] = useState<{
+        user: typeof sessionUser;
+        apiBaseUrl: string;
+        sandbox: boolean;
+    } | null>(null);
+    const [liveEnvelopes, setLiveEnvelopes] = useState<NotifEnvelope[]>([]);
+    const [sandboxEnvelopes, setSandboxEnvelopes] = useState(initialSandboxEnvelopes);
 
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
     const inboxUri = process.env.NEXT_PUBLIC_INBOX_URI;
     const trashUri = process.env.NEXT_PUBLIC_TRASH_URI;
     const markReadUri = process.env.NEXT_PUBLIC_MARK_READ_URI || "mark_read";
+    const forceSandbox = process.env.NEXT_PUBLIC_FORCE_SANDBOX_INBOX === "true";
+    const settingsMatch = settings?.user === sessionUser && settings?.apiBaseUrl === apiBaseUrl;
+    const isSandbox = forceSandbox || Boolean(!isGuest && settingsMatch && settings?.sandbox);
+    const sandboxResolved = forceSandbox || !sessionUser || isGuest || !apiBaseUrl || settingsMatch;
+    const effectiveUsers = isSandbox ? [...SANDBOX_SELLERS] : users;
+    const envelopes = isSandbox ? sandboxEnvelopes : liveEnvelopes;
+    const setEnvelopes = isSandbox ? setSandboxEnvelopes : setLiveEnvelopes;
+
     useEffect(() => {
-        if (process.env.NEXT_PUBLIC_FORCE_SANDBOX_INBOX === "true") {
-            setIsSandbox(true);
-            setSandboxResolved(true);
-            return;
-        }
-        if (!session?.user || isGuest || !apiBaseUrl) {
-            setIsSandbox(false);
-            setSandboxResolved(true);
-            return;
-        }
+        if (forceSandbox || !sessionUser || isGuest || !apiBaseUrl) return;
 
         let cancelled = false;
-        setSandboxResolved(false);
         fetch(`${apiBaseUrl}/settings`)
             .then(async (response) => {
                 if (!response.ok) throw new Error(`Could not determine eBay environment (${response.status})`);
@@ -63,47 +81,28 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                 const sandbox = ebayConfig && typeof ebayConfig === "object" && "isSandbox" in ebayConfig
                     ? ebayConfig.isSandbox === true
                     : false;
-                if (!cancelled) setIsSandbox(sandbox);
+                if (!cancelled) setSettings({ user: sessionUser, apiBaseUrl, sandbox });
             })
             .catch((settingsError: unknown) => {
                 console.warn("Failed to determine eBay environment", settingsError);
-                if (!cancelled) setIsSandbox(false);
-            })
-            .finally(() => {
-                if (!cancelled) setSandboxResolved(true);
+                if (!cancelled) setSettings({ user: sessionUser, apiBaseUrl, sandbox: false });
             });
 
         return () => {
             cancelled = true;
         };
-    }, [apiBaseUrl, isGuest, session?.user]);
+    }, [apiBaseUrl, forceSandbox, isGuest, sessionUser]);
 
 
     // Track EventSources so we can clean them up
     const eventSourcesRef = useRef<Map<string, EventSource>>(new Map());
 
     const unreadCount = envelopes.filter((e) => !e.read && !e.trashed).length;
-    useEffect(() => {
-        if (!isSandbox) return;
-        setEnvelopes(SANDBOX_NOTIFICATIONS.map((notif) => {
-            const data = notif.notification.data;
-            const user = SANDBOX_SELLERS.find((seller) =>
-                seller === data.senderUserName || seller === data.recipientUserName,
-            ) ?? data.recipientUserName;
-            return {
-                notif,
-                user,
-                id: notif.notification.notificationId,
-                read: notif.sealift_read,
-                trashed: notif.sealift_trashed,
-            };
-        }));
-    }, [isSandbox]);
 
 
     // Open one SSE connection per user
     useEffect(() => {
-        if (!sandboxResolved || isSandbox || !apiBaseUrl || users.length === 0) return;
+        if (!sandboxResolved || isSandbox || isGuest || !apiBaseUrl || users.length === 0) return;
 
         const existing = eventSourcesRef.current;
 
@@ -120,7 +119,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                     read: notif?.sealift_read === true,
                     trashed: notif?.sealift_trashed === true,
                 }));
-                setEnvelopes((prev) => mergeNotifications(prev, newEnvs));
+                setLiveEnvelopes((prev) => mergeNotifications(prev, newEnvs));
             };
 
             es.addEventListener("initial", (e) => {
@@ -162,7 +161,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             existing.forEach((es) => es.close());
             existing.clear();
         };
-    }, [apiBaseUrl, isSandbox, sandboxResolved, users]);
+    }, [apiBaseUrl, isGuest, isSandbox, sandboxResolved, users]);
 
     const changeMessage = async (action: NotificationAction, id: string, user: string) => {
         const message = envelopes.find((envelope) => envelope.id === id && envelope.user === user);
